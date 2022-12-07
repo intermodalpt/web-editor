@@ -57,11 +57,8 @@
 					{#each data.undecided as contribution}
 						<li>
 							<h2 class="card-title text-lg">
-								#{contribution.id} por {contribution.author_id} - {new Date(
-									contribution.submission_date
-								)
-									.toString()
-									.split(' GMT')[0]}
+								#{contribution.id} por {contribution.author_username} -
+								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
 							</h2>
 							<ChangeViewer change={contribution.change} />
 							{#if contribution.comment}
@@ -94,8 +91,8 @@
 					{#each data.decided as contribution}
 						<li>
 							<h2 class="card-title text-lg">
-								{contribution.evaluator_id}
-								{contribution.accepted ? 'aprovou' : 'recusou'} #{contribution.id} por {contribution.author_id}
+								{contribution.evaluator_username}
+								{contribution.accepted ? 'aprovou' : 'recusou'} #{contribution.id} por {contribution.author_username}
 								- {new Date(contribution.submission_date).toString().split(' GMT')[0]}
 							</h2>
 							<ChangeViewer change={contribution.change} />
@@ -115,7 +112,8 @@
 					<div class="card card-compact bg-base-100 shadow-sm">
 						<div class="card-body">
 							<h2 class="card-title text-lg">
-								#{changeset.id} - {new Date(changeset.datetime).toString().split(' GMT')[0]} - {changeset.author_id}
+								#{changeset.id} - aplicado por {changeset.author_username} em
+								{new Date(changeset.datetime).toString().split(' GMT')[0]}
 							</h2>
 							<ul>
 								{#each changeset.changes as change}
