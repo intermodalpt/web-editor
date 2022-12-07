@@ -1,0 +1,1 @@
+export const api_server = "https://api.intermodal.pt"
