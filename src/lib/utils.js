@@ -206,3 +206,16 @@ export function parseJwt(token) {
 
 	return JSON.parse(jsonPayload);
 }
+
+export function listDifferences(original, patch) {
+	const changes = [];
+	for (const [key, value] of Object.entries(patch)) {
+		if (value === null) {
+			continue;
+		}
+		if (original[key] !== value) {
+			changes.push({ key, original: original[key], new: value });
+		}
+	}
+	return changes;
+}
