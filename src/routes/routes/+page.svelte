@@ -10,7 +10,7 @@
 	import { icons, picIcon } from '$lib/assets.js';
 	import RouteForm from '$lib/editor/RouteForm.svelte';
 	import SubrouteScheduleForm from '$lib/editor/SubrouteScheduleForm.svelte';
-	import LineStopsEditor from '$lib/editor/LineStopsEditor.svelte';
+	import RouteStopsEditor from '$lib/editor/RouteStopsEditor.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -347,7 +347,7 @@
 					{#if $selectedRouteId}{/if}
 				</div>
 				{#if $selectedRoute}
-					<LineStopsEditor
+					<RouteStopsEditor
 						{selectedStop}
 						{selectedSubrouteStops}
 						{selectedRoute}
