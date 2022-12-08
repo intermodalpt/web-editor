@@ -58,7 +58,6 @@
 		if (selectedStop == null) {
 			return;
 		}
-    console.log(selectedStop);
 
 		id = selectedStop.id;
 		name = selectedStop.name;

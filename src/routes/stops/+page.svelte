@@ -1,13 +1,13 @@
 <script>
-	import { api_server } from '$lib/settings.js';
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
 	import L from 'leaflet?client';
 	import 'leaflet.markercluster?client';
 	import 'leaflet.featuregroup.subgroup?client';
+	import { api_server } from '$lib/settings.js';
 	import { icons, picIcon } from '$lib/assets.js';
+	import { token, stops, pictures, decodedToken } from '$lib/stores.js';
 	import StopForm from '$lib/editor/StopForm.svelte';
-	import { token, stops, pictures } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -17,7 +17,6 @@
 	let selectedStop = writable(undefined);
 	let previewedPic = undefined;
 
-	let pickingFilers = false;
 	let filterOnlyNoName = false;
 	let filterOnlyNoOfficialName = false;
 	let filterOnlyNoOSM = false;
@@ -30,7 +29,6 @@
 
 	function saveStopMeta(e) {
 		let newMeta = Object.assign($selectedStop, e.detail);
-		alert(JSON.stringify(newMeta));
 
 		updateStop(newMeta);
 
@@ -38,19 +36,43 @@
 	}
 
 	function updateStop(stop) {
-		fetch(`${api_server}/v1/stops/update/${stop.id}`, {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
-			body: JSON.stringify(stop)
-		})
-			.then((data) => {
-				Object.assign($stops[stop.id], stop);
+		let request;
+		const headers = {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${$token}`
+		};
+		if ($decodedToken.permissions.is_admin) {
+			request = fetch(`${api_server}/v1/stops/update/${stop.id}`, {
+				method: 'PATCH',
+				headers: headers,
+				body: JSON.stringify(stop)
+			});
+		} else {
+			let comment = null;
+			if (
+				confirm(
+					'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
+				)
+			) {
+				comment = prompt('Insira o seu comentário');
+			}
+
+			request = fetch(`${api_server}/v1/contrib/stops/update/${stop.id}`, {
+				method: 'POST',
+				headers: headers,
+				body: JSON.stringify({ contribution: stop, comment: comment })
+			});
+		}
+		request
+			.then((r) => {
+				if (r.ok) {
+					Object.assign($stops[stop.id], stop);
+				} else {
+					alert('Error updating');
+				}
 			})
 			.catch(() => {
-				alert('Error updating');
+				alert('Error requestion update');
 			});
 	}
 
@@ -288,7 +310,7 @@
 			maxZoom: 18,
 			zoomControl: false,
 			closePopupOnClick: false,
-			maxBounds:  new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0)),
+			maxBounds: new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0)),
 			maxBoundsViscosity: 1.0
 		}).setView([38.605, -9.0], 11);
 
