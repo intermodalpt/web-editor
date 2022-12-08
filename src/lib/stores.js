@@ -86,31 +86,25 @@ export const picStopRels = derived(stopPicRels, ($stopPicRels) => {
 });
 
 export async function loadRoutes(fetch) {
-	routes.set(
-		await fetch(`${api_server}/v1/routes`)
-			.then((r) => r.json())
-			.then((data) =>
-				data.sort((ra, rb) => {
-					if (!ra.code) {
-						return -1;
-					} else if (!rb.code) {
-						return 1;
-					} else {
-						return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
-					}
-				})
-			)
-	);
+	let routesData = await fetch(`${api_server}/v1/routes`)
+		.then((r) => r.json())
+		.then((stopList) => {
+			return Object.fromEntries(stopList.map((stop) => [stop.id, stop]));
+		});
+
+	routes.set(routesData);
+	return routesData;
 }
 
 export async function loadStops(fetch) {
-	stops.set(
-		await fetch(`${api_server}/v1/stops?all=true`)
-			.then((r) => r.json())
-			.then((stopList) => {
-				return Object.fromEntries(stopList.map((stop) => [stop.id, stop]));
-			})
-	);
+	let stopData = await fetch(`${api_server}/v1/stops?all=true`)
+		.then((r) => r.json())
+		.then((stopList) => {
+			return Object.fromEntries(stopList.map((stop) => [stop.id, stop]));
+		});
+
+	stops.set(stopData);
+	return stopData;
 }
 
 export async function loadPictures(fetch, token) {

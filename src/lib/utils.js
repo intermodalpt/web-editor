@@ -168,6 +168,16 @@ export const timestampToTime = (timestamp) => {
 	).padStart(2, '0')}`;
 };
 
+export function timeToTimestamp(time) {
+	let hour = parseInt(time.split(':')[0]);
+	if (hour < 4) {
+		hour += 24;
+	}
+	let minute = parseInt(time.split(':')[1]);
+
+	return hour * 60 + minute;
+}
+
 const isObject = (object) => {
 	return object != null && typeof object === 'object';
 };
