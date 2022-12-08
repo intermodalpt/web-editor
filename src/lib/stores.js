@@ -138,11 +138,11 @@ export async function loadPictures(fetch, token) {
 }
 
 export async function loadCalendars(fetch) {
-	calendars.set(
-		await fetch(`${api_server}/v1/calendars`)
-			.then((r) => r.json())
-			.then((calendarList) => {
-				return Object.fromEntries(calendarList.map((calendar) => [calendar.id, calendar]));
-			})
-	);
+	let calendarsData = await fetch(`${api_server}/v1/calendars`)
+		.then((r) => r.json())
+		.then((calendarList) => {
+			return Object.fromEntries(calendarList.map((calendar) => [calendar.id, calendar]));
+		});
+	calendars.set(calendarsData);
+	return calendarsData;
 }

@@ -1,25 +1,19 @@
 <script>
-	import { writable, derived } from 'svelte/store';
+	import { invalidate } from '$app/navigation';
 	import Select from 'svelte-select';
 	import { api_server } from '$lib/settings.js';
-	import { calendarStr } from '$lib/utils.js';
-	import { token, operators, calendars } from '$lib/stores.js';
+	import { calendarStr, isDeepEqual } from '$lib/utils.js';
+	import { token, operators } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
-	console.log($calendars);
-
-	const selectedOperatorId = writable(undefined);
-	const operatorCalendars = derived([selectedOperatorId], ([$selectedOperatorId]) => {
-		if ($selectedOperatorId) {
-			return Object.values($calendars).filter((value) => {
-				return value.operator_id === $selectedOperatorId;
-			});
-		} else {
-			return [];
-		}
-	});
+	let selectedOperatorId = null;
+	$: operatorCalendars = selectedOperatorId
+		? Object.values(data.calendars)
+				.filter((value) => value.operator_id === selectedOperatorId)
+				.sort((a, b) => a.name.localeCompare(b.name))
+		: [];
 
 	let formTitle = null;
 	let formNewConditionType = null;
@@ -79,7 +73,7 @@
 	}
 
 	function handleSelect(event) {
-		$selectedOperatorId = parseInt(event.detail.value);
+		selectedOperatorId = parseInt(event.detail.value);
 	}
 
 	let operatorOptions = Object.entries(operators).map(([key, value]) => {
@@ -94,7 +88,7 @@
 			alert('É necessário um título para o calendário');
 			return;
 		}
-		fetch(`${api_server}/v1/operators/${$selectedOperatorId}/calendars`, {
+		fetch(`${api_server}/v1/operators/${selectedOperatorId}/calendars`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -105,13 +99,37 @@
 				calendar: formCalendar
 			})
 		})
-			.then((response) => response.json())
+			.then((response) => {
+				if (response.ok) {
+					invalidate('app:calendars');
+				} else {
+					alert('Erro ao criar calendário');
+				}
+			})
 			.catch((error) => {
 				console.error('Error:', error);
 			});
-		console.log(formCalendar);
 		formTitle = null;
 		resetFormCalendar();
+	}
+
+	function deleteCalendar(calendar) {
+		if (!confirm(`Confirma que quer apagar o calendário ${calendar.name}?`)) {
+			return;
+		}
+		fetch(`${api_server}/v1/operators/${selectedOperatorId}/calendars/${calendar.id}`, {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			}
+		}).then((response) => {
+			if (response.ok) {
+				invalidate('app:calendars');
+			} else {
+				alert('Erro ao apagar calendário');
+			}
+		});
 	}
 </script>
 
@@ -131,7 +149,7 @@
 				placeholder="Operador"
 			/>
 
-			{#if $selectedOperatorId}
+			{#if selectedOperatorId}
 				<table>
 					<thead>
 						<tr>
@@ -142,14 +160,18 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each $operatorCalendars as calendar}
-							<tr>
-								<td>{calendar.id}</td>
+						{#each operatorCalendars as calendar}
+							<tr class="hover:bg-base-200">
+								<td class="pr-4 text-xs">{calendar.id}</td>
 								<td>{calendar.name}</td>
 								<td>{calendarStr(calendar.calendar)}</td>
-								<!-- <td><pre>{JSON.stringify(calendar.calendar, null, 2)}</pre></td> -->
 								<td>
-									<a href="#">Apagar</a>
+									<span
+										class="btn btn-error btn-xs btn-outline"
+										on:mouseup={() => {
+											deleteCalendar(calendar);
+										}}>Apagar</span
+									>
 								</td>
 							</tr>
 						{/each}
@@ -159,7 +181,7 @@
 		</div>
 	</div>
 
-	{#if $selectedOperatorId}
+	{#if selectedOperatorId}
 		<div class="card max-w-5xl bg-base-100 shadow-md">
 			<div class="card-body">
 				<h2 class="card-title">Novo calendário</h2>
@@ -178,8 +200,8 @@
 				<div class="border-2 rounded-lg p-2">
 					<span class="text-md">Dias da semana</span>
 					<div class="flex gap-4">
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -187,8 +209,8 @@
 								bind:group={formWeekdays}
 							/> Segunda</label
 						>
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -196,8 +218,8 @@
 								bind:group={formWeekdays}
 							/> Terça</label
 						>
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -205,8 +227,8 @@
 								bind:group={formWeekdays}
 							/> Quarta</label
 						>
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -214,8 +236,8 @@
 								bind:group={formWeekdays}
 							/> Quinta</label
 						>
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -223,8 +245,8 @@
 								bind:group={formWeekdays}
 							/> Sexta</label
 						>
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -232,8 +254,8 @@
 								bind:group={formWeekdays}
 							/> Sábado</label
 						>
-						<label
-							><input
+						<label>
+							<input
 								class="checkbox"
 								name="weekdays"
 								type="checkbox"
@@ -372,7 +394,7 @@
 						</div>
 						<div class="flex justify-end">
 							<button
-								class="btn btn-info btn-xs"
+								class="btn btn-info btn-xs mt-2"
 								disabled={!(newConditionPeriodReady && formNewConditionType)}
 								on:mouseup={addModifier}
 							>

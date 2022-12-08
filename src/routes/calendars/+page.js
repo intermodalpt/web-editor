@@ -11,11 +11,14 @@ export const csr = dev;
 export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
-export async function load({ params, fetch }) {
+export async function load({ params, fetch, depends }) {
 	if (!browser) {
 		return { calendars: {} };
 	}
+
 	const token = await loadToken(fetch);
+	
+	depends('app:calendars');
 
 	return {
 		calendars: await loadCalendars(fetch)
