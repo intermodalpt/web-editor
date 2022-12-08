@@ -26,6 +26,11 @@
 			{/if}
 			{#if $decodedToken?.permissions?.is_admin}
 				<a
+					href="/calendars"
+					class="tab tab-bordered"
+					class:tab-active={$page.url.pathname.startsWith('/calendars')}>Calendários</a
+				>
+				<a
 					href="/moderation"
 					class="tab tab-bordered"
 					class:tab-active={$page.url.pathname.startsWith('/moderation')}>Moderação</a

@@ -36,28 +36,6 @@ export async function loadToken(fetch) {
 	return currentToken;
 }
 
-// // Subscribe to token. Check if it valid and unset if not.
-// token.subscribe(async (token) => {
-// 	if (token) {
-// 		// Check if token is expired
-// 		let valid = await fetch(`${api_server}/v1/auth/check`, {
-// 			method: 'GET',
-// 			headers: {
-// 				'Content-Type': 'application/json',
-// 				authorization: `Bearer ${token}`
-// 			}
-// 		}).then((r) => {
-// 			if (r.status === 200) {
-// 				console.log('token is valid');
-// 			} else {
-// 				console.log('token is invalid');
-// 				localStorage.removeItem('token');
-// 				alert('Your session has expired. Please refresh the page.');
-// 			}
-// 		});
-// 	}
-// });
-
 export const decodedToken = derived(token, ($token) => {
 	if ($token) {
 		return parseJwt($token);
@@ -73,18 +51,19 @@ export const routes = writable(undefined);
 export const stops = writable(undefined);
 export const pictures = writable(undefined);
 export const stopPicRels = writable([]);
+export const calendars = writable(undefined);
 
 export const operators = {
-	1: {name: "Carris Metropolitana", tag: "cmet"},
-	2: {name: "Transportes Colectivos do Barreiro", tag: "tcb"},
-	3: {name: "Carris", tag: "carris"},
-	4: {name: "MobiCascais", tag: "mobic"},
-	5: {name: "Comboios de Portugal", tag: "cp"},
-	6: {name: "Fertagus", tag: "fert"},
-	7: {name: "Metro Transportes do Sul", tag: "mts"},
-	8: {name: "Metro de Lisboa", tag: "ml"},
-	9: {name: "Transtejo e Soflusa", tag: "ttsl"}
-  };
+	1: { name: 'Carris Metropolitana', tag: 'cmet' },
+	2: { name: 'Transportes Colectivos do Barreiro', tag: 'tcb' },
+	3: { name: 'Carris', tag: 'carris' },
+	4: { name: 'MobiCascais', tag: 'mobic' },
+	5: { name: 'Comboios de Portugal', tag: 'cp' },
+	6: { name: 'Fertagus', tag: 'fert' },
+	7: { name: 'Metro Transportes do Sul', tag: 'mts' },
+	8: { name: 'Metro de Lisboa', tag: 'ml' },
+	9: { name: 'Transtejo e Soflusa', tag: 'ttsl' }
+};
 
 export const picStopRels = derived(stopPicRels, ($stopPicRels) => {
 	const reverseRel = {};
@@ -156,4 +135,14 @@ export async function loadPictures(fetch, token) {
 		pictures.set(pics);
 		stopPicRels.set(rels);
 	});
+}
+
+export async function loadCalendars(fetch) {
+	calendars.set(
+		await fetch(`${api_server}/v1/calendars`)
+			.then((r) => r.json())
+			.then((calendarList) => {
+				return Object.fromEntries(calendarList.map((calendar) => [calendar.id, calendar]));
+			})
+	);
 }
