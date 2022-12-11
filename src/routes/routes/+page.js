@@ -1,9 +1,6 @@
 import { dev, browser } from '$app/environment';
 import { get } from 'svelte/store';
-import { loadToken, stops, loadStops, routes, loadRoutes } from '$lib/stores.js';
-import { parseJwt } from '$lib/utils.js';
-import { api_server } from '$lib/settings';
-import { goto } from '$app/navigation';
+import { loadToken, routes, loadRoutes } from '$lib/stores.js';
 
 // we don't need any JS on this page, though we'll load
 // it in dev so that we get hot module replacement
@@ -15,27 +12,26 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
-	const token = await loadToken(fetch);
-
-
-	// if (!browser) {
-	// 	return {
-	// 		decided: [],
-	// 		undecided: []
-	// 	};
-	// }
-
-	if (get(stops) === undefined) {
-		await loadStops(fetch);
+	if (browser) {
+		const token = await loadToken(fetch);
 	}
 
-	if (get(routes) === undefined) {
-		await loadRoutes(fetch);
+	let routesData = get(routes);
+	if (routesData === undefined) {
+		routesData = await loadRoutes(fetch);
 	}
 
+	const sortedRoutes = Object.values(routesData).sort((ra, rb) => {
+		if (!ra.code) {
+			return -1;
+		} else if (!rb.code) {
+			return 1;
+		} else {
+			return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
+		}
+	});
 
 	return {
-		stops: stops,
-		routes: routes
+		routes: sortedRoutes
 	};
 }
