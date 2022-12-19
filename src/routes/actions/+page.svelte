@@ -9,6 +9,9 @@
 	let osmSyncing = false;
 	let cacheRebuilding = false;
 
+	let fromStopId = null;
+	let toStopId = null;
+
 	function osmSync() {
 		osmSyncing = true;
 		fetch(`${api_server}/v1/actions/import_osm`, {
@@ -29,6 +32,35 @@
 		// await new Promise((resolve) => setTimeout(resolve, 10));
 		// refreshCache($token);
 		// cacheRebuilding = false;
+	}
+
+	async function migrateStops() {
+		if (!fromStopId || !toStopId) {
+			alert('Por favor preencha os dois campos');
+			return;
+		}
+		if (fromStopId === toStopId) {
+			alert('Os dois campos não podem ser iguais');
+			return;
+		}
+
+		if (!Number.isInteger(Number(fromStopId)) || !Number.isInteger(Number(toStopId))) {
+			alert('Os ids de paragem devem ser números');
+			return;
+		}
+
+		const response = await fetch(`${api_server}/v1/actions/migrate_stop/${fromStopId}/${toStopId}`, {
+			method: 'POST',
+			headers: {
+				authorization: `Bearer ${$token}`,
+				'Content-Type': 'application/json'
+			}
+		});
+		if (result.error) {
+			alert(result.error);
+		} else {
+			alert('Paragem migrada com sucesso');
+		}
 	}
 </script>
 
@@ -78,10 +110,10 @@
 	<div class="form-control">
 		<label class="input-group">
 		  <span>Migrar paragem</span>
-		  <input type="text" placeholder="Id de paragem" class="input input-bordered" />
+		  <input type="text" placeholder="Id de paragem" class="input input-bordered" bind:value={fromStopId}/>
 		  <span>para</span>
-		  <input type="text" placeholder="Id de paragem" class="input input-bordered" />
-		  <input type="button" class="btn btn-primary" value="Aplicar">
+		  <input type="text" placeholder="Id de paragem" class="input input-bordered" bind:value={toStopId} />
+		  <input type="button" class="btn btn-primary" value="Aplicar" on:click={migrateStops}>
 		</label>
 	  </div>
 
