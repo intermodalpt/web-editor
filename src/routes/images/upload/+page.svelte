@@ -43,8 +43,8 @@
 </script>
 
 <svelte:head>
-	<title>TODO</title>
-	<meta name="description" content="TODO" />
+	<title>Intermodal - Enviar fotografias</title>
+	<meta name="description" content="Envio de fotografias para o Intermodal" />
 </svelte:head>
 
 <div class="card bg-base-100 shadow-md w-full max-w-5xl mt-4 self-center">

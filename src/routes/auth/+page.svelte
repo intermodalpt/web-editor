@@ -84,7 +84,7 @@
 	{#if $token}
 		<div class="card card-compact bg-base-100 shadow-xl">
 			<div class="card-body">
-				<h2 class="card-title">👍👍👍 Autenticado como XXXX 👍👍👍</h2>
+				<h2 class="card-title">👍👍👍 Autenticado como {$decodedToken.uname} 👍👍👍</h2>
 				<h3>Ignore this:</h3>
 				<span>
 					{JSON.stringify($decodedToken)}

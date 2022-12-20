@@ -65,8 +65,8 @@
 </script>
 
 <svelte:head>
-	<title>TODO</title>
-	<meta name="description" content="TODO" />
+	<title>Intermodal - Ações</title>
+	<meta name="description" content="Ações" />
 </svelte:head>
 
 <div class="flex flex-col gap-2 w-full max-w-5xl mt-4 self-center">

@@ -5,8 +5,8 @@
 </script>
 
 <svelte:head>
-	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
+	<title>Intermodal - Editor</title>
+	<meta name="description" content="Editor de dados do Intermodal" />
 </svelte:head>
 
 <div class="flex flex-col gap-4 w-full max-w-5xl mt-4 self-center">
@@ -34,7 +34,7 @@
 		<div class="card-body">
 			<h1 class="card-title">Contribuir</h1>
 			<div>
-				Sê bem vind@. Neste portal podes contibuir informações em falta ou que, não estando em
+				Sê bem-vind@. Neste portal podes contibuir com informações em falta ou que, não estando em
 				falta, acrescentam valor ao projeto.
 			</div>
 			<h3 class="text-lg">1 - Cria uma conta</h3>
@@ -47,7 +47,7 @@
 					<a href="/auth" class="link">Faz uma aqui</a>.
 				</div>
 			{/if}
-			<h3 class="text-lg">2 - O que podes ser editar</h3>
+			<h3 class="text-lg">2 - O que podes editar</h3>
 			<p>
 				Enquanto convidado podes adicionar carateristicas às paragens e fotografias do que
 				observares.<br />
@@ -77,8 +77,8 @@
 			<h3 class="text-lg">4 - Condições</h3>
 			<div>
 				Consideram-se as submissões doadas. Naturalmente é necessário que se detenha direitos sobre
-				o que se doa. (O nome de uma paragem não é sujeita a direitos de autor, uma
-				fotografia é). Todas as contribuições serão disponibilizadas em formatos abertos.
+				o que se doa. (O nome de uma paragem não é sujeita a direitos de autor, uma fotografia é).
+				Todas as contribuições serão disponibilizadas em formatos abertos.
 			</div>
 			<div class="card-actions justify-end">
 				{#if !$token}

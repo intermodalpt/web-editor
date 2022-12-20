@@ -331,8 +331,8 @@
 </script>
 
 <svelte:head>
-	<title>TODO</title>
-	<meta name="description" content="TODO" />
+	<title>Intermodal - Paragens</title>
+	<meta name="description" content="Dados de paragens do Intermodal" />
 </svelte:head>
 
 <div class="flex flex-col">
