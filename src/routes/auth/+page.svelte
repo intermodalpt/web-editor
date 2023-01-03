@@ -109,6 +109,7 @@
 								placeholder="HenriqueCimento123"
 								class="input input-bordered input-md"
 								bind:value={loginUser}
+								on:keydown={(e)=>{if(e.key === 'Enter'){login()}}}
 							/>
 						</label>
 					</div>
@@ -120,6 +121,7 @@
 								type="password"
 								class="input input-bordered input-md"
 								bind:value={loginPassword}
+								on:keydown={(e)=>{if(e.key === 'Enter'){login()}}}
 							/>
 						</label>
 					</div>
