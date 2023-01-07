@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { api_server } from '$lib/settings.js';
-	import { token } from '$lib/stores.js';
+	import { token, decodedToken } from '$lib/stores.js';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 	import StopImageEditor from '$lib/editor/StopImageEditor.svelte';
 
@@ -44,11 +44,17 @@
 
 	const stopPictures = derived([stop], ([$stop], set) => {
 		if ($stop) {
-			fetch(`${api_server}/v1/stops/${$stop.id}/pictures/all`, {
-				headers: { authorization: `Bearer ${$token}` }
-			})
-				.then((r) => r.json())
-				.then((pictureList) => set(pictureList));
+			if ($decodedToken) {
+				fetch(`${api_server}/v1/stops/${$stop.id}/pictures/all`, {
+					headers: { authorization: `Bearer ${$token}` }
+				})
+					.then((r) => r.json())
+					.then((pictureList) => set(pictureList));
+			} else {
+				fetch(`${api_server}/v1/stops/${$stop.id}/pictures`)
+					.then((r) => r.json())
+					.then((pictureList) => set(pictureList));
+			}
 		} else {
 			return [];
 		}
@@ -196,6 +202,7 @@
 					type="text"
 					bind:value={official_name}
 					placeholder="Vl. Qts. R Pessoa 29"
+					disabled
 					class="input input-bordered w-full input-sm"
 				/>
 			</label>
@@ -207,6 +214,7 @@
 					type="text"
 					bind:value={official_id}
 					placeholder="15000000"
+					disabled={!$decodedToken?.permissions?.is_admin}
 					class="input input-bordered w-full input-sm"
 				/>
 			</label>
@@ -219,6 +227,7 @@
 					bind:value={name}
 					placeholder="Vale das Quintas, Rua Pessoa, 29"
 					class="input input-bordered w-full input-sm"
+					disabled={!$decodedToken?.permissions?.is_admin}
 				/>
 			</label>
 		</div>
@@ -230,6 +239,7 @@
 					bind:value={short_name}
 					placeholder="Vl. Quintas, Pessoa"
 					class="input input-bordered w-full input-sm"
+					disabled={!$decodedToken?.permissions?.is_admin}
 				/>
 			</label>
 		</div>
@@ -241,6 +251,7 @@
 					bind:value={locality}
 					placeholder="Vale das Quintas"
 					class="input input-bordered w-full input-sm"
+					disabled={!$decodedToken}
 				/>
 			</label>
 		</div>
@@ -252,6 +263,7 @@
 					bind:value={street}
 					placeholder="Rua Pessoa"
 					class="input input-bordered w-full input-sm"
+					disabled={!$decodedToken}
 				/>
 			</label>
 		</div>
@@ -263,6 +275,7 @@
 					bind:value={door}
 					placeholder="29"
 					class="input input-bordered w-full input-sm"
+					disabled={!$decodedToken}
 				/>
 			</label>
 		</div>
@@ -273,52 +286,62 @@
 			text="Postaletes"
 			description="O poste ou abrigo da paragem tem um postalete"
 			state={has_flag}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Horários"
 			description="A paragem tem horários atualizados"
 			state={has_schedules}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Passeio"
 			description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
 			state={has_sidewalk}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Abrigo"
 			description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
 			state={has_shelter}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Banco"
 			description="A paragem tem bancos onde os passageiros se possam sentar"
 			state={has_bench}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Caixote do lixo"
 			description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
 			state={has_trash_can}
+			disabled={!$decodedToken}
 		/>
 		<label class="label"><span class="label-text">Defeitos</span></label>
 		<StopCheckbox
 			text="Estacionamento abusivo"
 			description="Alvo recorrente de estacionamento abusivo impeditivo ao bom funcionamento"
 			state={has_abusive_parking}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Informação obsoleta"
 			description="A informação prestada na paragem (horários/postaletes) encontra-se obsoleta"
 			state={has_outdated_info}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Danificada"
 			description="A infraestrutura encontra-se danificada (ex. banco partido)"
 			state={is_damaged}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Vandalizada"
 			description="Existe uma quantidade substâncial de vandalismo (eg. graffitti)"
 			state={is_vandalized}
+			disabled={!$decodedToken}
 		/>
 	</div>
 	<div>
@@ -327,20 +350,30 @@
 			text="Atravessamento de via"
 			description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
 			state={has_crossing}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Acesso mobilidade reduzida"
 			description="A paragem dispõe de acesso para pessoas com mobilidade reduzida"
 			state={has_accessibility}
+			disabled={!$decodedToken}
 		/>
 		<label class="label"><span class="label-text">Iluminação</span></label>
-		<select class="select select-primary max-w-xs select-xs" bind:value={$illumination_position}>
+		<select
+			class="select select-primary max-w-xs select-xs"
+			bind:value={$illumination_position}
+			disabled={!$decodedToken}
+		>
 			<option disabled selected value={null}>Posição</option>
 			<option value={0}>Indireta</option>
 			<option value={10}>Directa</option>
 			<option value={20}>Própria</option>
 		</select>
-		<select class="select select-primary max-w-xs select-xs" bind:value={$illumination_strength}>
+		<select
+			class="select select-primary max-w-xs select-xs"
+			bind:value={$illumination_strength}
+			disabled={!$decodedToken}
+		>
 			<option disabled selected value={null}>Intensidade</option>
 			<option value={0}>Sem iluminação</option>
 			<option value={1}>Fraca</option>
@@ -351,27 +384,32 @@
 			text="Funcional"
 			description="A iluminação não se encontra fundida"
 			state={is_illumination_working}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="No acesso"
 			description="O acesso para a paragem encontra-se bem iluminado todas as 24 horas"
 			state={has_illuminated_path}
+			disabled={!$decodedToken}
 		/>
 		<label class="label"><span class="label-text">Visibilidade</span></label>
 		<StopCheckbox
 			text="Da paragem para autocarro"
 			description="Estando na paragem (+-5 metros) é possível ver autocarros atempadamente"
 			state={has_visibility_from_area}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Do abrigo para autocarro"
 			description="Estando sentado no abrigo é possível ver autocarros atempadamente"
 			state={has_visibility_from_within}
+			disabled={!$decodedToken}
 		/>
 		<StopCheckbox
 			text="Do autocarro para paragem"
 			description="Enquanto motorista, é possível ver devidamente a paragem sem abrandar"
 			state={is_visible_from_outside}
+			disabled={!$decodedToken}
 		/>
 	</div>
 	<div>
@@ -386,8 +424,15 @@
 						type="text"
 						class="input input-bordered"
 						placeholder="Creche ABC123"
+						disabled={!$decodedToken}
 					/>
-					<input class="btn" type="button" value="Add" on:click={addTag} />
+					<input
+						class="btn"
+						type="button"
+						value="Add"
+						on:click={addTag}
+						disabled={!$decodedToken}
+					/>
 				</div>
 				{#each tags as tag}
 					<div class="badge badge-outline badge-lg">
@@ -409,6 +454,7 @@
 			class="textarea textarea-bordered h-12"
 			placeholder="Falta obter-se uma foto que mostre que a paragem se encontra frente a xyz"
 			bind:value={notes}
+			disabled={!$decodedToken}
 		/>
 	</div>
 	<div class="form-control">
@@ -435,7 +481,9 @@
 	</div>
 </div>
 <div class="flex w-full justify-end">
-	<button class="btn btn-primary w-20 float-right" on:click={save}>Guardar</button>
+	<button class="btn btn-primary w-20 float-right" on:click={save} disabled={!$decodedToken}
+		>Guardar</button
+	>
 </div>
 <!--{#if imageModal}-->
 <!--  <StopImageEditor bind:image={openedImage} on:close={close} />-->

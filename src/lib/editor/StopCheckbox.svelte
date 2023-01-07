@@ -4,6 +4,7 @@
   export let text = "Missing label";
   export let description = "Missing description";
   export let state;
+  export let disabled = false;
 
   let box;
 
@@ -51,6 +52,7 @@
     <input
         id="cbox"
         class="checkbox checkbox-error indeterminate:checkbox-warning checked:checkbox-primary"
+        disabled={disabled}
         type="checkbox"
         bind:this={box}
         on:click={rotateState}
