@@ -1,14 +1,17 @@
 <script>
+	import { invalidate } from '$app/navigation';
 	import { api_server } from '$lib/settings.js';
 	import { token, operators } from '$lib/stores.js';
-	import { invalidate } from '$app/navigation';
+	import { decodedToken } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
-	const route = data.route;
+	let route = data.route;
 	let routeChanged = false;
-	let mainSubrouteIndex = route.subroutes.findIndex((subroute) => subroute.id === route.main_subroute);
+	let mainSubrouteIndex = route.subroutes.findIndex(
+		(subroute) => subroute.id === route.main_subroute
+	);
 
 	function addSubroute() {
 		route.subroutes.push({
@@ -208,6 +211,7 @@
 							bind:value={route.code}
 							on:change={() => (routeChanged = true)}
 							class="input input-bordered w-24 input-md"
+							disabled={!$decodedToken?.permissions.is_admin} 
 						/>
 					</label>
 				</div>
@@ -219,6 +223,7 @@
 							bind:value={route.name}
 							on:change={() => (routeChanged = true)}
 							class="input input-bordered w-full input-md"
+							disabled={!$decodedToken?.permissions.is_admin} 
 						/>
 					</label>
 				</div>
@@ -242,6 +247,7 @@
 								bind:checked={route.active}
 								on:change={() => (routeChanged = true)}
 								class="checkbox checkbox-info"
+								disabled={!$decodedToken?.permissions.is_admin} 
 							/>
 						</label>
 					</div>
@@ -260,6 +266,7 @@
 							class="btn btn-success btn-xs"
 							value="+"
 							on:mouseup={addSubroute}
+							disabled={!$decodedToken?.permissions.is_admin} 
 						/>
 					</th>
 				</tr>
@@ -274,6 +281,7 @@
 								on:change={() => (routeChanged = true)}
 								name="main-route"
 								value={index}
+								disabled={!$decodedToken?.permissions.is_admin} 
 							/>
 						</td>
 						<td>
@@ -282,6 +290,7 @@
 								type="text"
 								bind:value={subroute.flag}
 								on:change={() => (subroute.changed = true)}
+								disabled={!$decodedToken?.permissions.is_admin} 
 							/>
 						</td>
 						<td>
@@ -290,6 +299,7 @@
 								type="checkbox"
 								bind:checked={subroute.circular}
 								on:change={() => (subroute.changed = true)}
+								disabled={!$decodedToken?.permissions.is_admin} 
 							/>
 						</td>
 						<td>
@@ -300,6 +310,7 @@
 								on:mouseup={() => {
 									delSubroute(index);
 								}}
+								 disabled={!$decodedToken?.permissions.is_admin} 
 							/>
 						</td>
 					</tr>

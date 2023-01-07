@@ -3,7 +3,7 @@
 	import Select from 'svelte-select';
 	import { api_server } from '$lib/settings.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
-	import { token, operators } from '$lib/stores.js';
+	import { token, decodedToken, operators } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -166,12 +166,14 @@
 								<td>{calendar.name}</td>
 								<td>{calendarStr(calendar.calendar)}</td>
 								<td>
-									<span
-										class="btn btn-error btn-xs btn-outline"
-										on:mouseup={() => {
-											deleteCalendar(calendar);
-										}}>Apagar</span
-									>
+									{#if $decodedToken?.permissions.is_admin}
+										<span
+											class="btn btn-error btn-xs btn-outline"
+											on:mouseup={() => {
+												deleteCalendar(calendar);
+											}}>Apagar</span
+										>
+									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -181,7 +183,7 @@
 		</div>
 	</div>
 
-	{#if selectedOperatorId}
+	{#if selectedOperatorId && $decodedToken?.permissions.is_admin}
 		<div class="card max-w-5xl bg-base-100 shadow-md">
 			<div class="card-body">
 				<h2 class="card-title">Novo calendário</h2>

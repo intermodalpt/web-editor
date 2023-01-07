@@ -6,11 +6,13 @@
 	import 'leaflet.featuregroup.subgroup?client';
 	import { api_server } from '$lib/settings.js';
 	import { icons, picIcon } from '$lib/assets.js';
-	import { token, stops, pictures, decodedToken } from '$lib/stores.js';
+	import { token, decodedToken } from '$lib/stores.js';
 	import StopForm from '$lib/editor/StopForm.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+	const stops = data.stops;
+	const pictures = data.pictures;
 
 	let map;
 	let control;
@@ -340,13 +342,32 @@
 	<div>
 		{#if $selectedStop}
 			<StopForm stop={selectedStop} on:save={saveStopMeta} />
+			<div>
+				<input
+					type="button"
+					class="input input-info"
+					value="Filtros"
+					on:click={openFilterPicker}
+					on:keypress={openFilterPicker}
+				/>
+				<a class="btn" href="/instructions#edit-stops">Instruções</a>
+			</div>
 		{:else}
+			<div>
+				<input
+					type="button"
+					class="input input-info"
+					value="Filtros"
+					on:click={openFilterPicker}
+					on:keypress={openFilterPicker}
+				/>
+				<a class="btn" href="/instructions#edit-stops">Instruções</a>
+			</div>
 			<p>Escolha uma paragem para a editar.</p>
 		{/if}
 	</div>
 </div>
 
-<input type="button" class="input input-info" value="Filtros" on:click={openFilterPicker} />
 {#if previewedPic}
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
 	<div class="modal">

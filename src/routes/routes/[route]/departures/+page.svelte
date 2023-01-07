@@ -122,13 +122,17 @@
 								<div class="bg-base-100 rounded-lg flex flex-col min-w-[1.0rem] items-start p-1">
 									<div class="font-bold">{hour}</div>
 									{#each departures as departure}
-										<a
-											class="cursor-pointer hover:bg-base-300"
-											on:mouseup={() => {
-												selectedDepartureCalendarId = departure.calendarId;
-												selectedDepartureId = departure.id;
-											}}>{departure.minute}</a
-										>
+										{#if $decodedToken?.permissions.is_admin}
+											<span
+												class="cursor-pointer hover:bg-base-300"
+												on:mouseup={() => {
+													selectedDepartureCalendarId = departure.calendarId;
+													selectedDepartureId = departure.id;
+												}}>{departure.minute}</span
+											>
+										{:else}
+											<span>{departure.minute}</span>
+										{/if}
 									{/each}
 								</div>
 							{/each}
@@ -162,7 +166,7 @@
 			</div>
 		</div>
 	{/if}
-	{#if data.calendars && subroute}
+	{#if data.calendars && subroute && $decodedToken?.permissions.is_admin}
 		<div class="card bg-base-100 shadow-md">
 			<div class="card-body">
 				<h2 class="card-title">Nova partida em {subroute.flag}</h2>

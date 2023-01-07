@@ -172,6 +172,7 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 	<div class="flex flex-col gap-1 p-2 overflow-visible w-full">
+		<a class="btn btn-sm" href="/instructions">Instruções</a>
 		<div class="form-control w-full max-w-xs">
 			<label class="input-group">
 				<span class="label-text w-24">Fonte</span>
