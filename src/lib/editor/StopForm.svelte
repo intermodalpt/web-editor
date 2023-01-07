@@ -99,7 +99,6 @@
 
 	has_visibility_from_within.subscribe((visibility_from_within) => {
 		if (visibility_from_within) {
-			$has_shelter = true;
 			$has_visibility_from_area = true;
 		}
 	});
@@ -163,7 +162,7 @@
 			illumination_strength: $illumination_strength,
 			illumination_position: $illumination_position,
 			has_illuminated_path: $has_illuminated_path,
-			has_visibility_from_within: $has_visibility_from_within,
+			has_visibility_from_within: $has_shelter ? $has_visibility_from_within : null,
 			has_visibility_from_area: $has_visibility_from_area,
 			is_visible_from_outside: $is_visible_from_outside
 		};
@@ -203,7 +202,7 @@
 					bind:value={official_name}
 					placeholder="Vl. Qts. R Pessoa 29"
 					disabled
-					class="input input-bordered w-full input-sm"
+					class="input input-bordered w-full input-xs"
 				/>
 			</label>
 		</div>
@@ -215,7 +214,7 @@
 					bind:value={official_id}
 					placeholder="15000000"
 					disabled={!$decodedToken?.permissions?.is_admin}
-					class="input input-bordered w-full input-sm"
+					class="input input-bordered w-full input-xs"
 				/>
 			</label>
 		</div>
@@ -399,12 +398,14 @@
 			state={has_visibility_from_area}
 			disabled={!$decodedToken}
 		/>
-		<StopCheckbox
-			text="Do abrigo para autocarro"
-			description="Estando sentado no abrigo é possível ver autocarros atempadamente"
-			state={has_visibility_from_within}
-			disabled={!$decodedToken}
-		/>
+		{#if $has_shelter}
+			<StopCheckbox
+				text="Do abrigo para autocarro"
+				description="Estando sentado no abrigo é possível ver autocarros atempadamente"
+				state={has_visibility_from_within}
+				disabled={!$decodedToken}
+			/>
+		{/if}
 		<StopCheckbox
 			text="Do autocarro para paragem"
 			description="Enquanto motorista, é possível ver devidamente a paragem sem abrandar"
