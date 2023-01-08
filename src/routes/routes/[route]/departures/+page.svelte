@@ -1,15 +1,20 @@
 <script>
 	import { invalidate } from '$app/navigation';
+	import { browser } from '$app/environment';
 	import { timeToTimestamp, timestampToTime } from '$lib/utils.js';
 	import { api_server } from '$lib/settings.js';
 	import { token, decodedToken, operators } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+	const route = data.route;
 
 	let newTime;
+	let newTimeInput = null;
 	let additionalNewTimes = [];
 	let newCalendarId;
+
+	let cleanOnAdd = true;
 
 	let selectedSubrouteId = data?.route?.subroutes[0]?.id;
 	$: subroute = selectedSubrouteId
@@ -22,6 +27,20 @@
 		(departure) => departure.subroute === selectedSubrouteId
 	);
 	$: departuresAndCalendars = subrouteSchedule ? getDeparturesAndCalendars() : {};
+
+
+	const canEditSchedules =
+		$decodedToken?.permissions.is_admin ||
+		$decodedToken?.permissions.is_trusted ||
+		$decodedToken?.permissions.can_edit_schedules;
+		
+	if (browser) {
+		document.addEventListener('keypress', (e) => {
+			if (e.key === '+') {
+				addAdditionalTime();
+			}
+		});
+	}
 
 	function getDeparturesAndCalendars() {
 		let scheduleMats = Object.fromEntries(
@@ -72,8 +91,10 @@
 				}
 			});
 		}
-		newTime = null;
-		additionalNewTimes = [];
+		if (cleanOnAdd) {
+			newTime = null;
+			additionalNewTimes = [];
+		}
 	}
 
 	async function patchDeparture() {
@@ -94,7 +115,11 @@
 		if (newTime) {
 			additionalNewTimes.push(newTime);
 			newTime = null;
-			additionalNewTimes = additionalNewTimes.sort();
+			additionalNewTimes = [...new Set(additionalNewTimes)].sort();
+			if (newTimeInput) {
+				newTimeInput.blur();
+				newTimeInput.focus();
+			}
 		}
 	}
 
@@ -102,6 +127,26 @@
 		additionalNewTimes = additionalNewTimes.filter((t) => t !== time);
 	}
 </script>
+
+{#if route.subroutes?.length === 0}
+	<div class="alert alert-error shadow-lg">
+		<div>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="stroke-current flex-shrink-0 h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+				/></svg
+			>
+			<span>Adicione primeiro subrotas a esta rota</span>
+		</div>
+	</div>
+{/if}
 
 <div class="flex flex-col self-center p-4 gap-4">
 	{#if data.route}
@@ -122,7 +167,7 @@
 								<div class="bg-base-100 rounded-lg flex flex-col min-w-[1.0rem] items-start p-1">
 									<div class="font-bold">{hour}</div>
 									{#each departures as departure}
-										{#if $decodedToken?.permissions.is_admin}
+										{#if canEditSchedules}
 											<span
 												class="cursor-pointer hover:bg-base-300"
 												on:mouseup={() => {
@@ -166,7 +211,7 @@
 			</div>
 		</div>
 	{/if}
-	{#if data.calendars && subroute && $decodedToken?.permissions.is_admin}
+	{#if data.calendars && subroute && canEditSchedules}
 		<div class="card bg-base-100 shadow-md">
 			<div class="card-body">
 				<h2 class="card-title">Nova partida em {subroute.flag}</h2>
@@ -174,7 +219,12 @@
 					<div class="form-control">
 						<label class="input-group">
 							<span>Início</span>
-							<input type="time" class="input input-bordered" bind:value={newTime} />
+							<input
+								type="time"
+								class="input input-bordered"
+								bind:this={newTimeInput}
+								bind:value={newTime}
+							/>
 							<input
 								type="button"
 								class="btn btn-success"
@@ -184,7 +234,7 @@
 						</label>
 					</div>
 
-					<ul class="flex gap-2">
+					<div class="flex flex-wrap gap-2">
 						{#each additionalNewTimes as time}
 							<div class="badge badge-info gap-2">
 								<svg
@@ -203,7 +253,7 @@
 								{time}
 							</div>
 						{/each}
-					</ul>
+					</div>
 					Em
 					<select class="select select-bordered w-fit" bind:value={newCalendarId}>
 						{#each Object.values(data.calendars) as calendar}
@@ -212,6 +262,11 @@
 					</select>
 				</div>
 				<div class="card-actions justify-end">
+					<label>
+						Limpar ao adicionar
+						<input type="checkbox" bind:checked={cleanOnAdd} />
+					</label>
+
 					<button class="btn btn-primary" on:mouseup={createDeparture}>Adicionar</button>
 				</div>
 			</div>
