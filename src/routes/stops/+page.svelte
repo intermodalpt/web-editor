@@ -25,8 +25,10 @@
 	let filterOnlyNoAttrs = false;
 	let filterOnlyNoPics = false;
 
+	let dragNoopWarning = false;
+
 	export function selectStop(stopId) {
-		$selectedStop = $stops[stopId];
+		$selectedStop = stops[stopId];
 	}
 
 	function saveStopMeta(e) {
@@ -43,7 +45,7 @@
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${$token}`
 		};
-		if ($decodedToken.permissions.is_admin) {
+		if ($decodedToken?.permissions.is_admin) {
 			request = fetch(`${api_server}/v1/stops/update/${stop.id}`, {
 				method: 'PATCH',
 				headers: headers,
@@ -68,7 +70,7 @@
 		request
 			.then((r) => {
 				if (r.ok) {
-					Object.assign($stops[stop.id], stop);
+					Object.assign(stops[stop.id], stop);
 				} else {
 					alert('Error updating');
 				}
@@ -180,6 +182,14 @@
 		marker.meta = info;
 
 		marker.on('click', (e) => selectStop(e.target.stopId));
+		marker.on('moveend', (e) => {
+			if (!dragNoopWarning) {
+				alert(
+					'Alterações de posição são cosméticas. Assim que recarregue a página serão desfeitas.'
+				);
+				dragNoopWarning = true;
+			}
+		});
 
 		let name = info.name || info.short_name || info.official_name || info.osm_name;
 
@@ -193,7 +203,7 @@
 
 		marker.picId = pic.id;
 
-		marker.on('click', (e) => (previewedPic = $pictures[pic.id]));
+		marker.on('click', (e) => (previewedPic = pictures[pic.id]));
 		return marker;
 	}
 
@@ -212,7 +222,7 @@
 		let otherMarkers = [];
 		let picMarkers = [];
 
-		Object.values($stops).forEach((stop) => {
+		Object.values(stops).forEach((stop) => {
 			if (stop.lat != null && stop.lon != null) {
 				let marker = createStopMarker(stop);
 				if (stop.source === 'osm') {
@@ -242,7 +252,7 @@
 			}
 		});
 
-		Object.values($pictures).forEach((pic) => {
+		Object.values(pictures).forEach((pic) => {
 			if (pic.lat != null && pic.lon != null) {
 				let marker = createPicMarker(pic);
 				picMarkers.push(marker);

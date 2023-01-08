@@ -21,12 +21,14 @@ export async function load({ params, fetch }) {
 		await loadStops(fetch);
 	}
 
-	if (get(pictures) === undefined) {
-		await loadPictures(fetch, token);
+	if (token) {
+		if (get(pictures) === undefined) {
+			await loadPictures(fetch, token);
+		}
 	}
 
 	return {
 		stops: get(stops),
-		pictures: get(pictures)
+		pictures: token ? get(pictures) : {}
 	};
 }
