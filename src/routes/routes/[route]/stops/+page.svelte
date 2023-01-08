@@ -25,8 +25,13 @@
 
 	const selectedStop = writable(null);
 	const selectedSubrouteId = writable(route.subroutes[0]?.id);
+
 	const selectedSubrouteStops = derived(selectedSubrouteId, ($selectedSubrouteId) => {
-		return routeStops[$selectedSubrouteId];
+		if ($selectedSubrouteId) {
+			return routeStops[$selectedSubrouteId];
+		} else {
+			return [];
+		}
 	});
 	const importableSubroutesIds = derived(routeStops, ($routeStops) => {
 		return Object.entries($routeStops)
@@ -110,8 +115,35 @@
 	function goTo(stopId) {
 		const stop = stops[stopId];
 		if (stop.lat && stop.lon) {
-			map.setView([stop.lat, stop.lon], 17);
+			map.setView([stop.lat, stop.lon], 18);
 		}
+	}
+
+	function importStopsPrompt() {
+		let input = prompt('Insert the stop array below');
+
+		if (!input) {
+			return;
+		}
+
+		try {
+			let newStopList = JSON.parse(input);
+			// Check if the input is an integer array
+			if (!Array.isArray(newStopList) || newStopList.some((stop) => !Number.isInteger(stop))) {
+				alert('Invalid input');
+				return;
+			}
+			$stopList = newStopList;
+			changes = true;
+			console.log(newStopList);
+		} catch (e) {
+			alert('Invalid input');
+			return;
+		}
+	}
+
+	function exportStopsPrompt() {
+		prompt('Lista de paragens', JSON.stringify($stopList));
 	}
 
 	function saveSubrouteStops() {
@@ -132,8 +164,8 @@
 		})
 			.then((resp) => {
 				if (resp.ok) {
-					alert("We're good");
 					routeStops[$selectedSubrouteId] = $stopList;
+					changes = false;
 					invalidate('app:subroute-stops');
 				} else {
 					alert("The server didn't like this data");
@@ -211,11 +243,11 @@
 			return;
 		}
 
-		// if (selectedSubrouteStops.stops.includes($selectedStop)) {
-		//     if (!confirm("Route already has this stop. Are you totally sure?")) {
-		//         return;
-		//     }
-		// }
+		if ($stopList.includes($selectedStop.id)) {
+			if (!confirm('Route already has this stop. Are you totally sure?')) {
+				return;
+			}
+		}
 
 		if (
 			confirm(`Do you want to replace ${stopName(stops[$stopList[i]])}
@@ -258,7 +290,7 @@
 		map = L.map('map', {
 			contextmenu: true,
 			minZoom: 10,
-			maxZoom: 18,
+			maxZoom: 20,
 			zoomControl: false,
 			closePopupOnClick: false,
 			maxBounds: new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0)),
@@ -292,16 +324,37 @@
 	<meta name="description" content="Paragens" />
 </svelte:head>
 
+{#if route.subroutes?.length === 0}
+	<div class="alert alert-error shadow-lg">
+		<div>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="stroke-current flex-shrink-0 h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
+			</svg>
+			<span>Adicione primeiro subrotas a esta rota</span>
+		</div>
+	</div>
+{/if}
+
 <div class="flex flex-col flex-1 p-2 gap-2">
 	<div class="z-[1001] grid grid-cols-1 justify-items-stretch w-full">
 		<div>
-			Variante:
+			<span class="font-bold">{route.code}</span>
 			<select class="select select-bordered select-sm" bind:value={$selectedSubrouteId}>
 				{#each route.subroutes as subroute}
 					<option value={subroute.id}>{subroute.flag.substring(0, 60)}</option>
 				{/each}
 			</select>
-			<span class="badge">VId: {$selectedSubrouteId}</span>
+			<span class="badge">{$selectedSubrouteId}</span>
+			<span class="badge">{subroutes[$selectedSubrouteId].flag}</span>
 			<span class="badge badge-primary">
 				Selected stop:
 				{#if $selectedStop}
@@ -353,7 +406,7 @@
 			{#each $stopList as stop, index}
 				<div class="flex justify-between">
 					<a class="btn btn-xs btn-ghost" on:click={() => goTo(stop)}>
-						({stops[stop].source}{stop})
+						({stop})
 						{stopName(stops[stop])}
 					</a>
 					{#if $decodedToken?.permissions?.is_admin}
@@ -406,12 +459,24 @@
 				<hr />
 			{/each}
 		</div>
-		<div id="actions" class="flex justify-end">
+		<div id="actions" class="flex justify-end gap-2">
 			{#if $decodedToken?.permissions?.is_admin}
+				<input
+					class="btn btn-sm btn-secondary"
+					type="button"
+					value="Exportar"
+					on:click={exportStopsPrompt}
+				/>
+				<input
+					class="btn btn-sm btn-secondary"
+					type="button"
+					value="Importar"
+					on:click={importStopsPrompt}
+				/>
 				<input
 					class="btn btn-sm btn-primary"
 					type="button"
-					value="Save"
+					value="Guardar"
 					disabled={!changes}
 					on:click={saveSubrouteStops}
 				/>
