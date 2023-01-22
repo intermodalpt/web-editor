@@ -1,6 +1,6 @@
 <script>
 	import { invalidate } from '$app/navigation';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { token, operators } from '$lib/stores.js';
 	import { decodedToken } from '$lib/stores.js';
 
@@ -30,7 +30,7 @@
 				continue;
 			}
 			if (subroute.id) {
-				fetch(`${api_server}/v1/routes/${route.id}/${subroute.id}`, {
+				fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
 					method: 'PATCH',
 					headers: {
 						'Content-Type': 'application/json',
@@ -56,7 +56,7 @@
 						}
 					});
 			} else {
-				fetch(`${api_server}/v1/routes/${route.id}/create_subroute`, {
+				fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -92,7 +92,7 @@
 		}
 
 		if (routeChanged) {
-			fetch(`${api_server}/v1/routes/${route.id}`, {
+			fetch(`${apiServer}/v1/routes/${route.id}`, {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json',
@@ -136,7 +136,7 @@
 				`Do you really really want to delete ${route.subroutes[index].flag} (${route.subroutes[index].id})? This will fail if it has stops or departures.`
 			)
 		) {
-			fetch(`${api_server}/v1/routes/${route.id}/${route.subroutes[index].id}`, {
+			fetch(`${apiServer}/v1/routes/${route.id}/${route.subroutes[index].id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -167,7 +167,7 @@
 				`Do you really really want to delete ${route.code}? This will fail if it has subroutes.`
 			)
 		) {
-			fetch(`${api_server}/v1/routes/${route.id}`, {
+			fetch(`${apiServer}/v1/routes/${route.id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',

@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import L from 'leaflet?client';
 	import 'leaflet.markercluster?client';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer, imageRoot } from '$lib/settings.js';
 	import { picStopRels, stopPicRels, stops, token } from '$lib/stores.js';
 	import { icons } from '$lib/assets.js';
 
@@ -237,7 +237,7 @@
 			}
 		}
 
-		fetch(`${api_server}/v1/upload/stops/${$image.id}`, {
+		fetch(`${apiServer}/v1/upload/stops/${$image.id}`, {
 			method: 'PATCH',
 			body: JSON.stringify(newMeta),
 			headers: {
@@ -274,7 +274,7 @@
 
 	function deleteImage() {
 		if (confirm('Are you really really sure?')) {
-			fetch(`${api_server}/v1/upload/stops/${$image.id}`, {
+			fetch(`${apiServer}/v1/upload/stops/${$image.id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -300,13 +300,13 @@
 			<div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
 				<a
 					target="_blank"
-					href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{$image.sha1}/{$image.original_filename}"
+					href="{imageRoot}/ori/{$image.sha1}/{$image.original_filename}"
 					class="block shrink-0"
 				>
 					<img
 						class="rounded-lg h-96"
 						alt="Visualização paragem"
-						src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{$image.sha1}/stop"
+						src="{imageRoot}/medium/{$image.sha1}/stop"
 					/>
 				</a>
 				<div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction />

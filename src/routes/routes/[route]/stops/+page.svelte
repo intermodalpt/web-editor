@@ -1,9 +1,10 @@
 <script>
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { invalidate } from '$app/navigation';
 	import L from 'leaflet?client';
 	import 'leaflet.markercluster?client';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { token, decodedToken } from '$lib/stores.js';
 	import { calc_route_multipoly } from '$lib/utils.js';
 	import { icons } from '$lib/assets.js';
@@ -147,7 +148,7 @@
 	}
 
 	function saveSubrouteStops() {
-		fetch(`${api_server}/v1/routes/${route.id}/stops/subroutes/${$selectedSubrouteId}`, {
+		fetch(`${apiServer}/v1/routes/${route.id}/stops/subroutes/${$selectedSubrouteId}`, {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',

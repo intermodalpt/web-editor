@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import { api_server } from '$lib/settings.js';
+import { apiServer } from '$lib/settings.js';
 import { parseJwt } from '$lib/utils.js';
 import { browser } from '$app/environment';
 
@@ -18,7 +18,8 @@ export async function loadToken(fetch) {
 		if (storedToken === null) {
 			return null;
 		}
-		let validityCheck = await fetch(`${api_server}/v1/auth/check`, {
+		currentToken = storedToken;
+		let validityCheck = await fetch(`${apiServer}/v1/auth/check`, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ export const picStopRels = derived(stopPicRels, ($stopPicRels) => {
 });
 
 export async function loadRoutes(fetch) {
-	let routesData = await fetch(`${api_server}/v1/routes`)
+	let routesData = await fetch(`${apiServer}/v1/routes`)
 		.then((r) => r.json())
 		.then((stopList) => {
 			return Object.fromEntries(stopList.map((stop) => [stop.id, stop]));
@@ -97,7 +98,7 @@ export async function loadRoutes(fetch) {
 }
 
 export async function loadStops(fetch) {
-	let stopData = await fetch(`${api_server}/v1/stops?all=true`)
+	let stopData = await fetch(`${apiServer}/v1/stops?all=true`)
 		.then((r) => r.json())
 		.then((stopList) => {
 			return Object.fromEntries(stopList.map((stop) => [stop.id, stop]));
@@ -119,12 +120,12 @@ export async function loadPictures(fetch, token) {
 	};
 
 	await Promise.all([
-		fetch(`${api_server}/v1/pictures`, headers)
+		fetch(`${apiServer}/v1/pictures`, headers)
 			.then((r) => r.json())
 			.then((pics) => {
 				return Object.fromEntries(pics.map((pic) => [pic.id, pic]));
 			}),
-		fetch(`${api_server}/v1/pictures/rels`, headers).then((r) => r.json())
+		fetch(`${apiServer}/v1/pictures/rels`, headers).then((r) => r.json())
 	]).then(([pics, rels]) => {
 		pictures.set(pics);
 		stopPicRels.set(rels);
@@ -132,7 +133,7 @@ export async function loadPictures(fetch, token) {
 }
 
 export async function loadCalendars(fetch) {
-	let calendarsData = await fetch(`${api_server}/v1/calendars`)
+	let calendarsData = await fetch(`${apiServer}/v1/calendars`)
 		.then((r) => r.json())
 		.then((calendarList) => {
 			return Object.fromEntries(calendarList.map((calendar) => [calendar.id, calendar]));

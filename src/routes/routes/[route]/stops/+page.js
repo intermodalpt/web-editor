@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
 import { loadToken, stops, loadStops, routes, loadRoutes } from '$lib/stores.js';
-import { api_server } from '$lib/settings';
+import { apiServer } from '$lib/settings';
 
 export const csr = true;
 export const ssr = false;
@@ -37,7 +37,7 @@ export async function load({ params, fetch, depends }) {
 
 	const route = routesData[routeId];
 
-	const routeStops = await fetch(`${api_server}/v1/routes/${routeId}/stops`)
+	const routeStops = await fetch(`${apiServer}/v1/routes/${routeId}/stops`)
 			.then((r) => r.json())
 			.then((data) => {
 				const stops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute.stops]));

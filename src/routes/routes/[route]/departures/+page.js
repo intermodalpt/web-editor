@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { loadToken, loadRoutes, loadCalendars } from '$lib/stores.js';
-import { api_server } from '$lib/settings.js';
+import { apiServer } from '$lib/settings.js';
 
 export const csr = true;
 export const ssr = false;
@@ -19,7 +19,7 @@ export async function load({ params, fetch, depends }) {
 
 	depends('app:departures');
 
-	let departures = await fetch(`${api_server}/v1/routes/${routeId}/schedule`)
+	let departures = await fetch(`${apiServer}/v1/routes/${routeId}/schedule`)
 		.then((r) => r.json())
 		.catch(() => {
 			alert('Failed to parse the schedule');

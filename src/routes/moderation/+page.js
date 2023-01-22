@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
-import { loadToken } from '$lib/stores.js';
+import { loadToken, loadStops } from '$lib/stores.js';
 import { parseJwt } from '$lib/utils.js';
-import { api_server } from '$lib/settings';
+import { apiServer } from '$lib/settings';
 import { goto } from '$app/navigation';
 
 export const csr = true;
@@ -40,10 +40,11 @@ export async function load({ params, fetch }) {
 		}
 	};
 
-	const [decided, undecided, changesets] = await Promise.all([
-		fetch(`${api_server}/v1/contrib/contributions/decided`, headers).then((res) => res.json()),
-		fetch(`${api_server}/v1/contrib/contributions/undecided`, headers).then((res) => res.json()),
-		fetch(`${api_server}/v1/contrib/changelog`, headers).then((res) => res.json())
+	const [decided, undecided, changesets, stops] = await Promise.all([
+		fetch(`${apiServer}/v1/contrib/contributions/decided`, headers).then((res) => res.json()),
+		fetch(`${apiServer}/v1/contrib/contributions/undecided`, headers).then((res) => res.json()),
+		fetch(`${apiServer}/v1/contrib/changelog`, headers).then((res) => res.json()),
+		loadStops(fetch)
 	]);
 
 	return {

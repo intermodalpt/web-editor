@@ -1,7 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer, imageRoot } from '$lib/settings.js';
 	import { token, decodedToken } from '$lib/stores.js';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 	import StopImageEditor from '$lib/editor/StopImageEditor.svelte';
@@ -45,13 +45,13 @@
 	const stopPictures = derived([stop], ([$stop], set) => {
 		if ($stop) {
 			if ($decodedToken) {
-				fetch(`${api_server}/v1/stops/${$stop.id}/pictures/all`, {
+				fetch(`${apiServer}/v1/stops/${$stop.id}/pictures/all`, {
 					headers: { authorization: `Bearer ${$token}` }
 				})
 					.then((r) => r.json())
 					.then((pictureList) => set(pictureList));
 			} else {
-				fetch(`${api_server}/v1/stops/${$stop.id}/pictures`)
+				fetch(`${apiServer}/v1/stops/${$stop.id}/pictures`)
 					.then((r) => r.json())
 					.then((pictureList) => set(pictureList));
 			}
@@ -470,10 +470,10 @@
 				{#each $stopPictures as picture}
 					<a
 						target="_blank"
-						href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{picture.sha1}/{picture.original_filename}"
+						href="{imageRoot}/ori/{picture.sha1}/{picture.original_filename}"
 					>
 						<img
-							src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{picture.sha1}/preview"
+							src="{imageRoot}/medium/{picture.sha1}/preview"
 							class="rounded-box transition-all hover:scale-150 h-16"
 						/>
 					</a>

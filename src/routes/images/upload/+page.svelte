@@ -1,5 +1,5 @@
 <script>
-	import { api_server } from '$lib/settings';
+	import { apiServer } from '$lib/settings';
 	import { token } from '$lib/stores';
 	import { createEventDispatcher } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -18,7 +18,7 @@
 		for (let x = 0; x < files.length; x++) {
 			const formData = new FormData();
 			formData.append('images[]', files[x]);
-			let res = await fetch(`${api_server}/v1/upload/stops`, {
+			let res = await fetch(`${apiServer}/v1/upload/stops`, {
 				method: 'POST',
 				body: formData,
 				headers: {

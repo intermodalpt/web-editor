@@ -1,6 +1,6 @@
 <script>
 	import { token } from '$lib/stores.js';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 
 	/** @type {import('./$types').PageData} */
@@ -9,7 +9,7 @@
 	let changelogPage = 1;
 
 	function acceptContribution(contribution_id) {
-		fetch(`${api_server}/v1/contrib/${contribution_id}/accept`, {
+		fetch(`${apiServer}/v1/contrib/${contribution_id}/accept`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -25,7 +25,7 @@
 	}
 
 	function declineContribution(contribution_id) {
-		fetch(`${api_server}/v1/contrib/${contribution_id}/decline`, {
+		fetch(`${apiServer}/v1/contrib/${contribution_id}/decline`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',

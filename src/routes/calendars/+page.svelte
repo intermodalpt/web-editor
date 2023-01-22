@@ -1,7 +1,7 @@
 <script>
 	import { invalidate } from '$app/navigation';
 	import Select from 'svelte-select';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
 	import { token, decodedToken, operators } from '$lib/stores.js';
 
@@ -88,7 +88,7 @@
 			alert('É necessário um título para o calendário');
 			return;
 		}
-		fetch(`${api_server}/v1/operators/${selectedOperatorId}/calendars`, {
+		fetch(`${apiServer}/v1/operators/${selectedOperatorId}/calendars`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -117,7 +117,7 @@
 		if (!confirm(`Confirma que quer apagar o calendário ${calendar.name}?`)) {
 			return;
 		}
-		fetch(`${api_server}/v1/operators/${selectedOperatorId}/calendars/${calendar.id}`, {
+		fetch(`${apiServer}/v1/operators/${selectedOperatorId}/calendars/${calendar.id}`, {
 			method: 'DELETE',
 			headers: {
 				'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 <script>
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { token, stops, routes, pictures } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
@@ -14,7 +14,7 @@
 
 	function osmSync() {
 		osmSyncing = true;
-		fetch(`${api_server}/v1/actions/import_osm`, {
+		fetch(`${apiServer}/v1/actions/import_osm`, {
 			headers: {
 				authorization: `Bearer ${$token}`
 			}
@@ -49,7 +49,7 @@
 			return;
 		}
 
-		const response = await fetch(`${api_server}/v1/actions/migrate_stop/${fromStopId}/${toStopId}`, {
+		const response = await fetch(`${apiServer}/v1/actions/migrate_stop/${fromStopId}/${toStopId}`, {
 			method: 'POST',
 			headers: {
 				authorization: `Bearer ${$token}`,

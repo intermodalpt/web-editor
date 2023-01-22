@@ -1,5 +1,5 @@
 <script>
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { decodedToken, token, logout } from '$lib/stores.js';
 
 	let loginUser = null;
@@ -11,7 +11,7 @@
 	let registrationPasswordConfirmation = null;
 
 	function login() {
-		fetch(`${api_server}/v1/auth/login`, {
+		fetch(`${apiServer}/v1/auth/login`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -51,7 +51,7 @@
 			return;
 		}
 
-		fetch(`${api_server}/v1/auth/register`, {
+		fetch(`${apiServer}/v1/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({

@@ -2,7 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { timeToTimestamp, timestampToTime } from '$lib/utils.js';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { token, decodedToken, operators } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
@@ -76,7 +76,7 @@
 				calendar_id: newCalendarId
 			};
 
-			await fetch(`${api_server}/v1/schedules/${selectedSubrouteId}`, {
+			await fetch(`${apiServer}/v1/schedules/${selectedSubrouteId}`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -103,7 +103,7 @@
 
 	async function deleteDeparture() {
 		if (confirm(`Confirma que quer apagar? (${timestampToTime(selectedDeparture.time)})`)) {
-			await fetch(`${api_server}/v1/schedules/${selectedSubrouteId}/${selectedDepartureId}`, {
+			await fetch(`${apiServer}/v1/schedules/${selectedSubrouteId}/${selectedDepartureId}`, {
 				method: 'DELETE',
 				headers: { authorization: `Bearer ${$token}` }
 			});

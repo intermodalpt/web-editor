@@ -1,7 +1,8 @@
 <script>
 	import StopImageEditor from '$lib/editor/StopImageEditor.svelte';
+	import { imageRoot } from '$lib/settings.js';
 	import { writable } from 'svelte/store';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { token } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
@@ -34,7 +35,7 @@
 
 		Promise.all(
 			pages.map((page) => {
-				return fetch(`${api_server}/v1/tagging/stops/untagged?p=${page}`, {
+				return fetch(`${apiServer}/v1/tagging/stops/untagged?p=${page}`, {
 					headers: {
 						authorization: `Bearer ${$token}`
 					}
@@ -87,7 +88,7 @@
 						<div class="p-2 flex justify-center items-center cursor-pointer">
 							<!-- {pic.id};{pic.capture_date} -->
 							<img
-								src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{pic.sha1}/preview"
+								src="{imageRoot}/medium/{pic.sha1}/preview"
 								class="rounded-box transition-all hover:scale-105"
 								on:click={() => {
 									openPic(pic.id);

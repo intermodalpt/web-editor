@@ -4,7 +4,7 @@
 	import L from 'leaflet?client';
 	import 'leaflet.markercluster?client';
 	import 'leaflet.featuregroup.subgroup?client';
-	import { api_server } from '$lib/settings.js';
+	import { apiServer, imageRoot } from '$lib/settings.js';
 	import { icons, picIcon } from '$lib/assets.js';
 	import { token, decodedToken } from '$lib/stores.js';
 	import StopForm from '$lib/editor/StopForm.svelte';
@@ -46,7 +46,7 @@
 			authorization: `Bearer ${$token}`
 		};
 		if ($decodedToken?.permissions.is_admin) {
-			request = fetch(`${api_server}/v1/stops/update/${stop.id}`, {
+			request = fetch(`${apiServer}/v1/stops/update/${stop.id}`, {
 				method: 'PATCH',
 				headers: headers,
 				body: JSON.stringify(stop)
@@ -61,7 +61,7 @@
 				comment = prompt('Insira o seu comentário');
 			}
 
-			request = fetch(`${api_server}/v1/contrib/stops/update/${stop.id}`, {
+			request = fetch(`${apiServer}/v1/contrib/stops/update/${stop.id}`, {
 				method: 'POST',
 				headers: headers,
 				body: JSON.stringify({ contribution: stop, comment: comment })
@@ -281,7 +281,7 @@
 			lat: e.latlng.lat,
 			lon: e.latlng.lng
 		};
-		fetch(`${api_server}/api/stops/create`, {
+		fetch(`${apiServer}/api/stops/create`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
@@ -385,12 +385,9 @@
 			<a>
 				<a
 					target="_blank"
-					href="https://intermodal-storage-worker.claudioap.workers.dev/ori/{previewedPic.sha1}/{previewedPic.original_filename}"
+					href="{imageRoot}/ori/{previewedPic.sha1}/{previewedPic.original_filename}"
 				>
-					<img
-						src="https://intermodal-storage-worker.claudioap.workers.dev/medium/{previewedPic.sha1}/preview"
-						class="rounded-box w-full"
-					/>
+					<img src="{imageRoot}/medium/{previewedPic.sha1}/preview" class="rounded-box w-full" />
 				</a>
 			</a>
 			<div class="modal-action">
