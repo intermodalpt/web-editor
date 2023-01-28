@@ -179,10 +179,45 @@
 	}
 </script>
 
-<div class="h-full overflow-auto">
+<div class="h-full overflow-y-auto w-80">
+	<label class="input-group p-1">
+		<span class="label-text">{$stop.id}</span>
+		<input
+			type="text"
+			value={$stop.osm_name}
+			class="input input-bordered w-full input-sm"
+			disabled
+		/>
+	</label>
+
+	<div class="form-control">
+		<label class="label">
+			<span class="label-text">Fotos</span>
+			<input
+				class="btn btn-sm btn-primary"
+				type="button"
+				value="+"
+				on:click={() => alert('Por implementar')}
+				disabled={true || !$decodedToken}
+			/>
+		</label>
+		<div class="flex gap-2 overflow-x-scroll">
+			{#if $stopPictures !== undefined && $stopPictures.length > 0}
+				{#each $stopPictures as picture}
+					<a target="_blank" href="{imageRoot}/ori/{picture.sha1}/{picture.original_filename}">
+						<img
+							src="{imageRoot}/medium/{picture.sha1}/preview"
+							class="rounded-box transition-all hover:scale-150 h-16"
+						/>
+					</a>
+				{/each}
+			{/if}
+		</div>
+	</div>
+
 	<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 		<div
-			class="collapse-title text-lg font-medium"
+			class="collapse-title text-lg font-medium p-2 min-h-0"
 			on:click={() => {
 				currentSubform = currentSubform === subforms.geral ? null : subforms.geral;
 			}}
@@ -190,28 +225,6 @@
 			Dados localização
 		</div>
 		<div class={currentSubform === subforms.geral ? 'px-2 pb-2' : 'max-h-0'}>
-			<div class="form-control w-full">
-				<label class="input-group">
-					<span class="label-text w-24">Fonte</span>
-					<input
-						type="text"
-						value={`${$stop.id} - ${$stop.source}`}
-						class="input input-bordered w-full input-xs"
-						disabled
-					/>
-				</label>
-			</div>
-			<div class="form-control w-full">
-				<label class="input-group">
-					<span class="label-text w-24">OSM</span>
-					<input
-						type="text"
-						bind:value={$stop.osm_name}
-						class="input input-bordered w-full input-xs"
-						disabled
-					/>
-				</label>
-			</div>
 			<div class="form-control w-full">
 				<label class="input-group">
 					<span class="label-text w-24">Oficial</span>
@@ -230,7 +243,7 @@
 					<input
 						type="text"
 						bind:value={official_id}
-						placeholder="15000000"
+						placeholder="150000"
 						disabled={!$decodedToken?.permissions?.is_admin}
 						class="input input-bordered w-full input-xs"
 					/>
@@ -300,7 +313,7 @@
 	</div>
 	<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 		<div
-			class="collapse-title text-lg font-medium"
+			class="collapse-title text-lg font-medium p-2 min-h-0"
 			on:click={() => {
 				currentSubform = currentSubform === subforms.service ? null : subforms.service;
 			}}
@@ -308,49 +321,23 @@
 			Serviço
 		</div>
 		<div class={currentSubform === subforms.service ? 'px-2 pb-2' : 'max-h-0'}>
-			<div>
-				<StopCheckbox
-					text="Postaletes"
-					description="O poste ou abrigo da paragem tem um postalete"
-					state={has_flag}
-					disabled={!$decodedToken}
-				/>
-				<StopCheckbox
-					text="Horários"
-					description="A paragem tem horários atualizados"
-					state={has_schedules}
-					disabled={!$decodedToken}
-				/>
-				<StopCheckbox
-					text="Passeio"
-					description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
-					state={has_sidewalk}
-					disabled={!$decodedToken}
-				/>
-				<StopCheckbox
-					text="Abrigo"
-					description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
-					state={has_shelter}
-					disabled={!$decodedToken}
-				/>
-				<StopCheckbox
-					text="Banco"
-					description="A paragem tem bancos onde os passageiros se possam sentar"
-					state={has_bench}
-					disabled={!$decodedToken}
-				/>
-				<StopCheckbox
-					text="Caixote do lixo"
-					description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
-					state={has_trash_can}
-					disabled={!$decodedToken}
-				/>
-			</div>
+			<StopCheckbox
+				text="Postaletes"
+				description="O poste ou abrigo da paragem tem um postalete"
+				state={has_flag}
+				disabled={!$decodedToken}
+			/>
+			<StopCheckbox
+				text="Horários"
+				description="A paragem tem horários atualizados"
+				state={has_schedules}
+				disabled={!$decodedToken}
+			/>
 		</div>
 	</div>
 	<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 		<div
-			class="collapse-title text-lg font-medium"
+			class="collapse-title text-lg font-medium p-2 min-h-0"
 			on:click={() => {
 				currentSubform = currentSubform === subforms.quality ? null : subforms.quality;
 			}}
@@ -358,12 +345,35 @@
 			Qualidade
 		</div>
 		<div class={currentSubform === subforms.quality ? 'px-2 pb-2' : 'max-h-0'}>
-			<!-- <p>attribute is necessary to make the div focusable</p> -->
+			<StopCheckbox
+				text="Passeio"
+				description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
+				state={has_sidewalk}
+				disabled={!$decodedToken}
+			/>
+			<StopCheckbox
+				text="Abrigo"
+				description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
+				state={has_shelter}
+				disabled={!$decodedToken}
+			/>
+			<StopCheckbox
+				text="Banco"
+				description="A paragem tem bancos onde os passageiros se possam sentar"
+				state={has_bench}
+				disabled={!$decodedToken}
+			/>
+			<StopCheckbox
+				text="Caixote do lixo"
+				description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
+				state={has_trash_can}
+				disabled={!$decodedToken}
+			/>
 		</div>
 	</div>
 	<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 		<div
-			class="collapse-title text-lg font-medium"
+			class="collapse-title text-lg font-medium p-2 min-h-0"
 			on:click={() => {
 				currentSubform = currentSubform === subforms.accesibility ? null : subforms.accesibility;
 			}}
@@ -445,7 +455,7 @@
 	</div>
 	<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 		<div
-			class="collapse-title text-lg font-medium"
+			class="collapse-title text-lg font-medium p-2 min-h-0"
 			on:click={() => {
 				currentSubform = currentSubform === subforms.extra ? null : subforms.extra;
 			}}
@@ -487,14 +497,14 @@
 						<input
 							id="tag-text"
 							type="text"
-							class="input input-bordered"
+							class="input input-bordered input-sm"
 							placeholder="Creche ABC123"
 							disabled={!$decodedToken}
 						/>
 						<input
-							class="btn"
+							class="btn btn-sm btn-primary"
 							type="button"
-							value="Add"
+							value="+"
 							on:click={addTag}
 							disabled={!$decodedToken}
 						/>
@@ -520,32 +530,4 @@
 			</div>
 		</div>
 	</div>
-
-	<div class="form-control">
-		<label class="label">
-			<span class="label-text">Fotos</span>
-		</label>
-		<div class="flex gap-2">
-			{#if $stopPictures === undefined || $stopPictures.length === 0}
-				<span>Sem fotos</span>
-			{:else}
-				{#each $stopPictures as picture}
-					<a target="_blank" href="{imageRoot}/ori/{picture.sha1}/{picture.original_filename}">
-						<img
-							src="{imageRoot}/medium/{picture.sha1}/preview"
-							class="rounded-box transition-all hover:scale-150 h-16"
-						/>
-					</a>
-				{/each}
-			{/if}
-		</div>
-	</div>
-	<button class="btn btn-primary w-20 float-right" on:click={save} disabled={!$decodedToken}
-		>Guardar</button
-	>
-
-
 </div>
-<!--{#if imageModal}-->
-<!--  <StopImageEditor bind:image={openedImage} on:close={close} />-->
-<!--{/if}-->
