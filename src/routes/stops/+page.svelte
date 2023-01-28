@@ -1,11 +1,10 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
-	import L from 'leaflet?client';
-	import 'leaflet.markercluster?client';
-	import 'leaflet.featuregroup.subgroup?client';
+
+	import { Map, NavigationControl, GeolocateControl } from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { apiServer, imageRoot } from '$lib/settings.js';
-	import { icons, picIcon } from '$lib/assets.js';
 	import { token, decodedToken } from '$lib/stores.js';
 	import StopForm from '$lib/editor/StopForm.svelte';
 
@@ -15,7 +14,6 @@
 	const pictures = data.pictures;
 
 	let map;
-	let control;
 	let selectedStop = writable(undefined);
 	let previewedPic = undefined;
 
@@ -24,8 +22,6 @@
 	let filterOnlyNoOSM = false;
 	let filterOnlyNoAttrs = false;
 	let filterOnlyNoPics = false;
-
-	let dragNoopWarning = false;
 
 	export function selectStop(stopId) {
 		$selectedStop = stops[stopId];
@@ -80,11 +76,6 @@
 			});
 	}
 
-	let mapLayers;
-
-	let info;
-	let zoom = 0;
-
 	function stopScore(stop) {
 		let score = 10.0;
 
@@ -130,215 +121,176 @@
 		return score;
 	}
 
-	function createStopMarker(info) {
-		let marker;
-		let markerOptions = { rinseOnHover: true, draggable: true };
-		if (!(info.name || info.short_name || info.osm_name || info.official_name)) {
-			marker = L.marker(
-				[info.lat, info.lon],
-				Object.assign({}, markerOptions, { icon: icons['geoc'] })
-			);
-		} else if (info.source === 'osm') {
-			const score = Math.round(stopScore(info));
-			let color;
-			switch (score) {
-				case 3:
-				case 4:
-					color = 'orange';
-					break;
-				case 5:
-				case 6:
-					color = 'yellow';
-					break;
-				case 7:
-				case 8:
-				case 9:
-					color = 'green';
-					break;
-				case 10:
-					color = 'perfect';
-					break;
-				default:
-					color = 'red';
-			}
-			let icon = L.divIcon({
-				html: `${score}`,
-				// iconUrl: `/markers/${source}.svg`,
-				className: `score-bubble score-bubble-${color}`,
-				iconSize: [16, 16],
-				tooltipAnchor: [16, 0]
-			});
-			marker = L.marker([info.lat, info.lon], Object.assign({}, markerOptions, { icon: icon }));
-		} else if (icons[info.source] === undefined) {
-			marker = L.marker([info.lat, info.lon], markerOptions);
-		} else {
-			marker = L.marker(
-				[info.lat, info.lon],
-				Object.assign({}, markerOptions, { icon: icons[info.source] })
-			);
-		}
-
-		marker.stopId = info.id;
-		marker.meta = info;
-
-		marker.on('click', (e) => selectStop(e.target.stopId));
-		marker.on('moveend', (e) => {
-			if (!dragNoopWarning) {
-				alert(
-					'Alterações de posição são cosméticas. Assim que recarregue a página serão desfeitas.'
-				);
-				dragNoopWarning = true;
-			}
-		});
-
-		let name = info.name || info.short_name || info.official_name || info.osm_name;
-
-		marker.bindTooltip(`${info.id} - ${name}`);
-
-		return marker;
-	}
-
-	function createPicMarker(pic) {
-		let marker = L.marker([pic.lat, pic.lon], { rinseOnHover: true, icon: picIcon });
-
-		marker.picId = pic.id;
-
-		marker.on('click', (e) => (previewedPic = pictures[pic.id]));
-		return marker;
-	}
-
 	function loadStops() {
-		mapLayers.stops.removeFrom(map);
-		mapLayers.stops = L.markerClusterGroup({
-			spiderfyOnMaxZoom: true,
-			showCoverageOnHover: true,
-			disableClusteringAtZoom: 14
-			// iconCreateFunction: function(cluster) {
-			//   return L.divIcon({ html: '<b>' + cluster.getChildCount() + console.log(cluster) + '</b>' });
+		let features = [];
+
+		Object.values(stops).forEach((stop) => {
+			// let marker = createStopMarker(stop);
+			let feature = {
+				type: 'Feature',
+				geometry: {
+					type: 'Point',
+					coordinates: [stop.lon, stop.lat]
+				},
+				properties: {
+					stopId: stop.id,
+					score: Math.round(stopScore(stop))
+				}
+			};
+			features.push(feature);
+
+			// if (stop.source === 'osm') {
+			// 	if (filterOnlyNoName && stop.name) {
+			// 		return;
+			// 	}
+
+			// 	if (filterOnlyNoOfficialName && stop.official_name) {
+			// 		return;
+			// 	}
+
+			// 	if (filterOnlyNoOSM && stop.osm_name) {
+			// 		return;
+			// 	}
+
+			// 	if (filterOnlyNoAttrs && stop.locality && stop.street) {
+			// 		return;
+			// 	}
+
+			// 	if (filterOnlyNoPics && stop.locality && stop.street) {
+			// 		return;
+			// 	}
+			// 	// marker.addTo(map);
+			// 	// osmMarkers.push(marker);
+			// } else {
+			// 	otherMarkers.push(marker);
 			// }
 		});
 
-		let osmMarkers = [];
-		let otherMarkers = [];
-		let picMarkers = [];
-
-		Object.values(stops).forEach((stop) => {
-			if (stop.lat != null && stop.lon != null) {
-				let marker = createStopMarker(stop);
-				if (stop.source === 'osm') {
-					if (filterOnlyNoName && stop.name) {
-						return;
-					}
-
-					if (filterOnlyNoOfficialName && stop.official_name) {
-						return;
-					}
-
-					if (filterOnlyNoOSM && stop.osm_name) {
-						return;
-					}
-
-					if (filterOnlyNoAttrs && stop.locality && stop.street) {
-						return;
-					}
-
-					if (filterOnlyNoPics && stop.locality && stop.street) {
-						return;
-					}
-					osmMarkers.push(marker);
-				} else {
-					otherMarkers.push(marker);
-				}
-			}
-		});
-
-		Object.values(pictures).forEach((pic) => {
-			if (pic.lat != null && pic.lon != null) {
-				let marker = createPicMarker(pic);
-				picMarkers.push(marker);
-			}
-		});
-
-		control.removeLayer(mapLayers.stopPics);
-		control.removeLayer(mapLayers.osmStops);
-		control.removeLayer(mapLayers.otherStops);
-
-		mapLayers.stopPics = L.featureGroup.subGroup(mapLayers.stops, picMarkers);
-		mapLayers.osmStops = L.featureGroup.subGroup(mapLayers.stops, osmMarkers);
-		mapLayers.otherStops = L.featureGroup.subGroup(mapLayers.stops, otherMarkers);
-		control.addOverlay(mapLayers.osmStops, 'OSM');
-		control.addOverlay(mapLayers.otherStops, 'GTFS');
-		control.addOverlay(mapLayers.stopPics, 'Pics');
-
-		map.addLayer(mapLayers.stops);
-		map.addLayer(mapLayers.osmStops);
-		// map.addLayer(mapLayers.other_stops);
-	}
-
-	function createStop(e) {
-		let stop = {
-			source: 'iml',
-			lat: e.latlng.lat,
-			lon: e.latlng.lng
+		let geojson = {
+			type: 'FeatureCollection',
+			features: features
 		};
-		fetch(`${apiServer}/api/stops/create`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(stop)
-		})
-			.then((r) => r.json())
-			.then((data) => {
-				stop.id = data.id;
-				let marker = createStopMarker(stop);
-				mapLayers.stops.addLayer(marker);
-			});
+		map.addSource('stops', {
+			type: 'geojson',
+			data: geojson,
+			// cluster: true,
+			clusterRadius: 40,
+			clusterMinPoints: 3
+		});
+
+		map.addLayer({
+			id: 'clusters',
+			type: 'circle',
+			source: 'stops',
+			filter: ['has', 'point_count'],
+			paint: {
+				'circle-color': '#aaaaaa',
+				'circle-radius': 15,
+			}
+		});
+
+		map.addLayer({
+			id: 'cluster-count',
+			type: 'symbol',
+			source: 'stops',
+			filter: ['has', 'point_count'],
+			layout: {
+				'text-field': ['get', 'point_count_abbreviated'],
+				'text-font': ['Metropolis Regular', 'Noto Sans Regular'],
+				'text-size': 12
+			}
+		});
+
+		map.addLayer({
+			id: 'unclustered-point',
+			type: 'circle',
+			source: 'stops',
+			filter: ['!', ['has', 'point_count']],
+			paint: {
+				'circle-color': [
+					'interpolate',
+					['linear'],
+					['get', 'score'],
+					0,
+					'rgb(255, 0, 0)',
+					10,
+					'rgb(0, 255, 0)'
+				],
+				'circle-radius': 8,
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
+			}
+		});
+
+		// map.addLayer({
+		// 	id: 'unclustered-point-score',
+		// 	type: 'symbol',
+		// 	source: 'stops',
+		// 	filter: ['!', ['has', 'point_count']],
+		// 	paint: {
+		// 		'text-color': 'black'
+		// 	},
+		// 	layout: {
+		// 		'text-field': ['get', 'score'],
+		// 		'text-font': ['Metropolis Regular', 'Noto Sans Regular'],
+		// 		'text-size': 12
+		// 	}
+		// });
+
+		map.on('mouseenter', 'unclustered-point', () => {
+			map.getCanvas().style.cursor = 'pointer';
+		});
+		map.on('mouseleave', 'unclustered-point', () => {
+			map.getCanvas().style.cursor = '';
+		});
+		map.on('click', 'unclustered-point', (e) => {
+			$selectedStop = stops[e.features[0].properties.stopId]
+		});
 	}
 
-	function openFilterPicker() {
-		document.getElementById('filter-picker').checked = true;
-	}
+	// function openFilterPicker() {
+	// 	document.getElementById('filter-picker').checked = true;
+	// }
 
-	function applyFilters() {
-		document.getElementById('filter-picker').checked = false;
-		loadStops();
-	}
+	// function applyFilters() {
+	// 	document.getElementById('filter-picker').checked = false;
+	// 	// TODO ask for a redraw
+	// 	// loadStops();
+	// }
 
 	onMount(() => {
-		mapLayers = {
-			stops: L.layerGroup(),
-			osmStops: L.layerGroup(),
-			otherStops: L.layerGroup(),
-			stopPics: L.layerGroup()
-		};
-
-		info = L.control();
-
-		control = L.control.layers(null, null, { collapsed: false });
-
-		map = L.map('map', {
+		map = new Map({
+			container: 'map',
+			style: 'https://tiles.intermodal.pt/styles/positron/style.json',
+			center: [-9.0, 38.605],
+			zoom: 11,
 			minZoom: 8,
-			maxZoom: 18,
-			zoomControl: false,
-			closePopupOnClick: false,
-			maxBounds: new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0)),
-			maxBoundsViscosity: 1.0
-		}).setView([38.605, -9.0], 11);
+			maxZoom: 20,
+			maxBounds: [
+				[-10.0, 38.3],
+				[-8.0, 39.35]
+			]
+		});
 
-		control.addTo(map);
+		map.addControl(new NavigationControl());
 
-		// L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
-		// 	attribution: '©OpenStreetMap e contribuidores. Telhas Carto Light',
-		// 	subdomains: 'abcd'
-		// }).addTo(map);
+		map.addControl(
+			new GeolocateControl({
+				positionOptions: {
+					enableHighAccuracy: true
+				},
+				showUserHeading: true,
+				trackUserLocation: true
+			})
+		);
 
-		let osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '© OpenStreetMap e contribuidores'
-		}).addTo(map);
+		map.on('load', function () {
+			loadStops();
+		});
+	});
 
-		loadStops();
+	onDestroy(() => {
+		map.remove();
 	});
 </script>
 
@@ -347,34 +299,30 @@
 	<meta name="description" content="Dados de paragens do Intermodal" />
 </svelte:head>
 
-<div class="flex flex-col">
-	<div id="map" class="h-96 cursor-crosshair" />
-	<div>
+<div id="grid-container" class="grid grid-cols-2 h-full">
+	<div id="map" class="h-full cursor-crosshair" />
+	<div id="list">
 		{#if $selectedStop}
 			<StopForm stop={selectedStop} on:save={saveStopMeta} />
-			<div>
-				<input
-					type="button"
-					class="input input-info"
-					value="Filtros"
-					on:click={openFilterPicker}
-					on:keypress={openFilterPicker}
-				/>
-				<a class="btn" href="/instructions#edit-stops">Instruções</a>
-			</div>
 		{:else}
-			<div>
-				<input
-					type="button"
-					class="input input-info"
-					value="Filtros"
-					on:click={openFilterPicker}
-					on:keypress={openFilterPicker}
-				/>
-				<a class="btn" href="/instructions#edit-stops">Instruções</a>
-			</div>
-			<p>Escolha uma paragem para a editar.</p>
+			<p>Escolha uma paragem.</p>
 		{/if}
+	</div>
+	<div id="actions" class="flex gap-2 justify-end">
+		<a class="btn" href="/instructions#edit-stops">Instruções</a>
+		<!-- <input
+			type="button"
+			class="input input-info"
+			value="Filtros"
+			on:click={openFilterPicker}
+			on:keypress={openFilterPicker}
+		/> -->
+		<input
+			type="button"
+			class="btn btn-primary float-right"
+			disabled={!$decodedToken}
+			value="Guardar"
+		/>
 	</div>
 </div>
 
@@ -382,13 +330,11 @@
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
 	<div class="modal">
 		<div class="modal-box w-11/12 max-w-5xl">
-			<a>
-				<a
-					target="_blank"
-					href="{imageRoot}/ori/{previewedPic.sha1}/{previewedPic.original_filename}"
-				>
-					<img src="{imageRoot}/medium/{previewedPic.sha1}/preview" class="rounded-box w-full" />
-				</a>
+			<a
+				target="_blank"
+				href="{imageRoot}/ori/{previewedPic.sha1}/{previewedPic.original_filename}"
+			>
+				<img src="{imageRoot}/medium/{previewedPic.sha1}/preview" class="rounded-box w-full" />
 			</a>
 			<div class="modal-action">
 				<label
@@ -427,12 +373,33 @@
 			</label>
 		</p>
 		<div class="modal-action">
-			<label class="btn" on:mouseup={applyFilters}>Aplicar</label>
+			<!-- <label class="btn" on:mouseup={applyFilters}>Aplicar</label> -->
 		</div>
 	</div>
 </div>
 
 <style>
-	@import 'leaflet/dist/leaflet.css';
-	@import 'leaflet.markercluster/dist/MarkerCluster.css';
+	#map {
+		border-top-left-radius: 12px;
+		border-bottom-left-radius: 12px;
+		cursor: crosshair !important;
+		grid-area: map;
+	}
+
+	#list {
+		grid-area: list;
+	}
+
+	#actions {
+		grid-area: actions;
+	}
+
+	#grid-container {
+		display: grid;
+		grid-template-areas:
+			'map list'
+			'actions actions';
+		grid-template-columns: 1fr auto;
+		grid-template-rows: minmax(300px, 85vh) auto;
+	}
 </style>

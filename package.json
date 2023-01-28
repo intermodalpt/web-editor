@@ -34,7 +34,8 @@
 		"daisyui": "^2.33.0",
 		"leaflet": "^1.8.0",
 		"leaflet-contextmenu": "1.4.0",
+		"leaflet.featuregroup.subgroup": "1.0.2",
 		"leaflet.markercluster": "1.5.3",
-		"leaflet.featuregroup.subgroup": "1.0.2"
+		"maplibre-gl": "^2.4.0"
 	}
 }
