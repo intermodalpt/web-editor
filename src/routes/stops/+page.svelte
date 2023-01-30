@@ -1,12 +1,12 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import { writable } from 'svelte/store';
+	import { writable, derived } from 'svelte/store';
 
 	import { Map, NavigationControl, GeolocateControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { apiServer, imageRoot } from '$lib/settings.js';
 	import { token, decodedToken } from '$lib/stores.js';
-	import StopForm from '$lib/editor/StopForm.svelte';
+	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -23,14 +23,107 @@
 	let filterOnlyNoAttrs = false;
 	let filterOnlyNoPics = false;
 
+	let id = null;
+	let name = null;
+	let short_name = null;
+	let official_name = null;
+	let official_id = null;
+	let locality = null;
+	let street = null;
+	let door = null;
+	let notes = null;
+	let tags = [];
+
+	const has_crossing = writable(null);
+	const has_accessibility = writable(null);
+	const has_abusive_parking = writable(null);
+	const has_outdated_info = writable(null);
+	const is_damaged = writable(null);
+	const is_vandalized = writable(null);
+	const has_flag = writable(null);
+	const has_schedules = writable(null);
+	const has_sidewalk = writable(null);
+	const has_shelter = writable(null);
+	const has_bench = writable(null);
+	const has_trash_can = writable(null);
+	const is_illumination_working = writable(null);
+	const illumination_strength = writable(null);
+	const illumination_position = writable(null);
+	const has_illuminated_path = writable(null);
+	const has_visibility_from_within = writable(null);
+	const has_visibility_from_area = writable(null);
+	const is_visible_from_outside = writable(null);
+
+	const subforms = {
+		geral: 'geral',
+		service: 'service',
+		quality: 'quality',
+		accesibility: 'accessibility',
+		extra: 'extra'
+	};
+	let currentSubform = null;
+
+	const stopPictures = derived([selectedStop], ([$selectedStop], set) => {
+		if ($selectedStop) {
+			if ($decodedToken) {
+				fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, {
+					headers: { authorization: `Bearer ${$token}` }
+				})
+					.then((r) => r.json())
+					.then((pictureList) => set(pictureList));
+			} else {
+				fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures`)
+					.then((r) => r.json())
+					.then((pictureList) => set(pictureList));
+			}
+		} else {
+			return [];
+		}
+	});
+
 	export function selectStop(stopId) {
 		$selectedStop = stops[stopId];
 	}
 
-	function saveStopMeta(e) {
-		let newMeta = Object.assign($selectedStop, e.detail);
+	function saveStopMeta() {
+		let newMeta = {
+			id: id,
+			name: name,
+			short_name: short_name,
+			official_name: official_name,
+			official_id: official_id,
+			locality: locality,
+			street: street,
+			door: door,
+			tags: tags,
+			notes: !notes || notes.trim() === '' ? null : notes.trim(),
+
+			has_crossing: $has_crossing,
+			has_accessibility: $has_accessibility,
+			has_abusive_parking: $has_abusive_parking,
+			has_outdated_info: $has_outdated_info,
+			is_damaged: $is_damaged,
+			is_vandalized: $is_vandalized,
+			has_flag: $has_flag,
+			has_schedules: $has_schedules,
+			has_sidewalk: $has_sidewalk,
+			has_shelter: $has_shelter,
+			has_bench: $has_bench,
+			has_trash_can: $has_trash_can,
+			is_illumination_working: $is_illumination_working,
+			illumination_strength: $illumination_strength,
+			illumination_position: $illumination_position,
+			has_illuminated_path: $has_illuminated_path,
+			has_visibility_from_within: $has_shelter ? $has_visibility_from_within : null,
+			has_visibility_from_area: $has_visibility_from_area,
+			is_visible_from_outside: $is_visible_from_outside
+		};
+
+		newMeta = Object.assign($selectedStop, newMeta);
 
 		updateStop(newMeta);
+
+		map.getSource('stops').setData(getStopsGeoJSON());
 
 		$selectedStop = null;
 	}
@@ -121,58 +214,29 @@
 		return score;
 	}
 
-	function loadStops() {
-		let features = [];
-
-		Object.values(stops).forEach((stop) => {
-			// let marker = createStopMarker(stop);
-			let feature = {
-				type: 'Feature',
-				geometry: {
-					type: 'Point',
-					coordinates: [stop.lon, stop.lat]
-				},
-				properties: {
-					stopId: stop.id,
-					score: Math.round(stopScore(stop))
-				}
-			};
-			features.push(feature);
-
-			// if (stop.source === 'osm') {
-			// 	if (filterOnlyNoName && stop.name) {
-			// 		return;
-			// 	}
-
-			// 	if (filterOnlyNoOfficialName && stop.official_name) {
-			// 		return;
-			// 	}
-
-			// 	if (filterOnlyNoOSM && stop.osm_name) {
-			// 		return;
-			// 	}
-
-			// 	if (filterOnlyNoAttrs && stop.locality && stop.street) {
-			// 		return;
-			// 	}
-
-			// 	if (filterOnlyNoPics && stop.locality && stop.street) {
-			// 		return;
-			// 	}
-			// 	// marker.addTo(map);
-			// 	// osmMarkers.push(marker);
-			// } else {
-			// 	otherMarkers.push(marker);
-			// }
-		});
-
-		let geojson = {
+	function getStopsGeoJSON() {
+		return {
 			type: 'FeatureCollection',
-			features: features
+			features: Object.values(stops).map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {
+						stopId: stop.id,
+						score: Math.round(stopScore(stop))
+					}
+				};
+			})
 		};
+	}
+
+	function loadStops() {
 		map.addSource('stops', {
 			type: 'geojson',
-			data: geojson,
+			data: getStopsGeoJSON(),
 			// cluster: true,
 			clusterRadius: 40,
 			clusterMinPoints: 3
@@ -185,7 +249,7 @@
 			filter: ['has', 'point_count'],
 			paint: {
 				'circle-color': '#aaaaaa',
-				'circle-radius': 15,
+				'circle-radius': 15
 			}
 		});
 
@@ -211,8 +275,10 @@
 					'interpolate',
 					['linear'],
 					['get', 'score'],
-					0,
+					2,
 					'rgb(255, 0, 0)',
+					6,
+					'rgb(255, 255, 0)',
 					10,
 					'rgb(0, 255, 0)'
 				],
@@ -244,8 +310,81 @@
 			map.getCanvas().style.cursor = '';
 		});
 		map.on('click', 'unclustered-point', (e) => {
-			$selectedStop = stops[e.features[0].properties.stopId]
+			$selectedStop = stops[e.features[0].properties.stopId];
 		});
+	}
+
+	selectedStop.subscribe((stop) => {
+		if (stop == null) {
+			return;
+		}
+
+		id = stop.id;
+		name = stop.name;
+		short_name = stop.short_name;
+		official_name = stop.official_name;
+		official_id = stop.official_id;
+		locality = stop.locality;
+		street = stop.street;
+		door = stop.door;
+		notes = stop.notes;
+		tags = stop.tags;
+
+		$has_crossing = stop.has_crossing;
+		$has_accessibility = stop.has_accessibility;
+		$has_abusive_parking = stop.has_abusive_parking;
+		$has_outdated_info = stop.has_outdated_info;
+		$is_damaged = stop.is_damaged;
+		$is_vandalized = stop.is_vandalized;
+		$has_flag = stop.has_flag;
+		$has_schedules = stop.has_schedules;
+		$has_sidewalk = stop.has_sidewalk;
+		$has_shelter = stop.has_shelter;
+		$has_bench = stop.has_bench;
+		$has_trash_can = stop.has_trash_can;
+		$is_illumination_working = stop.is_illumination_working;
+		$illumination_strength = stop.illumination_strength;
+		$illumination_position = stop.illumination_position;
+		$has_illuminated_path = stop.has_illuminated_path;
+		$has_visibility_from_within = stop.has_visibility_from_within;
+		$has_visibility_from_area = stop.has_visibility_from_area;
+		$is_visible_from_outside = stop.is_visible_from_outside;
+	});
+
+	has_visibility_from_within.subscribe((visibility_from_within) => {
+		if (visibility_from_within) {
+			$has_visibility_from_area = true;
+		}
+	});
+
+	has_visibility_from_area.subscribe((visibility_from_area) => {
+		if (visibility_from_area == null) {
+			$has_visibility_from_within = null;
+		} else if (!visibility_from_area) {
+			$has_visibility_from_within = false;
+		}
+	});
+
+	has_shelter.subscribe((shelter) => {
+		if (shelter == null && !shelter) {
+			$has_visibility_from_within = null;
+		}
+	});
+
+	function addTag() {
+		let entry = document.getElementById('tag-text');
+		let entryValue = entry.value.trim();
+
+		if (entryValue !== '') {
+			tags.push(entryValue);
+			tags = tags;
+		}
+		entry.value = '';
+	}
+
+	function removeTag(tag) {
+		tags.splice(tags.indexOf(tag), 1);
+		tags = tags;
 	}
 
 	// function openFilterPicker() {
@@ -301,9 +440,386 @@
 
 <div id="grid-container" class="grid grid-cols-2 h-full">
 	<div id="map" class="h-full cursor-crosshair" />
-	<div id="list">
+	<div id="list" class="h-full overflow-y-auto w-80">
 		{#if $selectedStop}
-			<StopForm stop={selectedStop} on:save={saveStopMeta} />
+			<label class="input-group p-1">
+				<span class="label-text">{$selectedStop.id}</span>
+				<input
+					type="text"
+					value={$selectedStop.osm_name}
+					class="input input-bordered w-full input-sm"
+					disabled
+				/>
+			</label>
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Fotos</span>
+					<input
+						class="btn btn-sm btn-primary"
+						type="button"
+						value="+"
+						on:click={() => alert('Por implementar')}
+						disabled={true || !$decodedToken}
+					/>
+				</label>
+				<div class="flex gap-2 overflow-x-scroll">
+					{#if $stopPictures !== undefined && $stopPictures.length > 0}
+						{#each $stopPictures as picture}
+							<a target="_blank" href="{imageRoot}/ori/{picture.sha1}/{picture.original_filename}">
+								<img
+									src="{imageRoot}/medium/{picture.sha1}/preview"
+									class="rounded-box transition-all hover:scale-150 h-16"
+								/>
+							</a>
+						{/each}
+					{/if}
+				</div>
+			</div>
+			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
+				<div
+					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					on:click={() => {
+						currentSubform = currentSubform === subforms.geral ? null : subforms.geral;
+					}}
+				>
+					<span>Dados localização</span>
+					<span class="bg-slate-200 rounded-full">10/10</span>
+				</div>
+				<div class={currentSubform === subforms.geral ? 'px-2 pb-2' : 'max-h-0'}>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Oficial</span>
+							<input
+								type="text"
+								bind:value={official_name}
+								placeholder="Vl. Qts. R Pessoa 29"
+								disabled
+								class="input input-bordered w-full input-xs"
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Opr. Id</span>
+							<input
+								type="text"
+								bind:value={official_id}
+								placeholder="150000"
+								disabled={!$decodedToken?.permissions?.is_admin}
+								class="input input-bordered w-full input-xs"
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Nome</span>
+							<input
+								type="text"
+								bind:value={name}
+								placeholder="Vale das Quintas, Rua Pessoa, 29"
+								class="input input-bordered w-full input-sm"
+								disabled={!$decodedToken?.permissions?.is_admin}
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Abrev.</span>
+							<input
+								type="text"
+								bind:value={short_name}
+								placeholder="Vl. Quintas, Pessoa"
+								class="input input-bordered w-full input-sm"
+								disabled={!$decodedToken?.permissions?.is_admin}
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Loc.</span>
+							<input
+								type="text"
+								bind:value={locality}
+								placeholder="Vale das Quintas"
+								class="input input-bordered w-full input-sm"
+								disabled={!$decodedToken}
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Via</span>
+							<input
+								type="text"
+								bind:value={street}
+								placeholder="Rua Pessoa"
+								class="input input-bordered w-full input-sm"
+								disabled={!$decodedToken}
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Porta</span>
+							<input
+								type="text"
+								bind:value={door}
+								placeholder="29"
+								class="input input-bordered w-full input-sm"
+								disabled={!$decodedToken}
+							/>
+						</label>
+					</div>
+				</div>
+			</div>
+			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
+				<div
+					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					on:click={() => {
+						currentSubform = currentSubform === subforms.service ? null : subforms.service;
+					}}
+				>
+					<span>Serviço</span>
+					<span class="bg-slate-200 rounded-full"
+						>{($has_flag === null ? 0 : 1) + ($has_schedules === null ? 0 : 1)}/2</span
+					>
+				</div>
+				<div class={currentSubform === subforms.service ? 'px-2 pb-2' : 'max-h-0'}>
+					<StopCheckbox
+						text="Postaletes"
+						description="O poste ou abrigo da paragem tem um postalete"
+						state={has_flag}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Horários"
+						description="A paragem tem horários atualizados"
+						state={has_schedules}
+						disabled={!$decodedToken}
+					/>
+				</div>
+			</div>
+			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
+				<div
+					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					on:click={() => {
+						currentSubform = currentSubform === subforms.quality ? null : subforms.quality;
+					}}
+				>
+					<span>Qualidade</span>
+					<span class="bg-slate-200 rounded-full"
+						>{($has_sidewalk === null ? 0 : 1) +
+							($has_shelter === null ? 0 : 1) +
+							($has_bench === null ? 0 : 1) +
+							($has_trash_can === null ? 0 : 1)}/4</span
+					>
+				</div>
+				<div class={currentSubform === subforms.quality ? 'px-2 pb-2' : 'max-h-0'}>
+					<StopCheckbox
+						text="Passeio"
+						description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
+						state={has_sidewalk}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Abrigo"
+						description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
+						state={has_shelter}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Banco"
+						description="A paragem tem bancos onde os passageiros se possam sentar"
+						state={has_bench}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Caixote do lixo"
+						description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
+						state={has_trash_can}
+						disabled={!$decodedToken}
+					/>
+				</div>
+			</div>
+			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
+				<div
+					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					on:click={() => {
+						currentSubform =
+							currentSubform === subforms.accesibility ? null : subforms.accesibility;
+					}}
+				>
+					<span>Acessibilidade</span>
+					<span class="bg-slate-200 rounded-full"
+						>{($has_crossing === null ? 0 : 1) +
+							($has_accessibility === null ? 0 : 1) +
+							($illumination_position === null ? 0 : 1) +
+							($illumination_strength === null ? 0 : 1) +
+							($is_illumination_working === null ? 0 : 1) +
+							($has_illuminated_path === null ? 0 : 1) +
+							($has_visibility_from_area === null ? 0 : 1) +
+							($has_visibility_from_within === null ? 0 : 1) +
+							($is_visible_from_outside === null ? 0 : 1)}/{$has_shelter === true ? 9 : 8}</span
+					>
+				</div>
+				<div class={currentSubform === subforms.accesibility ? 'px-2 pb-2' : 'max-h-0'}>
+					<div>
+						<label class="label"><span class="label-text">Acesso</span></label>
+						<StopCheckbox
+							text="Atravessamento de via"
+							description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
+							state={has_crossing}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Acesso mobilidade reduzida"
+							description="A paragem dispõe de acesso para pessoas com mobilidade reduzida"
+							state={has_accessibility}
+							disabled={!$decodedToken}
+						/>
+						<label class="label"><span class="label-text">Iluminação</span></label>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={$illumination_position}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Posição</option>
+							<option value={0}>Indireta</option>
+							<option value={10}>Directa</option>
+							<option value={20}>Própria</option>
+						</select>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={$illumination_strength}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Intensidade</option>
+							<option value={0}>Sem iluminação</option>
+							<option value={1}>Fraca</option>
+							<option value={3}>Moderada</option>
+							<option value={5}>Forte</option>
+						</select>
+						<StopCheckbox
+							text="Funcional"
+							description="A iluminação não se encontra fundida"
+							state={is_illumination_working}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="No acesso"
+							description="O acesso para a paragem encontra-se bem iluminado todas as 24 horas"
+							state={has_illuminated_path}
+							disabled={!$decodedToken}
+						/>
+						<label class="label"><span class="label-text">Visibilidade</span></label>
+						<StopCheckbox
+							text="Da paragem para autocarro"
+							description="Estando na paragem (+-5 metros) é possível ver autocarros atempadamente"
+							state={has_visibility_from_area}
+							disabled={!$decodedToken}
+						/>
+						{#if $has_shelter}
+							<StopCheckbox
+								text="Do abrigo para autocarro"
+								description="Estando sentado no abrigo é possível ver autocarros atempadamente"
+								state={has_visibility_from_within}
+								disabled={!$decodedToken}
+							/>
+						{/if}
+						<StopCheckbox
+							text="Do autocarro para paragem"
+							description="Enquanto motorista, é possível ver devidamente a paragem sem abrandar"
+							state={is_visible_from_outside}
+							disabled={!$decodedToken}
+						/>
+					</div>
+				</div>
+			</div>
+			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
+				<div
+					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					on:click={() => {
+						currentSubform = currentSubform === subforms.extra ? null : subforms.extra;
+					}}
+				>
+					<span>Extra</span>
+					<span class="bg-slate-200 rounded-full"
+						>{($has_sidewalk === null ? 0 : 1) +
+							($has_shelter === null ? 0 : 1) +
+							($has_bench === null ? 0 : 1) +
+							($has_trash_can === null ? 0 : 1)}/4</span
+					>
+				</div>
+				<div class={currentSubform === subforms.extra ? 'px-2 pb-2' : 'max-h-0'}>
+					<label class="label"><span class="label-text">Defeitos</span></label>
+					<StopCheckbox
+						text="Estacionamento abusivo"
+						description="Alvo recorrente de estacionamento abusivo impeditivo ao bom funcionamento"
+						state={has_abusive_parking}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Informação obsoleta"
+						description="A informação prestada na paragem (horários/postaletes) encontra-se obsoleta"
+						state={has_outdated_info}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Danificada"
+						description="A infraestrutura encontra-se danificada (ex. banco partido)"
+						state={is_damaged}
+						disabled={!$decodedToken}
+					/>
+					<StopCheckbox
+						text="Vandalizada"
+						description="Existe uma quantidade substâncial de vandalismo (eg. graffitti)"
+						state={is_vandalized}
+						disabled={!$decodedToken}
+					/>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">Tags</span>
+						</label>
+						<div class="flex flex-col gap-2">
+							<div>
+								<input
+									id="tag-text"
+									type="text"
+									class="input input-bordered input-sm"
+									placeholder="Creche ABC123"
+									disabled={!$decodedToken}
+								/>
+								<input
+									class="btn btn-sm btn-primary"
+									type="button"
+									value="+"
+									on:click={addTag}
+									disabled={!$decodedToken}
+								/>
+							</div>
+							{#each tags as tag}
+								<div class="badge badge-outline badge-lg">
+									{tag}
+									<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>
+										✕
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">Notas</span>
+						</label>
+						<textarea
+							class="textarea textarea-bordered h-12 w-full"
+							placeholder="Falta obter-se uma foto que mostre que a paragem se encontra frente a xyz"
+							bind:value={notes}
+							disabled={!$decodedToken}
+						/>
+					</div>
+				</div>
+			</div>
 		{:else}
 			<p>Escolha uma paragem.</p>
 		{/if}
@@ -321,6 +837,8 @@
 			type="button"
 			class="btn btn-primary float-right"
 			disabled={!$decodedToken}
+			on:click={saveStopMeta}
+			on:keypress={saveStopMeta}
 			value="Guardar"
 		/>
 	</div>
