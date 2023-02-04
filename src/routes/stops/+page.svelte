@@ -469,7 +469,7 @@
 	}
 
 	function addIssue() {
-		if (selectedTmpIssue !== undefined) {
+		if (selectedTmpIssue !== undefined && selectedTmpIssue !== null) {
 			// Push the issue to the list if it's not already there
 			if (tmpIssues.indexOf(selectedTmpIssue.value) === -1) {
 				tmpIssues.push(selectedTmpIssue.value);
@@ -804,6 +804,7 @@
 										</div>
 									{/each}
 								</div>
+								<hr>
 							{/each}
 
 							<div class="flex justify-end">
@@ -945,8 +946,8 @@
 							($hasFlatAccess === null ? 0 : 1) +
 							($hasWideAccess === null ? 0 : 1) +
 							($hasTactileAccess === null ? 0 : 1) +
-							($illuminationPosition === null ? 0 : 1) +
-							($illuminationStrength === null ? 0 : 1) +
+							(illuminationPosition === null ? 0 : 1) +
+							(illuminationStrength === null ? 0 : 1) +
 							($hasIlluminatedPath === null ? 0 : 1) +
 							($hasVisibilityFromArea === null ? 0 : 1) +
 							($hasVisibilityFromWithin === null ? 0 : 1) +
@@ -1227,7 +1228,7 @@
 							<span class="label-text">Notas</span>
 						</label>
 						<textarea
-							class="textarea textarea-bordered h-20 w-full"
+							class="textarea textarea-bordered h-32 w-full"
 							placeholder="Falta obter-se uma foto que mostre que a paragem se encontra frente a xyz"
 							bind:value={notes}
 							disabled={!$decodedToken}
