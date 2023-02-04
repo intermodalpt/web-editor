@@ -1,12 +1,12 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
-	import { writable, derived } from 'svelte/store';
-
-	import { Map, NavigationControl, GeolocateControl } from 'maplibre-gl';
-	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { apiServer, imageRoot } from '$lib/settings.js';
-	import { token, decodedToken } from '$lib/stores.js';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
+	import { apiServer, imageRoot } from '$lib/settings.js';
+	import { decodedToken, token } from '$lib/stores.js';
+	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { onDestroy, onMount } from 'svelte';
+	import Select from 'svelte-select';
+	import { derived, writable } from 'svelte/store';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -25,34 +25,50 @@
 
 	let id = null;
 	let name = null;
-	let short_name = null;
-	let official_name = null;
-	let official_id = null;
+	let shortName = null;
+	let officialName = null;
+	let officialId = null;
 	let locality = null;
 	let street = null;
 	let door = null;
+
+	let hasFlags = null;
+	let flagsData = null;
+	let hasSchedules = null;
+	let schedulesData = null;
+	let serviceCheckDate = null;
+	let infrastructureCheckDate = null;
+
+	const hasCrossing = writable(null);
+	const hasFlatAccess = writable(null);
+	const hasWideAccess = writable(null);
+	const hasTactileAccess = writable(null);
+	const hasSidewalk = writable(null);
+	const hasSidewalkedPath = writable(null);
+	const hasShelter = writable(null);
+	const hasCover = writable(null);
+	const hasBench = writable(null);
+	const hasTrashCan = writable(null);
+	let advertisements = null;
+	const hasWaitingTimes = writable(null);
+	const hasTicketSeller = writable(null);
+	const hasCostumerSupport = writable(null);
+	let illuminationStrength = null;
+	let illuminationPosition = null;
+
+	const hasIlluminatedPath = writable(null);
+	const hasVisibilityFromWithin = writable(null);
+	const hasVisibilityFromArea = writable(null);
+	const isVisibleFromOutside = writable(null);
+	let parkingVisibilityImpairment = null;
+	let parkingLocalAccessImpairment = null;
+	let parkingAreaAccessImpairment = null;
+
 	let notes = null;
 	let tags = [];
+	let tmpIssues = [];
 
-	const has_crossing = writable(null);
-	const has_accessibility = writable(null);
-	const has_abusive_parking = writable(null);
-	const has_outdated_info = writable(null);
-	const is_damaged = writable(null);
-	const is_vandalized = writable(null);
-	const has_flag = writable(null);
-	const has_schedules = writable(null);
-	const has_sidewalk = writable(null);
-	const has_shelter = writable(null);
-	const has_bench = writable(null);
-	const has_trash_can = writable(null);
-	const is_illumination_working = writable(null);
-	const illumination_strength = writable(null);
-	const illumination_position = writable(null);
-	const has_illuminated_path = writable(null);
-	const has_visibility_from_within = writable(null);
-	const has_visibility_from_area = writable(null);
-	const is_visible_from_outside = writable(null);
+	let verificationLevel = 0;
 
 	const subforms = {
 		geral: 'geral',
@@ -61,7 +77,36 @@
 		accesibility: 'accessibility',
 		extra: 'extra'
 	};
+
 	let currentSubform = null;
+
+	let selectedTmpIssue;
+
+	const tmpIssueLabels = {
+		lights_broken: 'Luz fundida',
+		path_lights_broken: 'Acesso fundido',
+		damage_low: 'Dano leve',
+		damage_medium: 'Dano moderado',
+		damage_high: 'Dano grave',
+		dirty: 'Suja',
+		thrash: 'Recolha lixo insuf.',
+		weeds: 'Vegetação excessiva',
+		obsolete: 'Info. obsoleta',
+		construction_works: 'Obras'
+	};
+
+	const tmpIssuesOptions = [
+		{ value: 'lights_broken', label: tmpIssueLabels['lights_broken'] },
+		{ value: 'path_lights_broken', label: tmpIssueLabels['path_lights_broken'] },
+		{ value: 'damage_low', label: tmpIssueLabels['damage_low'] },
+		{ value: 'damage_medium', label: tmpIssueLabels['damage_medium'] },
+		{ value: 'damage_high', label: tmpIssueLabels['damage_high'] },
+		{ value: 'dirty', label: tmpIssueLabels['dirty'] },
+		{ value: 'thrash', label: tmpIssueLabels['thrash'] },
+		{ value: 'weeds', label: tmpIssueLabels['weeds'] },
+		{ value: 'obsolete', label: tmpIssueLabels['obsolete'] },
+		{ value: 'construction_works', label: tmpIssueLabels['construction_works'] }
+	];
 
 	const stopPictures = derived([selectedStop], ([$selectedStop], set) => {
 		if ($selectedStop) {
@@ -81,6 +126,84 @@
 		}
 	});
 
+	selectedStop.subscribe((stop) => {
+		if (stop == null) {
+			return;
+		}
+
+		id = stop.id;
+		name = stop.name || null;
+		shortName = stop.short_name || null;
+		officialName = stop.official_name || null;
+		officialId = stop.official_id || null;
+		locality = stop.locality || null;
+		street = stop.street || null;
+		door = stop.door || null;
+		notes = stop.notes || null;
+		tags = stop.tags || null;
+		tmpIssues = stop.tmp_issues || [];
+		if (stop.flags === undefined || stop.flags === null) {
+			hasFlags = null;
+		} else if (stop.flags.length === 0) {
+			hasFlags = false;
+		} else {
+			hasFlags = true;
+		}
+		flagsData = stop.flags || [];
+
+		if (stop.schedules === undefined || stop.schedules === null) {
+			hasSchedules = null;
+		} else if (stop.schedules.length === 0) {
+			hasSchedules = false;
+		} else {
+			hasSchedules = true;
+		}
+		schedulesData = stop.schedules || [];
+
+		$hasCrossing = stop.has_crossing || null;
+		$hasSidewalk = stop.has_sidewalk || null;
+		$hasSidewalkedPath = stop.has_sidewalked_path || null;
+		$hasCover = stop.has_cover || null;
+		$hasShelter = stop.has_shelter || null;
+		$hasCover = stop.has_cover || null;
+		$hasBench = stop.has_bench || null;
+		$hasTrashCan = stop.has_trash_can || null;
+		$hasWaitingTimes = stop.has_waiting_times || null;
+		$hasTicketSeller = stop.has_ticket_seller || null;
+		$hasCostumerSupport = stop.has_costumer_support || null;
+		illuminationStrength = stop.illumination_strength || null;
+		illuminationPosition = stop.illumination_position || null;
+		$hasIlluminatedPath = stop.has_illuminated_path || null;
+		$hasVisibilityFromWithin = stop.has_visibility_from_within || null;
+		$hasVisibilityFromArea = stop.has_visibility_from_area || null;
+		$isVisibleFromOutside = stop.is_visible_from_outside || null;
+		parkingVisibilityImpairment = stop.parking_visibility_impairment || null;
+		parkingLocalAccessImpairment = stop.parking_local_access_impairment || null;
+		parkingAreaAccessImpairment = stop.parking_area_access_impairment || null;
+
+		verificationLevel = stop.verification_level || 0;
+	});
+
+	hasVisibilityFromWithin.subscribe((visibility_from_within) => {
+		if (visibility_from_within) {
+			$hasVisibilityFromArea = true;
+		}
+	});
+
+	hasVisibilityFromArea.subscribe((visibility_from_area) => {
+		if (visibility_from_area == null) {
+			$hasVisibilityFromWithin = null;
+		} else if (!visibility_from_area) {
+			$hasVisibilityFromWithin = false;
+		}
+	});
+
+	hasShelter.subscribe((shelter) => {
+		if (shelter == null && !shelter) {
+			$hasVisibilityFromWithin = null;
+		}
+	});
+
 	export function selectStop(stopId) {
 		$selectedStop = stops[stopId];
 	}
@@ -89,34 +212,39 @@
 		let newMeta = {
 			id: id,
 			name: name,
-			short_name: short_name,
-			official_name: official_name,
-			official_id: official_id,
+			short_name: shortName,
+			official_name: officialName,
+			official_id: officialId,
 			locality: locality,
 			street: street,
 			door: door,
 			tags: tags,
 			notes: !notes || notes.trim() === '' ? null : notes.trim(),
 
-			has_crossing: $has_crossing,
-			has_accessibility: $has_accessibility,
-			has_abusive_parking: $has_abusive_parking,
-			has_outdated_info: $has_outdated_info,
-			is_damaged: $is_damaged,
-			is_vandalized: $is_vandalized,
-			has_flag: $has_flag,
-			has_schedules: $has_schedules,
-			has_sidewalk: $has_sidewalk,
-			has_shelter: $has_shelter,
-			has_bench: $has_bench,
-			has_trash_can: $has_trash_can,
-			is_illumination_working: $is_illumination_working,
-			illumination_strength: $illumination_strength,
-			illumination_position: $illumination_position,
-			has_illuminated_path: $has_illuminated_path,
-			has_visibility_from_within: $has_shelter ? $has_visibility_from_within : null,
-			has_visibility_from_area: $has_visibility_from_area,
-			is_visible_from_outside: $is_visible_from_outside
+			flags: hasFlags ? flagsData : null,
+			schedules: hasSchedules ? schedulesData : null,
+			tmp_issues: tmpIssues,
+
+			has_crossing: $hasCrossing,
+			has_sidewalk: $hasSidewalk,
+			has_shelter: $hasShelter,
+			has_cover: $hasCover,
+			has_bench: $hasBench,
+			has_trash_can: $hasTrashCan,
+			illumination_strength: illuminationStrength,
+			illumination_position: illuminationPosition,
+			has_illuminated_path: $hasIlluminatedPath,
+			has_visibility_from_within: $hasShelter ? $hasVisibilityFromWithin : null,
+			has_visibility_from_area: $hasVisibilityFromArea,
+			is_visible_from_outside: $isVisibleFromOutside,
+
+			has_flat_access: hasFlatAccess,
+			has_wide_access: hasWideAccess,
+			has_tactile_access: hasTactileAccess,
+
+			parking_visibility_impairment: parkingVisibilityImpairment,
+			parking_local_access_impairment: parkingLocalAccessImpairment,
+			parking_area_access_impairment: parkingAreaAccessImpairment
 		};
 
 		newMeta = Object.assign($selectedStop, newMeta);
@@ -173,7 +301,7 @@
 		let score = 10.0;
 
 		// 2 points here
-		score -= stop.has_flag === true || stop.has_flag === false ? 0.0 : 0.5;
+		// score -= stop.has_flag === true || stop.has_flag === false ? 0.0 : 0.5;
 		score -= stop.has_schedules === true || stop.has_schedules === false ? 0.0 : 0.2;
 		score -= stop.has_sidewalk === true || stop.has_sidewalk === false ? 0.0 : 0.2;
 		score -= stop.has_shelter === true || stop.has_shelter === false ? 0.0 : 0.5;
@@ -314,63 +442,6 @@
 		});
 	}
 
-	selectedStop.subscribe((stop) => {
-		if (stop == null) {
-			return;
-		}
-
-		id = stop.id;
-		name = stop.name;
-		short_name = stop.short_name;
-		official_name = stop.official_name;
-		official_id = stop.official_id;
-		locality = stop.locality;
-		street = stop.street;
-		door = stop.door;
-		notes = stop.notes;
-		tags = stop.tags;
-
-		$has_crossing = stop.has_crossing;
-		$has_accessibility = stop.has_accessibility;
-		$has_abusive_parking = stop.has_abusive_parking;
-		$has_outdated_info = stop.has_outdated_info;
-		$is_damaged = stop.is_damaged;
-		$is_vandalized = stop.is_vandalized;
-		$has_flag = stop.has_flag;
-		$has_schedules = stop.has_schedules;
-		$has_sidewalk = stop.has_sidewalk;
-		$has_shelter = stop.has_shelter;
-		$has_bench = stop.has_bench;
-		$has_trash_can = stop.has_trash_can;
-		$is_illumination_working = stop.is_illumination_working;
-		$illumination_strength = stop.illumination_strength;
-		$illumination_position = stop.illumination_position;
-		$has_illuminated_path = stop.has_illuminated_path;
-		$has_visibility_from_within = stop.has_visibility_from_within;
-		$has_visibility_from_area = stop.has_visibility_from_area;
-		$is_visible_from_outside = stop.is_visible_from_outside;
-	});
-
-	has_visibility_from_within.subscribe((visibility_from_within) => {
-		if (visibility_from_within) {
-			$has_visibility_from_area = true;
-		}
-	});
-
-	has_visibility_from_area.subscribe((visibility_from_area) => {
-		if (visibility_from_area == null) {
-			$has_visibility_from_within = null;
-		} else if (!visibility_from_area) {
-			$has_visibility_from_within = false;
-		}
-	});
-
-	has_shelter.subscribe((shelter) => {
-		if (shelter == null && !shelter) {
-			$has_visibility_from_within = null;
-		}
-	});
-
 	function addTag() {
 		let entry = document.getElementById('tag-text');
 		let entryValue = entry.value.trim();
@@ -385,6 +456,72 @@
 	function removeTag(tag) {
 		tags.splice(tags.indexOf(tag), 1);
 		tags = tags;
+	}
+
+	function addIssue() {
+		if (selectedTmpIssue !== undefined) {
+			// Push the issue to the list if it's not already there
+			if (tmpIssues.indexOf(selectedTmpIssue.value) === -1) {
+				tmpIssues.push(selectedTmpIssue.value);
+				tmpIssues = tmpIssues;
+			}
+		}
+		selectedTmpIssue = undefined;
+	}
+
+	function addFlag() {
+		flagsData.push({
+			id: null,
+			route_codes: []
+		});
+		flagsData = flagsData;
+	}
+
+	function removeFlag(i) {
+		flagsData.splice(i, 1);
+		flagsData = flagsData;
+	}
+
+	function addFlagRoute(i) {
+		const code = prompt('Código da linha:');
+
+		if (!code || code.trim() === '') {
+			return;
+		}
+
+		const trimmedCode = code.trim();
+
+		// Check if the route code is already in the list
+		if (flagsData[i].route_codes.indexOf(trimmedCode) !== -1) {
+			return;
+		}
+
+		flagsData[i].route_codes.push(code);
+		flagsData[i].route_codes = flagsData[i].route_codes;
+	}
+
+	function removeFlagRoute(i, j) {
+		flagsData[i].route_codes.splice(j, 1);
+		flagsData[i].route_codes = flagsData[i].route_codes;
+	}
+
+	function addScheduleEntry() {
+		schedulesData.push({
+			code: null,
+			discriminator: null,
+			type: null
+		});
+		schedulesData = schedulesData;
+	}
+
+	function removeScheduleEntry(index) {
+		schedulesData.splice(index, 1);
+		schedulesData = schedulesData;
+	}
+
+	function removeIssue(tag) {
+		tmpIssues.splice(tmpIssues.indexOf(tag), 1);
+		tmpIssues = tmpIssues;
 	}
 
 	// function openFilterPicker() {
@@ -440,7 +577,7 @@
 
 <div id="grid-container" class="grid grid-cols-2 h-full">
 	<div id="map" class="h-full cursor-crosshair" />
-	<div id="list" class="h-full overflow-y-auto w-80">
+	<div id="list" class="h-full overflow-y-auto w-72 lg:w-80">
 		{#if $selectedStop}
 			<label class="input-group p-1">
 				<span class="label-text">{$selectedStop.id}</span>
@@ -477,13 +614,12 @@
 			</div>
 			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 				<div
-					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					class="text-lg font-medium p-2 min-h-0"
 					on:click={() => {
 						currentSubform = currentSubform === subforms.geral ? null : subforms.geral;
 					}}
 				>
-					<span>Dados localização</span>
-					<span class="bg-slate-200 rounded-full">10/10</span>
+					Dados localização
 				</div>
 				<div class={currentSubform === subforms.geral ? 'px-2 pb-2' : 'max-h-0'}>
 					<div class="form-control w-full">
@@ -491,7 +627,7 @@
 							<span class="label-text w-24">Oficial</span>
 							<input
 								type="text"
-								bind:value={official_name}
+								bind:value={officialName}
 								placeholder="Vl. Qts. R Pessoa 29"
 								disabled
 								class="input input-bordered w-full input-xs"
@@ -503,7 +639,7 @@
 							<span class="label-text w-24">Opr. Id</span>
 							<input
 								type="text"
-								bind:value={official_id}
+								bind:value={officialId}
 								placeholder="150000"
 								disabled={!$decodedToken?.permissions?.is_admin}
 								class="input input-bordered w-full input-xs"
@@ -527,7 +663,7 @@
 							<span class="label-text w-24">Abrev.</span>
 							<input
 								type="text"
-								bind:value={short_name}
+								bind:value={shortName}
 								placeholder="Vl. Quintas, Pessoa"
 								class="input input-bordered w-full input-sm"
 								disabled={!$decodedToken?.permissions?.is_admin}
@@ -581,64 +717,198 @@
 				>
 					<span>Serviço</span>
 					<span class="bg-slate-200 rounded-full"
-						>{($has_flag === null ? 0 : 1) + ($has_schedules === null ? 0 : 1)}/2</span
+						>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span
 					>
 				</div>
-				<div class={currentSubform === subforms.service ? 'px-2 pb-2' : 'max-h-0'}>
-					<StopCheckbox
-						text="Postaletes"
-						description="O poste ou abrigo da paragem tem um postalete"
-						state={has_flag}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Horários"
-						description="A paragem tem horários atualizados"
-						state={has_schedules}
-						disabled={!$decodedToken}
-					/>
-				</div>
-			</div>
-			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 				<div
-					class="text-lg font-medium p-2 min-h-0 flex justify-between"
-					on:click={() => {
-						currentSubform = currentSubform === subforms.quality ? null : subforms.quality;
-					}}
+					class={currentSubform === subforms.service ? 'px-2 pb-2 flex flex-col gap-2' : 'max-h-0'}
 				>
-					<span>Qualidade</span>
-					<span class="bg-slate-200 rounded-full"
-						>{($has_sidewalk === null ? 0 : 1) +
-							($has_shelter === null ? 0 : 1) +
-							($has_bench === null ? 0 : 1) +
-							($has_trash_can === null ? 0 : 1)}/4</span
-					>
-				</div>
-				<div class={currentSubform === subforms.quality ? 'px-2 pb-2' : 'max-h-0'}>
-					<StopCheckbox
-						text="Passeio"
-						description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
-						state={has_sidewalk}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Abrigo"
-						description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
-						state={has_shelter}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Banco"
-						description="A paragem tem bancos onde os passageiros se possam sentar"
-						state={has_bench}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Caixote do lixo"
-						description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
-						state={has_trash_can}
-						disabled={!$decodedToken}
-					/>
+					<div class="rounded-lg border-base-300 border-2 py-2">
+						<div class="btn-group items-center">
+							<span class="px-2">Postaletes</span>
+							<button
+								class="btn btn-sm px-4"
+								class:btn-active={hasFlags === true}
+								on:click={() => (hasFlags = true)}
+								on:keypress={() => (hasFlags = true)}>Sim</button
+							>
+							<button
+								class="btn btn-sm px-6"
+								class:btn-active={hasFlags === null}
+								on:click={() => (hasFlags = null)}
+								on:keypress={() => (hasFlags = null)}>?</button
+							>
+							<button
+								class="btn btn-sm px-4"
+								class:btn-active={hasFlags === false}
+								on:click={() => (hasFlags = false)}
+								on:keypress={() => (hasFlags = false)}>Não</button
+							>
+						</div>
+						{#if hasFlags}
+							{#each flagsData as flag, i}
+								<table class="table table-compact w-full">
+									<thead>
+										<tr>
+											<th class="text-xs">Id</th>
+											<th class="w-full">
+												<input
+													type="text"
+													class="w-24 input input-xs input-bordered px-0"
+													bind:value={flag.id}
+												/>
+											</th>
+											<th>
+												<input
+													type="button"
+													class="btn btn-success btn-xs"
+													value="+ linha"
+													disabled={!$decodedToken}
+													on:click={() => addFlagRoute(i)}
+													on:keypress={() => addFlagRoute(i)}
+												/>
+											</th>
+											<th>
+												<input
+													type="button"
+													class="btn btn-error btn-xs"
+													value="-"
+													disabled={!$decodedToken}
+													on:click={() => removeFlag(i)}
+													on:keypress={() => removeFlag(i)}
+												/>
+											</th>
+										</tr>
+									</thead>
+								</table>
+								<div class="flex flex-wrap">
+									{#each flag.route_codes as code, j}
+										<div class="badge badge-outline badge-lg">
+											{code}
+											<div
+												class="btn btn-error btn-circle btn-xs"
+												on:click={() => removeFlagRoute(i, j)}
+											>
+												✕
+											</div>
+										</div>
+									{/each}
+								</div>
+							{/each}
+
+							<div class="flex justify-end">
+								<input
+									type="button"
+									class="btn btn-success btn-xs"
+									value="+ postalete"
+									on:click={addFlag}
+								/>
+							</div>
+						{/if}
+					</div>
+					<div class="rounded-lg border-base-300 border-2 py-2">
+						<div class="btn-group items-center">
+							<span class="px-2">Horários</span>
+							<button
+								class="btn btn-sm px-4"
+								class:btn-active={hasSchedules === true}
+								on:click={() => (hasSchedules = true)}
+								on:keypress={() => (hasSchedules = true)}>Sim</button
+							>
+							<button
+								class="btn btn-sm px-6"
+								class:btn-active={hasSchedules === null}
+								on:click={() => (hasSchedules = null)}
+								on:keypress={() => (hasSchedules = null)}>?</button
+							>
+							<button
+								class="btn btn-sm px-4"
+								class:btn-active={hasSchedules === false}
+								on:click={() => (hasSchedules = false)}
+								on:keypress={() => (hasSchedules = false)}>Não</button
+							>
+						</div>
+
+						{#if hasSchedules}
+							<table class="table table-zebra table-compact w-full">
+								<thead>
+									<tr>
+										<th class="text-xs">Linha</th>
+										<th class="text-xs">Tipo</th>
+										<th class="text-xs">Discrim.</th>
+										<th>
+											<input
+												type="button"
+												class="btn btn-success btn-xs"
+												value="+"
+												on:click={addScheduleEntry}
+												on:kaypress={addScheduleEntry}
+												disabled={!$decodedToken}
+											/>
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each schedulesData as schedule, i}
+										<tr>
+											<td>
+												<input
+													type="text"
+													class="w-10 input input-xs input-bordered px-0"
+													bind:value={schedule.code}
+												/>
+											</td>
+											<td class="p-0">
+												<select
+													class="select select-primary max-w-xs select-xs"
+													bind:value={schedule.type}
+													disabled={!$decodedToken}
+												>
+													<option disabled selected value={null}>Tipo?</option>
+													<option value="origin">Origem</option>
+													<option value="prediction">Previs.</option>
+													<option value="periodic">Periód.</option>
+												</select>
+											</td>
+											<td class="p-0">
+												<input
+													type="text"
+													class="w-16 input input-xs input-bordered px-0"
+													bind:value={schedule.discriminator}
+												/>
+											</td>
+											<td>
+												<input
+													type="button"
+													class="btn btn-error btn-xs"
+													value="-"
+													on:click={() => removeScheduleEntry(i)}
+													on:keypress={() => removeScheduleEntry(i)}
+													disabled={!$decodedToken}
+												/>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{/if}
+					</div>
+					<label class="label"><span class="label-text">Verificação</span></label>
+					<div class="flex">
+						<input
+							type="date"
+							class="input input-xs input-bordered"
+							bind:value={serviceCheckDate}
+						/>
+						<input
+							type="button"
+							class="btn btn-primary btn-xs"
+							value="Hoje"
+							on:click={() => {
+								serviceCheckDate = new Date().toISOString().split('T')[0];
+							}}
+						/>
+					</div>
 				</div>
 			</div>
 			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
@@ -649,133 +919,268 @@
 							currentSubform === subforms.accesibility ? null : subforms.accesibility;
 					}}
 				>
-					<span>Acessibilidade</span>
+					<span>Infraestrutura</span>
 					<span class="bg-slate-200 rounded-full"
-						>{($has_crossing === null ? 0 : 1) +
-							($has_accessibility === null ? 0 : 1) +
-							($illumination_position === null ? 0 : 1) +
-							($illumination_strength === null ? 0 : 1) +
-							($is_illumination_working === null ? 0 : 1) +
-							($has_illuminated_path === null ? 0 : 1) +
-							($has_visibility_from_area === null ? 0 : 1) +
-							($has_visibility_from_within === null ? 0 : 1) +
-							($is_visible_from_outside === null ? 0 : 1)}/{$has_shelter === true ? 9 : 8}</span
+						>{($hasSidewalk === null ? 0 : 1) +
+							($hasSidewalkedPath === null ? 0 : 1) +
+							($hasShelter === null ? 0 : 1) +
+							($hasCover === null ? 0 : 1) +
+							($hasBench === null ? 0 : 1) +
+							($hasTrashCan === null ? 0 : 1) +
+							($hasWaitingTimes === null ? 0 : 1) +
+							($hasTicketSeller === null ? 0 : 1) +
+							($hasCostumerSupport === null ? 0 : 1) +
+							(advertisements === null ? 0 : 1) +
+							($hasCrossing === null ? 0 : 1) +
+							($hasFlatAccess === null ? 0 : 1) +
+							($hasWideAccess === null ? 0 : 1) +
+							($hasTactileAccess === null ? 0 : 1) +
+							($illuminationPosition === null ? 0 : 1) +
+							($illuminationStrength === null ? 0 : 1) +
+							($hasIlluminatedPath === null ? 0 : 1) +
+							($hasVisibilityFromArea === null ? 0 : 1) +
+							($hasVisibilityFromWithin === null ? 0 : 1) +
+							($isVisibleFromOutside === null ? 0 : 1) +
+							(parkingVisibilityImpairment === null ? 0 : 1) +
+							(parkingLocalAccessImpairment === null ? 0 : 1) +
+							(parkingAreaAccessImpairment === null ? 0 : 1)}/{$hasShelter === true ? 23 : 22}</span
 					>
 				</div>
 				<div class={currentSubform === subforms.accesibility ? 'px-2 pb-2' : 'max-h-0'}>
 					<div>
+						<!-- <label class="label"><span class="label-text">Infraestrutura</span></label> -->
+						<StopCheckbox
+							text="Passeio"
+							description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
+							state={hasSidewalk}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Passeio no acesso"
+							description="Existe um passeio ao longo de todo o acesso à paragem"
+							state={hasSidewalkedPath}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Abrigo"
+							description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
+							state={hasShelter}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Cobertura"
+							description="A paragem encontra-se debaixo de uma cobertura que resguarde da chuva"
+							state={hasCover}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Banco"
+							description="A paragem tem bancos onde os passageiros se possam sentar"
+							state={hasBench}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Caixote do lixo"
+							description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
+							state={hasTrashCan}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Tempos de espera"
+							description="A paragem dispõe de um painel com os tempos de espera"
+							state={hasWaitingTimes}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Ponto de venda"
+							description="Existe um ponto de venda de títulos na paragem"
+							state={hasTicketSeller}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Apoio ao passageiro"
+							description="Existe infraestrutura de apoio ao passageiro (balcão, intercomunicador, ...)"
+							state={hasCostumerSupport}
+							disabled={!$decodedToken}
+						/>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={advertisements}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Anúncios?</option>
+							<option value={0}>Sem anúncios</option>
+							<option value={2}>Pouca área de anúncio</option>
+							<option value={4}>Muita área de anúncio</option>
+							<option value={6}>Anúncios intrusivos</option>
+						</select>
 						<label class="label"><span class="label-text">Acesso</span></label>
 						<StopCheckbox
 							text="Atravessamento de via"
 							description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
-							state={has_crossing}
+							state={hasCrossing}
 							disabled={!$decodedToken}
 						/>
 						<StopCheckbox
-							text="Acesso mobilidade reduzida"
-							description="A paragem dispõe de acesso para pessoas com mobilidade reduzida"
-							state={has_accessibility}
+							text="Acesso sem ressaltos"
+							description="O acesso não é feito exclusivamente por degraus (>1cm) ou declives abruptos"
+							state={hasFlatAccess}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Acesso largo"
+							description="O acesso é suficientemente largo (incluindo obstaculos) que possibilite a passagem de uma cadeira de rodas."
+							state={hasWideAccess}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Acesso táctil"
+							description="É possível alcançar a paragem através de um percurso táctil"
+							state={hasTactileAccess}
 							disabled={!$decodedToken}
 						/>
 						<label class="label"><span class="label-text">Iluminação</span></label>
 						<select
 							class="select select-primary max-w-xs select-xs"
-							bind:value={$illumination_position}
+							bind:value={illuminationPosition}
 							disabled={!$decodedToken}
 						>
-							<option disabled selected value={null}>Posição</option>
+							<option disabled selected value={null}>Posição?</option>
 							<option value={0}>Indireta</option>
 							<option value={10}>Directa</option>
 							<option value={20}>Própria</option>
 						</select>
 						<select
 							class="select select-primary max-w-xs select-xs"
-							bind:value={$illumination_strength}
+							bind:value={illuminationStrength}
 							disabled={!$decodedToken}
 						>
-							<option disabled selected value={null}>Intensidade</option>
+							<option disabled selected value={null}>Intensidade?</option>
 							<option value={0}>Sem iluminação</option>
 							<option value={1}>Fraca</option>
 							<option value={3}>Moderada</option>
 							<option value={5}>Forte</option>
 						</select>
-						<StopCheckbox
-							text="Funcional"
-							description="A iluminação não se encontra fundida"
-							state={is_illumination_working}
-							disabled={!$decodedToken}
-						/>
+
 						<StopCheckbox
 							text="No acesso"
 							description="O acesso para a paragem encontra-se bem iluminado todas as 24 horas"
-							state={has_illuminated_path}
+							state={hasIlluminatedPath}
 							disabled={!$decodedToken}
 						/>
 						<label class="label"><span class="label-text">Visibilidade</span></label>
 						<StopCheckbox
 							text="Da paragem para autocarro"
 							description="Estando na paragem (+-5 metros) é possível ver autocarros atempadamente"
-							state={has_visibility_from_area}
+							state={hasVisibilityFromArea}
 							disabled={!$decodedToken}
 						/>
-						{#if $has_shelter}
+						{#if $hasShelter}
 							<StopCheckbox
 								text="Do abrigo para autocarro"
 								description="Estando sentado no abrigo é possível ver autocarros atempadamente"
-								state={has_visibility_from_within}
+								state={hasVisibilityFromWithin}
 								disabled={!$decodedToken}
 							/>
 						{/if}
 						<StopCheckbox
 							text="Do autocarro para paragem"
 							description="Enquanto motorista, é possível ver devidamente a paragem sem abrandar"
-							state={is_visible_from_outside}
+							state={isVisibleFromOutside}
 							disabled={!$decodedToken}
 						/>
+						<label class="label"><span class="label-text">Parque automóvel</span></label>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={parkingVisibilityImpairment}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Limitação visual?</option>
+							<option value={0}>Sem limitações à visibilidade</option>
+							<option value={2}>Pouco limitante à visibilidade</option>
+							<option value={4}>Algo limitante à visibilidade</option>
+							<option value={6}>Muito limitante à visibilidade</option>
+						</select>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={parkingLocalAccessImpairment}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Disfuncional à paragem?</option>
+							<option value={0}>Sem inteferência à paragem</option>
+							<option value={2}>Pouca intreferêcia à paragem</option>
+							<option value={4}>Alguma intreferência à paragem</option>
+							<option value={6}>Muita intreferência à paragem</option>
+						</select>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={parkingAreaAccessImpairment}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Disfuncional ao acesso?</option>
+							<option value={0}>Acesso sem inteferência</option>
+							<option value={2}>Acesso com pouca intreferêcia</option>
+							<option value={4}>Acesso com alguma intreferência</option>
+							<option value={6}>Acesso com muita intreferência</option>
+						</select>
+						<label class="label"><span class="label-text">Verificação</span></label>
+						<div class="flex">
+							<input
+								type="date"
+								class="input input-xs input-bordered"
+								bind:value={infrastructureCheckDate}
+							/>
+							<input
+								type="button"
+								class="btn btn-primary btn-xs"
+								value="Hoje"
+								on:click={() => {
+									infrastructureCheckDate = new Date().toISOString().split('T')[0];
+								}}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
 			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 				<div
-					class="text-lg font-medium p-2 min-h-0 flex justify-between"
+					class="text-lg font-medium p-2 min-h-0"
 					on:click={() => {
 						currentSubform = currentSubform === subforms.extra ? null : subforms.extra;
 					}}
 				>
-					<span>Extra</span>
-					<span class="bg-slate-200 rounded-full"
-						>{($has_sidewalk === null ? 0 : 1) +
-							($has_shelter === null ? 0 : 1) +
-							($has_bench === null ? 0 : 1) +
-							($has_trash_can === null ? 0 : 1)}/4</span
-					>
+					Extra
 				</div>
 				<div class={currentSubform === subforms.extra ? 'px-2 pb-2' : 'max-h-0'}>
-					<label class="label"><span class="label-text">Defeitos</span></label>
-					<StopCheckbox
-						text="Estacionamento abusivo"
-						description="Alvo recorrente de estacionamento abusivo impeditivo ao bom funcionamento"
-						state={has_abusive_parking}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Informação obsoleta"
-						description="A informação prestada na paragem (horários/postaletes) encontra-se obsoleta"
-						state={has_outdated_info}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Danificada"
-						description="A infraestrutura encontra-se danificada (ex. banco partido)"
-						state={is_damaged}
-						disabled={!$decodedToken}
-					/>
-					<StopCheckbox
-						text="Vandalizada"
-						description="Existe uma quantidade substâncial de vandalismo (eg. graffitti)"
-						state={is_vandalized}
-						disabled={!$decodedToken}
-					/>
+					<div class="form-control">
+						<label class="label"><span class="label-text">Defeitos</span></label>
+						<div class="flex flex-col gap-2">
+							<div class="flex gap-2">
+								<div class="grow w-full">
+									<Select
+										items={tmpIssuesOptions}
+										bind:value={selectedTmpIssue}
+										placeholder="Novo defeito"
+									/>
+								</div>
+								<input
+									class="btn btn-sm btn-primary grow-0"
+									type="button"
+									value="+"
+									on:click={addIssue}
+									disabled={!$decodedToken}
+								/>
+							</div>
+							{#each tmpIssues as issue}
+								<div class="badge badge-outline badge-lg">
+									{tmpIssueLabels[issue]}
+									<div class="btn btn-error btn-circle btn-xs" on:click={() => removeIssue(tag)}>
+										✕
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
 					<div class="form-control">
 						<label class="label">
 							<span class="label-text">Tags</span>
@@ -812,13 +1217,28 @@
 							<span class="label-text">Notas</span>
 						</label>
 						<textarea
-							class="textarea textarea-bordered h-12 w-full"
+							class="textarea textarea-bordered h-20 w-full"
 							placeholder="Falta obter-se uma foto que mostre que a paragem se encontra frente a xyz"
 							bind:value={notes}
 							disabled={!$decodedToken}
 						/>
 					</div>
 				</div>
+			</div>
+			<div class="flex items-baseline">
+				<label class="label"><span class="label-text">Autenticidade</span></label>
+				<select
+					class="select select-primary max-w-xs select-xs"
+					bind:value={verificationLevel}
+					disabled={!$decodedToken?.permissions.is_admin}
+				>
+					<option value={-1}>Errado</option>
+					<option value={0}>Não verificado</option>
+					<option value={3}>Infra muito provável</option>
+					<option value={5}>Serviço verificado</option>
+					<option value={6}>Infraestrutura verificada</option>
+					<option value={10}>Tudo verificado</option>
+				</select>
 			</div>
 		{:else}
 			<p>Escolha uma paragem.</p>
