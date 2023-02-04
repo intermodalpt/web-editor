@@ -764,18 +764,8 @@
 											<th class="w-full">
 												<input
 													type="text"
-													class="w-24 input input-xs input-bordered px-0"
+													class="w-32 input input-xs input-bordered px-0"
 													bind:value={flag.id}
-												/>
-											</th>
-											<th>
-												<input
-													type="button"
-													class="btn btn-success btn-xs"
-													value="+ linha"
-													disabled={!$decodedToken}
-													on:click={() => addFlagRoute(i)}
-													on:keypress={() => addFlagRoute(i)}
 												/>
 											</th>
 											<th>
@@ -786,6 +776,26 @@
 													disabled={!$decodedToken}
 													on:click={() => removeFlag(i)}
 													on:keypress={() => removeFlag(i)}
+												/>
+											</th>
+										</tr>
+										<tr>
+											<th class="text-xs">Nome</th>
+											<th class="w-full">
+												<input
+													type="text"
+													class="w-32 input input-xs input-bordered px-0"
+													bind:value={flag.name}
+												/>
+											</th>
+											<th>
+												<input
+													type="button"
+													class="btn btn-success btn-xs"
+													value="+linha"
+													disabled={!$decodedToken}
+													on:click={() => addFlagRoute(i)}
+													on:keypress={() => addFlagRoute(i)}
 												/>
 											</th>
 										</tr>
