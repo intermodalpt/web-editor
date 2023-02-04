@@ -225,12 +225,22 @@
 			schedules: hasSchedules ? schedulesData : null,
 			tmp_issues: tmpIssues,
 
-			has_crossing: $hasCrossing,
 			has_sidewalk: $hasSidewalk,
+			has_sidewalked_path: $hasSidewalkedPath,
 			has_shelter: $hasShelter,
 			has_cover: $hasCover,
 			has_bench: $hasBench,
 			has_trash_can: $hasTrashCan,
+			has_waiting_times: $hasWaitingTimes,
+			has_ticket_seller: $hasTicketSeller,
+			has_costumer_support: $hasCostumerSupport,
+			advertisements: advertisements,
+
+			has_crossing: $hasCrossing,
+			has_flat_access: $hasFlatAccess,
+			has_wide_access: $hasWideAccess,
+			has_tactile_access: $hasTactileAccess,
+
 			illumination_strength: illuminationStrength,
 			illumination_position: illuminationPosition,
 			has_illuminated_path: $hasIlluminatedPath,
@@ -238,13 +248,13 @@
 			has_visibility_from_area: $hasVisibilityFromArea,
 			is_visible_from_outside: $isVisibleFromOutside,
 
-			has_flat_access: hasFlatAccess,
-			has_wide_access: hasWideAccess,
-			has_tactile_access: hasTactileAccess,
-
 			parking_visibility_impairment: parkingVisibilityImpairment,
 			parking_local_access_impairment: parkingLocalAccessImpairment,
-			parking_area_access_impairment: parkingAreaAccessImpairment
+			parking_area_access_impairment: parkingAreaAccessImpairment,
+
+			service_check_date: serviceCheckDate,
+			infrastructure_check_date: infrastructureCheckDate,
+			verification_level: verificationLevel
 		};
 
 		newMeta = Object.assign($selectedStop, newMeta);
