@@ -39,23 +39,24 @@
 	let serviceCheckDate = null;
 	let infrastructureCheckDate = null;
 
-	const hasCrossing = writable(null);
-	const hasFlatAccess = writable(null);
-	const hasWideAccess = writable(null);
-	const hasTactileAccess = writable(null);
 	const hasSidewalk = writable(null);
 	const hasSidewalkedPath = writable(null);
 	const hasShelter = writable(null);
 	const hasCover = writable(null);
 	const hasBench = writable(null);
 	const hasTrashCan = writable(null);
-	let advertisements = null;
 	const hasWaitingTimes = writable(null);
 	const hasTicketSeller = writable(null);
 	const hasCostumerSupport = writable(null);
+	let advertisementQty = null;
+
+	const hasCrossing = writable(null);
+	const hasFlatAccess = writable(null);
+	const hasWideAccess = writable(null);
+	const hasTactileAccess = writable(null);
+
 	let illuminationStrength = null;
 	let illuminationPosition = null;
-
 	const hasIlluminatedPath = writable(null);
 	const hasVisibilityFromWithin = writable(null);
 	const hasVisibilityFromArea = writable(null);
@@ -132,16 +133,17 @@
 		}
 
 		id = stop.id;
-		name = stop.name || null;
-		shortName = stop.short_name || null;
-		officialName = stop.official_name || null;
-		officialId = stop.official_id || null;
-		locality = stop.locality || null;
-		street = stop.street || null;
-		door = stop.door || null;
-		notes = stop.notes || null;
-		tags = stop.tags || null;
-		tmpIssues = stop.tmp_issues || [];
+		name = stop.name ?? null;
+		shortName = stop.short_name ?? null;
+		officialName = stop.official_name ?? null;
+		officialId = stop.refs.join(';');
+		locality = stop.locality ?? null;
+		street = stop.street ?? null;
+		door = stop.door ?? null;
+		notes = stop.notes ?? null;
+		tags = stop.tags ?? null;
+		tmpIssues = stop.tmp_issues ?? [];
+
 		if (stop.flags === undefined || stop.flags === null) {
 			hasFlags = null;
 		} else if (stop.flags.length === 0) {
@@ -160,28 +162,37 @@
 		}
 		schedulesData = stop.schedules || [];
 
-		$hasCrossing = stop.has_crossing || null;
-		$hasSidewalk = stop.has_sidewalk || null;
-		$hasSidewalkedPath = stop.has_sidewalked_path || null;
-		$hasCover = stop.has_cover || null;
-		$hasShelter = stop.has_shelter || null;
-		$hasCover = stop.has_cover || null;
-		$hasBench = stop.has_bench || null;
-		$hasTrashCan = stop.has_trash_can || null;
-		$hasWaitingTimes = stop.has_waiting_times || null;
-		$hasTicketSeller = stop.has_ticket_seller || null;
-		$hasCostumerSupport = stop.has_costumer_support || null;
-		illuminationStrength = stop.illumination_strength || null;
-		illuminationPosition = stop.illumination_position || null;
-		$hasIlluminatedPath = stop.has_illuminated_path || null;
-		$hasVisibilityFromWithin = stop.has_visibility_from_within || null;
-		$hasVisibilityFromArea = stop.has_visibility_from_area || null;
-		$isVisibleFromOutside = stop.is_visible_from_outside || null;
-		parkingVisibilityImpairment = stop.parking_visibility_impairment || null;
-		parkingLocalAccessImpairment = stop.parking_local_access_impairment || null;
-		parkingAreaAccessImpairment = stop.parking_area_access_impairment || null;
+		$hasCrossing = stop.has_crossing ?? null;
+		$hasSidewalk = stop.has_sidewalk ?? null;
+		$hasSidewalkedPath = stop.has_sidewalked_path ?? null;
+		$hasShelter = stop.has_shelter ?? null;
+		$hasCover = stop.has_cover ?? null;
+		$hasBench = stop.has_bench ?? null;
+		$hasTrashCan = stop.has_trash_can ?? null;
+		$hasWaitingTimes = stop.has_waiting_times ?? null;
+		$hasTicketSeller = stop.has_ticket_seller ?? null;
+		$hasCostumerSupport = stop.has_costumer_support ?? null;
+		advertisementQty = stop.advertisement_qty ?? null;
 
-		verificationLevel = stop.verification_level || 0;
+		$hasCrossing = stop.has_crossing ?? null;
+		$hasFlatAccess = stop.has_flat_access ?? null;
+		$hasWideAccess = stop.has_wide_access ?? null;
+		$hasTactileAccess = stop.has_tactile_access ?? null;
+
+		illuminationStrength = stop.illumination_strength ?? null;
+		illuminationPosition = stop.illumination_position ?? null;
+		$hasIlluminatedPath = stop.has_illuminated_path ?? null;
+		$hasVisibilityFromWithin = stop.has_visibility_from_within ?? null;
+		$hasVisibilityFromArea = stop.has_visibility_from_area ?? null;
+		$isVisibleFromOutside = stop.is_visible_from_outside ?? null;
+		parkingVisibilityImpairment = stop.parking_visibility_impairment ?? null;
+		parkingLocalAccessImpairment = stop.parking_local_access_impairment ?? null;
+		parkingAreaAccessImpairment = stop.parking_area_access_impairment ?? null;
+
+		serviceCheckDate = stop.service_check_date ?? null;
+		infrastructureCheckDate = stop.infrastructure_check_date ?? null;
+
+		verificationLevel = stop.verification_level ?? 0;
 	});
 
 	hasVisibilityFromWithin.subscribe((visibility_from_within) => {
@@ -214,15 +225,18 @@
 			name: name,
 			short_name: shortName,
 			official_name: officialName,
-			official_id: officialId,
+			refs: officialId
+				.split(';')
+				.map((ref) => ref.trim())
+				.filter((ref) => ref !== ''),
 			locality: locality,
 			street: street,
 			door: door,
 			tags: tags,
 			notes: !notes || notes.trim() === '' ? null : notes.trim(),
 
-			flags: hasFlags ? flagsData : null,
-			schedules: hasSchedules ? schedulesData : null,
+			flags: hasFlags === null ? null : hasFlags ? flagsData : [],
+			schedules: hasSchedules === null ? null : hasSchedules ? schedulesData : [],
 			tmp_issues: tmpIssues,
 
 			has_sidewalk: $hasSidewalk,
@@ -234,7 +248,7 @@
 			has_waiting_times: $hasWaitingTimes,
 			has_ticket_seller: $hasTicketSeller,
 			has_costumer_support: $hasCostumerSupport,
-			advertisements: advertisements,
+			advertisement_qty: advertisementQty,
 
 			has_crossing: $hasCrossing,
 			has_flat_access: $hasFlatAccess,
@@ -482,6 +496,7 @@
 	function addFlag() {
 		flagsData.push({
 			id: null,
+			name: null,
 			route_codes: []
 		});
 		flagsData = flagsData;
@@ -651,7 +666,7 @@
 								type="text"
 								bind:value={officialId}
 								placeholder="150000"
-								disabled={!$decodedToken?.permissions?.is_admin}
+								disabled
 								class="input input-bordered w-full input-xs"
 							/>
 						</label>
@@ -888,7 +903,7 @@
 													<option disabled selected value={null}>Tipo?</option>
 													<option value="origin">Origem</option>
 													<option value="prediction">Previs.</option>
-													<option value="periodic">Periód.</option>
+													<option value="frequency">Periód.</option>
 												</select>
 											</td>
 											<td class="p-0">
@@ -951,7 +966,7 @@
 							($hasWaitingTimes === null ? 0 : 1) +
 							($hasTicketSeller === null ? 0 : 1) +
 							($hasCostumerSupport === null ? 0 : 1) +
-							(advertisements === null ? 0 : 1) +
+							(advertisementQty === null ? 0 : 1) +
 							($hasCrossing === null ? 0 : 1) +
 							($hasFlatAccess === null ? 0 : 1) +
 							($hasWideAccess === null ? 0 : 1) +
@@ -1026,7 +1041,7 @@
 						/>
 						<select
 							class="select select-primary max-w-xs select-xs"
-							bind:value={advertisements}
+							bind:value={advertisementQty}
 							disabled={!$decodedToken}
 						>
 							<option disabled selected value={null}>Anúncios?</option>
@@ -1253,12 +1268,13 @@
 					bind:value={verificationLevel}
 					disabled={!$decodedToken?.permissions.is_admin}
 				>
-					<option value={-1}>Errado</option>
+					<!-- The binary mask -->
 					<option value={0}>Não verificado</option>
-					<option value={3}>Infra muito provável</option>
-					<option value={5}>Serviço verificado</option>
-					<option value={6}>Infraestrutura verificada</option>
-					<option value={10}>Tudo verificado</option>
+					<option value={8}>Infra muito provável</option>
+					<option value={48}>Serviço verificado</option>
+					<option value={12}>Infraestrutura verificada</option>
+					<option value={84}>Errado</option>
+					<option value={252}>Tudo verificado</option>
 				</select>
 			</div>
 		{:else}
