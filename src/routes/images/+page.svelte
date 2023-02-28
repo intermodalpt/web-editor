@@ -71,7 +71,7 @@
 	<meta name="description" content="Catalogo de imagens" />
 </svelte:head>
 
-<div class="flex flex-col gap-4 max-w-5xl mt-4 self-center">
+<div class="flex flex-col gap-4 w-full max-w-[900px] mt-4 self-center">
 	<div class="flex justify-end">
 		<a class="btn btn-primary" href="/images/upload">Enviar mais imagens</a>
 	</div>
