@@ -273,8 +273,8 @@
 			parking_local_access_impairment: parkingLocalAccessImpairment,
 			parking_area_access_impairment: parkingAreaAccessImpairment,
 
-			service_check_date: serviceCheckDate,
-			infrastructure_check_date: infrastructureCheckDate,
+			service_check_date: serviceCheckDate || null,
+			infrastructure_check_date: infrastructureCheckDate || null,
 			verification_level: verificationLevel
 		};
 
@@ -315,16 +315,22 @@
 				body: JSON.stringify({ contribution: stop, comment: comment })
 			});
 		}
+		// If the request answer is ok, update the stop in the stops array
+		// otherwise show an error message with the response body
 		request
 			.then((r) => {
 				if (r.ok) {
 					Object.assign(stops[stop.id], stop);
 				} else {
-					alert('Error updating');
+					r.text().then((error) => {
+						alert(`Erro a atualizar:\n${error}`);
+					}).catch(() => {
+						alert('Erro a atualizar');
+					})
 				}
 			})
 			.catch(() => {
-				alert('Error requestion update');
+				alert('Error requesting update');
 			});
 	}
 
