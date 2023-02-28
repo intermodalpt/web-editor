@@ -17,7 +17,7 @@ export async function load({ params, fetch }) {
 
 	const token = await loadToken(fetch);
 
-	let untagged = await fetch(`${apiServer}/v1/tagging/stops/untagged?p=0`, {
+	let untagged = await fetch(`${apiServer}/v1/stop_pics/dangling?p=0`, {
 		headers: {
 			authorization: `Bearer ${token}`
 		}

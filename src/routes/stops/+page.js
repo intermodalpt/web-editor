@@ -21,14 +21,7 @@ export async function load({ params, fetch }) {
 		await loadStops(fetch);
 	}
 
-	if (token) {
-		if (get(pictures) === undefined) {
-			await loadPictures(fetch, token);
-		}
-	}
-
 	return {
-		stops: get(stops),
-		pictures: token ? get(pictures) : {}
+		stops: get(stops)
 	};
 }

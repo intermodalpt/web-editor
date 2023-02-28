@@ -1,6 +1,5 @@
 <script>
-	import StopImageEditor from '$lib/editor/StopImageEditor.svelte';
-	import { imageRoot } from '$lib/settings.js';
+	import ImageEditor from '$lib/editor/ImageEditor.svelte';
 	import { writable } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
 	import { token } from '$lib/stores.js';
@@ -35,7 +34,7 @@
 
 		Promise.all(
 			pages.map((page) => {
-				return fetch(`${apiServer}/v1/tagging/stops/untagged?p=${page}`, {
+				return fetch(`${apiServer}/v1/stop_pics/dangling?p=${page}`, {
 					headers: {
 						authorization: `Bearer ${$token}`
 					}
@@ -87,8 +86,9 @@
 					{#each orderedUntaggedPictures as pic}
 						<div class="p-2 flex justify-center items-center cursor-pointer">
 							<!-- {pic.id};{pic.capture_date} -->
+							<!-- {JSON.stringify(pic)} -->
 							<img
-								src="{imageRoot}/medium/{pic.sha1}/preview"
+								src="{pic.url_medium}"
 								class="rounded-box transition-all hover:scale-105"
 								on:click={() => {
 									openPic(pic.id);
@@ -113,5 +113,5 @@
 </div>
 
 {#if $openImage}
-	<StopImageEditor image={openImage} on:close={close} />
+	<ImageEditor image={openImage} on:close={close} />
 {/if}

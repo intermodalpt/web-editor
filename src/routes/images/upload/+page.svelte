@@ -18,7 +18,7 @@
 		for (let x = 0; x < files.length; x++) {
 			const formData = new FormData();
 			formData.append('images[]', files[x]);
-			let res = await fetch(`${apiServer}/v1/upload/stops`, {
+			let res = await fetch(`${apiServer}/v1/stop_pics/dangling`, {
 				method: 'POST',
 				body: formData,
 				headers: {

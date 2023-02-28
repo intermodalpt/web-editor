@@ -1,20 +1,20 @@
 <script>
-	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
-	import { apiServer, imageRoot } from '$lib/settings.js';
+	import { onDestroy, onMount } from 'svelte';
+	import { derived, writable } from 'svelte/store';
+	import { apiServer } from '$lib/settings.js';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { onDestroy, onMount } from 'svelte';
 	import Select from 'svelte-select';
-	import { derived, writable } from 'svelte/store';
+	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
+	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 	const stops = data.stops;
-	const pictures = data.pictures;
 
 	let map;
-	let selectedStop = writable(undefined);
+	let selectedStop = writable(null);
 	let previewedPic = undefined;
 
 	let filterOnlyNoName = false;
@@ -620,16 +620,18 @@
 						class="btn btn-sm btn-primary"
 						type="button"
 						value="+"
-						on:click={() => alert('Por implementar')}
-						disabled={true || !$decodedToken}
+						on:click={() => {
+							uploadingPics = true;
+						}}
+						disabled={!$decodedToken}
 					/>
 				</label>
 				<div class="flex gap-2 overflow-x-scroll">
 					{#if $stopPictures !== undefined && $stopPictures.length > 0}
 						{#each $stopPictures as picture}
-							<a target="_blank" href="{imageRoot}/ori/{picture.sha1}/{picture.original_filename}">
+							<a target="_blank" href={picture.url_full}>
 								<img
-									src="{imageRoot}/medium/{picture.sha1}/preview"
+									src={picture.url_medium}
 									class="rounded-box transition-all hover:scale-150 h-16"
 								/>
 							</a>
@@ -1301,15 +1303,23 @@
 	</div>
 </div>
 
+{#if uploadingPics}
+	<StopImagesEditor
+		stop={selectedStop}
+		{stopPictures}
+		{newPictures}
+		on:save={() => {
+			uploadingPics = false;
+		}}
+	/>
+{/if}
+
 {#if previewedPic}
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
 	<div class="modal">
 		<div class="modal-box w-11/12 max-w-5xl">
-			<a
-				target="_blank"
-				href="{imageRoot}/ori/{previewedPic.sha1}/{previewedPic.original_filename}"
-			>
-				<img src="{imageRoot}/medium/{previewedPic.sha1}/preview" class="rounded-box w-full" />
+			<a target="_blank" href={previewedPic.url_full}>
+				<img src={previewedPic.url_medium} class="rounded-box w-full" />
 			</a>
 			<div class="modal-action">
 				<label
