@@ -245,13 +245,35 @@
 		});
 	}
 
+	function deleteImage() {
+		if (confirm('Tem certeza que quer apagar esta imagem?')) {
+			fetch(`${apiServer}/v1/stop_pics/${$selectedImage.id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					authorization: `Bearer ${$token}`
+				}
+			})
+				.catch(() => alert('Failed to delete the image'))
+				.then(() => {
+					// HACK - this is a hack to force the stop pics to update
+					$stop.modTimestamp = new Date();
+					$stop = $stop;
+					dispatch('save');
+				});
+		}
+	}
+
 	function closeEditor() {
 		// if ($hasModifiedPictures) {
 		// 	if (!confirm('Tem alterações pendentes. Se sair, estas poderão ser perdidas.')) {
 		// 		return;
 		// 	}
 		// }
-		if ($editedStopPictures.some((pic) => pic.modified) || $newPictures.some((pic) => pic.modified)) {
+		if (
+			$editedStopPictures.some((pic) => pic.modified) ||
+			$newPictures.some((pic) => pic.modified)
+		) {
 			if (!confirm('Tem alterações pendentes. Se sair, estas poderão ser perdidas.')) {
 				return;
 			}
@@ -273,7 +295,7 @@
 					on:click={() => (sendingPictures = true)}
 				/>
 				<!-- {#if $hasModifiedPictures} -->
-					<input type="button" class="btn btn-primary" value="Guardar" on:click={save} />
+				<input type="button" class="btn btn-primary" value="Guardar" on:click={save} />
 				<!-- {/if} -->
 				<input type="button" class="btn btn-neutral" value="Fechar" on:click={closeEditor} />
 			</div>
@@ -633,6 +655,8 @@
 							value="Notas"
 							on:click={() => (step = steps.notes)}
 						/>
+						<span class="grow" />
+						<input class="btn btn-error border-black border-2" on:click={deleteImage} value="Apagar" />
 					</div>
 				{/if}
 			{/if}
