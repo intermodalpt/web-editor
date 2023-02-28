@@ -322,11 +322,13 @@
 				if (r.ok) {
 					Object.assign(stops[stop.id], stop);
 				} else {
-					r.text().then((error) => {
-						alert(`Erro a atualizar:\n${error}`);
-					}).catch(() => {
-						alert('Erro a atualizar');
-					})
+					r.text()
+						.then((error) => {
+							alert(`Erro a atualizar:\n${error}`);
+						})
+						.catch(() => {
+							alert('Erro a atualizar');
+						});
 				}
 			})
 			.catch(() => {
@@ -652,6 +654,36 @@
 					disabled
 				/>
 			</label>
+			<div class="flex gap-2 ml-1">
+				<div class="flex">
+					<input
+						class="btn btn-primary btn-xs rounded-r-none"
+						type="button"
+						value={$selectedStop.lat.toFixed(6)}
+						on:click={() => {
+							navigator.clipboard.writeText($selectedStop.lat.toFixed(6));
+						}}
+					/>
+					<input
+						class="btn btn-primary btn-xs rounded-l-none"
+						type="button"
+						value={$selectedStop.lon.toFixed(6)}
+						on:click={() => {
+							navigator.clipboard.writeText($selectedStop.lon.toFixed(6));
+						}}
+					/>
+				</div>
+				<input
+					class="btn btn-secondary btn-xs"
+					type="button"
+					value="Copiar"
+					on:click={() => {
+						navigator.clipboard.writeText(
+							$selectedStop.lat.toFixed(6) + ',' + $selectedStop.lon.toFixed(6)
+						);
+					}}
+				/>
+			</div>
 			<div class="form-control">
 				<label class="label">
 					<span class="label-text">Fotos</span>
