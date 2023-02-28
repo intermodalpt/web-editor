@@ -109,6 +109,8 @@
 		{ value: 'construction_works', label: tmpIssueLabels['construction_works'] }
 	];
 
+	let uploadingPics = false;
+
 	const stopPictures = derived([selectedStop], ([$selectedStop], set) => {
 		if ($selectedStop) {
 			if ($decodedToken) {
@@ -125,6 +127,11 @@
 		} else {
 			return [];
 		}
+	});
+
+	const newPictures = writable([]);
+	stopPictures.subscribe(() => {
+		newPictures.set([]);
 	});
 
 	selectedStop.subscribe((stop) => {
@@ -321,49 +328,75 @@
 			});
 	}
 
-	function stopScore(stop) {
-		let score = 10.0;
+	function scoreAttr(truthVal, potentialScore) {
+		if (truthVal === undefined || truthVal === null) {
+			return 0.0;
+		} else {
+			return potentialScore;
+		}
+	}
 
-		// 2 points here
-		// score -= stop.has_flag === true || stop.has_flag === false ? 0.0 : 0.5;
-		score -= stop.has_schedules === true || stop.has_schedules === false ? 0.0 : 0.2;
-		score -= stop.has_sidewalk === true || stop.has_sidewalk === false ? 0.0 : 0.2;
-		score -= stop.has_shelter === true || stop.has_shelter === false ? 0.0 : 0.5;
-		score -= stop.has_bench === true || stop.has_bench === false ? 0.0 : 0.3;
-		score -= stop.has_trash_can === true || stop.has_trash_can === false ? 0.0 : 0.3;
+	export function stopScore(stop) {
+		let score = 0.0;
+		let maximum = 0.0;
 
-		// 0.9 point
-		score -= stop.has_abusive_parking === true || stop.has_abusive_parking === false ? 0.0 : 0.2;
-		score -= stop.has_outdated_info === true || stop.has_outdated_info === false ? 0.0 : 0.2;
-		score -= stop.is_damaged === true || stop.is_damaged === false ? 0.0 : 0.3;
-		score -= stop.is_vandalized === true || stop.is_vandalized === false ? 0.0 : 0.2;
+		score += scoreAttr(stop.locality, 0.1);
+		maximum += 1.0;
+		score += scoreAttr(stop.flags, 2.0);
+		maximum += 3.0;
+		score += scoreAttr(stop.schedules, 2.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.has_crossing, 5.0);
+		maximum += 5.0;
+		score += scoreAttr(stop.has_sidewalk, 1.5);
+		maximum += 2.5;
+		score += scoreAttr(stop.has_sidewalked_path, 1.0);
+		maximum += 2.5;
+		score += scoreAttr(stop.has_shelter, 3.0);
+		maximum += 3.0;
+		score += scoreAttr(stop.has_cover, 2.0);
+		maximum += 2.0;
+		score += scoreAttr(stop.has_bench, 1.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.has_trash_can, 1.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.has_ticket_seller, 0.2);
+		maximum += 1.0;
+		score += scoreAttr(stop.has_costumer_support, 0.2);
+		maximum += 0.2;
+		score += scoreAttr(stop.advertisement_qty, 0.2);
+		maximum += 0.2;
+		score += scoreAttr(stop.has_crossing, 3.0);
+		maximum += 3.0;
+		score += scoreAttr(stop.has_flat_access, 0.2);
+		maximum += 0.5;
+		score += scoreAttr(stop.has_wide_access, 0.2);
+		maximum += 0.5;
+		score += scoreAttr(stop.has_tactile_access, 0.2);
+		maximum += 0.5;
+		score += scoreAttr(stop.illumination_strength, 1.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.illumination_position, 1.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.has_illuminated_path, 1.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.has_visibility_from_area, 2.0);
+		maximum += 2.0;
+		score += scoreAttr(stop.has_visibility_from_within, 0.5);
+		maximum += 0.5;
+		score += scoreAttr(stop.is_visible_from_outside, 2.0);
+		maximum += 2.0;
+		score += scoreAttr(stop.parking_visibility_impairment, 1.0);
+		maximum += 1.0;
+		score += scoreAttr(stop.parking_local_access_impairment, 0.5);
+		maximum += 1.0;
+		score += scoreAttr(stop.parking_area_access_impairment, 0.5);
+		maximum += 0.5;
+		score += scoreAttr(stop.verification_level, 2.0);
+		maximum += 2.0;
 
-		// 0.8 point
-		score -= stop.has_crossing === true || stop.has_crossing === false ? 0.0 : 0.2;
-		score -= stop.has_accessibility === true || stop.has_accessibility === false ? 0.0 : 0.2;
-		score -= stop.is_illuminated === true || stop.is_illuminated === false ? 0.0 : 0.2;
-		score -= stop.has_illuminated_path === true || stop.has_illuminated_path === false ? 0.0 : 0.2;
-
-		// 0.8 point here
-		score -=
-			stop.has_visibility_from_area === true || stop.has_visibility_from_area === false ? 0.0 : 0.3;
-		score -=
-			stop.has_visibility_from_within === true || stop.has_visibility_from_within === false
-				? 0.0
-				: 0.2;
-		score -=
-			stop.is_visible_from_outside === true || stop.is_visible_from_outside === false ? 0.0 : 0.3;
-
-		// 3 points here
-		score -= stop.name != null ? 0.0 : 1.5;
-		score -= stop.official_name != null ? 0.0 : 0.7;
-		// score -= stop.code  != null ? 0.0 : 0.1;
-		score -= stop.abbr != null ? 0.0 : 0.3;
-		score -= stop.locality != null ? 0.0 : 0.2;
-		score -= stop.street != null ? 0.0 : 0.2;
-		// score -= stop.door  != null ? 0.0 : 0.0;
-
-		return score;
+		// Truncate number to 1 decimal place
+		return (score / maximum) * 10.0 || 0.0;
 	}
 
 	function getStopsGeoJSON() {
@@ -427,12 +460,12 @@
 					'interpolate',
 					['linear'],
 					['get', 'score'],
-					2,
-					'rgb(255, 0, 0)',
-					6,
-					'rgb(255, 255, 0)',
+					0,
+					'rgb(220, 30, 50)',
+					5,
+					'rgb(220, 220, 50)',
 					10,
-					'rgb(0, 255, 0)'
+					'rgb(30, 220, 50)'
 				],
 				'circle-radius': 8,
 				'circle-stroke-width': 1,
@@ -608,7 +641,7 @@
 				<span class="label-text">{$selectedStop.id}</span>
 				<input
 					type="text"
-					value={$selectedStop.osm_name}
+					value={$selectedStop.official_name || $selectedStop.osm_name}
 					class="input input-bordered w-full input-sm"
 					disabled
 				/>
@@ -831,7 +864,7 @@
 										</div>
 									{/each}
 								</div>
-								<hr>
+								<hr />
 							{/each}
 
 							<div class="flex justify-end">

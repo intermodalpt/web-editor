@@ -2,9 +2,9 @@
 	import { createEventDispatcher } from 'svelte';
 	import L from 'leaflet?client';
 	import 'leaflet.markercluster?client';
-	import { apiServer, imageRoot } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings.js';
 	import { picStopRels, stopPicRels, stops, token } from '$lib/stores.js';
-	import { icons } from '$lib/assets.js';
+	import { icons, dotIcon } from '$lib/assets.js';
 
 	export let image;
 
@@ -71,7 +71,7 @@
 			location.lat = targetLoc.lat;
 		};
 		if (location.lat) {
-			marker = L.marker([location.lat, location.lon], { draggable: true });
+			marker = L.marker([location.lat, location.lon], { draggable: true, icon: dotIcon });
 			marker.addTo(m);
 			marker.on('moveend', markerMoved);
 		}
@@ -80,7 +80,7 @@
 			if (marker) {
 				marker.removeFrom(map);
 			}
-			marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true });
+			marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true, icon: dotIcon });
 			location.lon = e.latlng.lng;
 			location.lat = e.latlng.lat;
 			marker.addTo(map);
@@ -100,11 +100,8 @@
 		});
 
 		Object.values($stops).forEach((stop) => {
-			if (stop.lat != null && stop.lon != null && stop.source === 'osm') {
-				let marker = L.marker(
-					[stop.lat, stop.lon],
-					Object.assign({}, { icon: icons[stop.source] })
-				);
+			if (stop.lat != null && stop.lon != null) {
+				let marker = L.marker([stop.lat, stop.lon], Object.assign({}, { icon: icons['osm'] }));
 
 				marker.stopId = stop.id;
 
@@ -237,7 +234,7 @@
 			}
 		}
 
-		fetch(`${apiServer}/v1/upload/stops/${$image.id}`, {
+		fetch(`${apiServer}/v1/stop_pics/${$image.id}`, {
 			method: 'PATCH',
 			body: JSON.stringify(newMeta),
 			headers: {
@@ -274,7 +271,7 @@
 
 	function deleteImage() {
 		if (confirm('Are you really really sure?')) {
-			fetch(`${apiServer}/v1/upload/stops/${$image.id}`, {
+			fetch(`${apiServer}/v1/stop_pics/${$image.id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -298,16 +295,8 @@
 	<div class="modal-box w-full max-w-full">
 		<div class="flex flex-col gap-1">
 			<div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
-				<a
-					target="_blank"
-					href="{imageRoot}/ori/{$image.sha1}/{$image.original_filename}"
-					class="block shrink-0"
-				>
-					<img
-						class="rounded-lg h-96"
-						alt="Visualização paragem"
-						src="{imageRoot}/medium/{$image.sha1}/stop"
-					/>
+				<a target="_blank" href={$image.url_full} class="block shrink-0">
+					<img class="rounded-lg h-96" alt="Visualização paragem" src={$image.url_medium} />
 				</a>
 				<div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction />
 			</div>
