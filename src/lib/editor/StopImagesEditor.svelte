@@ -195,7 +195,7 @@
 						fixable: true
 					};
 					$newPictures.push(pic);
-					return false;
+					return true;
 				})
 				.catch((e) => {
 					alert('Uma imagem falhou no seu upload');
