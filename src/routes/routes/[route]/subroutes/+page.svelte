@@ -41,20 +41,21 @@
 						circular: subroute.circular || false,
 						polyline: subroute.polyline || null
 					})
-				})
-					.catch((e) => {
-						alert(`Error patching a route: ${JSON.stringify(subroute)}`);
-					})
-					.then((res) => {
-						switch (res.status) {
-							case 200:
-								subroute.changed = false;
-								savedCount += 1;
-								break;
-							default:
-								alert('One request might have succeeded, or not');
-						}
-					});
+				}).then((res) => {
+					if (res.ok) {
+						subroute.changed = false;
+						savedCount += 1;
+					} else {
+						res
+							.text()
+							.then((error) => {
+								alert(`Erro a alterar variante:\n${error}`);
+							})
+							.catch(() => {
+								alert('Erro a alterar variante');
+							});
+					}
+				});
 			} else {
 				fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
 					method: 'POST',
@@ -67,23 +68,24 @@
 						circular: subroute.circular,
 						polyline: null
 					})
-				})
-					.catch((e) => {
-						alert(`Error creating a route: ${JSON.stringify(subroute)}`);
-					})
-					.then((res) => {
-						switch (res.status) {
-							case 200:
-								subroute.changed = false;
-								savedCount += 1;
-								res.json().then((data) => {
-									subroute.id = data.id;
-								});
-								break;
-							default:
-								alert('One request might have succeeded, or not');
-						}
-					});
+				}).then((res) => {
+					if (res.ok) {
+						subroute.changed = false;
+						savedCount += 1;
+						res.json().then((data) => {
+							subroute.id = data.id;
+						});
+					} else {
+						res
+							.text()
+							.then((error) => {
+								alert(`Erro a criar variante:\n${error}`);
+							})
+							.catch(() => {
+								alert('Erro a criar variante');
+							});
+					}
+				});
 			}
 		}
 
@@ -101,29 +103,26 @@
 				body: JSON.stringify({
 					code: route.code,
 					name: route.name,
-					// circular: route.circular,
+					circular: route.circular,
 					main_subroute: route.subroutes[mainSubrouteIndex]?.id,
 					operator_id: route.operator,
 					type_id: route.type_id,
-					active: route.active,
-					// FIXME
-					badge_text: 'fa3250',
-					badge_bg: '000000'
+					active: route.active
 				})
-			})
-				.catch((e) => {
-					alert('Error patching the route');
-				})
-				.then((res) => {
-					switch (res.status) {
-						case 200:
-							alert('Route saved');
-							routeChanged = false;
-							break;
-						default:
-							alert('One request did not succeed');
-					}
-				});
+			}).then((res) => {
+				if (res.ok) {
+					routeChanged = false;
+				} else {
+					res
+						.text()
+						.then((error) => {
+							alert(`Erro a atualizar:\n${error}`);
+						})
+						.catch(() => {
+							alert('Erro a atualizar');
+						});
+				}
+			});
 		}
 		invalidate('app:subroutes');
 	}
@@ -151,9 +150,20 @@
 					if (res.ok) {
 						invalidate('app:subroutes');
 					} else if (res.status === 424) {
-						alert('You need to delete the stops before you delete the subroute');
+						alert('É necessário que se apaguem as paragens antes de apagar a variante');
 					} else {
-						alert('There was an error deleting the subroute');
+						if (res.ok) {
+							routeChanged = false;
+						} else {
+							res
+								.text()
+								.then((error) => {
+									alert(`Erro a apagar variante:\n${error}`);
+								})
+								.catch(() => {
+									alert('Erro a apagar variante');
+								});
+						}
 						invalidate('app:subroutes');
 					}
 				});
@@ -179,13 +189,18 @@
 					console.log(e);
 				})
 				.then((res) => {
-					switch (res.status) {
-						case 424:
-							alert('You need to delete the subroutes before you delete the route');
-							break;
-						// case 200:
-						default:
-							invalidate('app:subroutes');
+					if (res.ok) {
+						routeChanged = false;
+					} else {
+						res
+							.text()
+							.then((error) => {
+								alert(`Erro a apagar a rota:\n${error}`);
+								invalidate('app:subroutes');
+							})
+							.catch(() => {
+								alert('Erro a apagar a rota');
+							});
 					}
 				});
 		}
@@ -211,7 +226,7 @@
 							bind:value={route.code}
 							on:change={() => (routeChanged = true)}
 							class="input input-bordered w-24 input-md"
-							disabled={!$decodedToken?.permissions.is_admin} 
+							disabled={!$decodedToken?.permissions.is_admin}
 						/>
 					</label>
 				</div>
@@ -223,12 +238,12 @@
 							bind:value={route.name}
 							on:change={() => (routeChanged = true)}
 							class="input input-bordered w-full input-md"
-							disabled={!$decodedToken?.permissions.is_admin} 
+							disabled={!$decodedToken?.permissions.is_admin}
 						/>
 					</label>
 				</div>
 				<div class="flex gap-2">
-					<!-- <div class="form-control">
+					<div class="form-control">
 						<label class="input-group">
 							<span>Circular</span>
 							<input
@@ -238,7 +253,7 @@
 								class="checkbox checkbox-info "
 							/>
 						</label>
-					</div> -->
+					</div>
 					<div class="form-control">
 						<label class="input-group">
 							<span>Activa</span>
@@ -247,7 +262,7 @@
 								bind:checked={route.active}
 								on:change={() => (routeChanged = true)}
 								class="checkbox checkbox-info"
-								disabled={!$decodedToken?.permissions.is_admin} 
+								disabled={!$decodedToken?.permissions.is_admin}
 							/>
 						</label>
 					</div>
@@ -266,7 +281,7 @@
 							class="btn btn-success btn-xs"
 							value="+"
 							on:mouseup={addSubroute}
-							disabled={!$decodedToken?.permissions.is_admin} 
+							disabled={!$decodedToken?.permissions.is_admin}
 						/>
 					</th>
 				</tr>
@@ -281,7 +296,7 @@
 								on:change={() => (routeChanged = true)}
 								name="main-route"
 								value={index}
-								disabled={!$decodedToken?.permissions.is_admin} 
+								disabled={!$decodedToken?.permissions.is_admin}
 							/>
 						</td>
 						<td>
@@ -290,7 +305,7 @@
 								type="text"
 								bind:value={subroute.flag}
 								on:change={() => (subroute.changed = true)}
-								disabled={!$decodedToken?.permissions.is_admin} 
+								disabled={!$decodedToken?.permissions.is_admin}
 							/>
 						</td>
 						<td>
@@ -299,7 +314,7 @@
 								type="checkbox"
 								bind:checked={subroute.circular}
 								on:change={() => (subroute.changed = true)}
-								disabled={!$decodedToken?.permissions.is_admin} 
+								disabled={!$decodedToken?.permissions.is_admin}
 							/>
 						</td>
 						<td>
@@ -310,7 +325,7 @@
 								on:mouseup={() => {
 									delSubroute(index);
 								}}
-								 disabled={!$decodedToken?.permissions.is_admin} 
+								disabled={!$decodedToken?.permissions.is_admin}
 							/>
 						</td>
 					</tr>
@@ -324,10 +339,7 @@
 			<button
 				class="btn btn-primary"
 				on:mouseup={saveRoute}
-				disabled={!routeChanged &&
-					route.subroutes.findIndex((sr) => {
-						return sr.changed;
-					}) === -1}
+				disabled={!routeChanged && route.subroutes.findIndex((sr) => sr.changed === true) === -1}
 			>
 				Guardar
 			</button>
