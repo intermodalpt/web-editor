@@ -682,8 +682,15 @@
 					<span>Envio em progresso</span><br />
 					<div class="font-bold">A enviar {uploadCount} de {files.length}</div>
 				{:else}
-					<div class="flex flex-col gap-1 ">
+					<div class="flex flex-col gap-1">
 						{#if files && files[0]}
+							<h3 class="text-md">
+								{#if files.length > 1}
+									Fotografias escolhidas
+								{:else}
+									Fotografia escolhida
+								{/if}
+							</h3>
 							{#each files as file, i}
 								<div class="flex flex-row justify-between items-center">
 									<div class="font-bold">{file.name}</div>
@@ -691,7 +698,7 @@
 							{/each}
 						{:else}
 							<div class="text-base-content text-bold opacity-50 p-2">
-								Escolha alguns ficheiros para começar
+								Escolha a fotografia que quer enviar
 							</div>
 						{/if}
 					</div>
@@ -709,23 +716,40 @@
 							Voltar
 						</div>
 					{:else}
-						<label for="dropzone-file" class="float-left mt-3 btn btn-primary">
-							Escolher ficheiros
-							<input
-								bind:files
-								capture="environment"
-								accept="image/*"
-								multiple
-								id="dropzone-file"
-								type="file"
-								class="hidden"
-							/>
-						</label>
+						<div class="flex flex-wrap gap-2">
+							<label for="dropzone-file" class="grow mt-3 btn btn-primary">
+								{#if files && files[0]}
+									📷 Alterar fotografia
+								{:else}
+									📷 Tirar fotografia
+								{/if}
+								<input
+									bind:files
+									multiple
+									capture="environment"
+									accept="image/*"
+									id="dropzone-file"
+									type="file"
+									class="hidden"
+								/>
+							</label>
+							<label for="dropzone-file-2" class="grow mt-3 btn btn-primary">
+								📁 Escolher da galeria
+								<input
+									bind:files
+									multiple
+									accept="image/*"
+									id="dropzone-file-2"
+									type="file"
+									class="hidden"
+								/>
+							</label>
+						</div>
 						<div
 							class="btn float-right mt-3 btn-secondary {files && files[0] ? '' : 'btn-disabled'}"
 							on:click={upload}
 						>
-							Enviar
+							Submeter
 						</div>
 					{/if}
 				{/if}
