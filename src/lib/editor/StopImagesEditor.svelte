@@ -81,20 +81,6 @@
 		});
 	});
 
-	const hasModifiedPictures = derived(
-		[editedStopPictures, newPictures],
-		([$editedStopPictures, $newPictures]) => {
-			console.log($editedStopPictures);
-			console.log($newPictures);
-			if ($editedStopPictures == null) return false;
-			if ($newPictures == null) return false;
-
-			return (
-				$editedStopPictures.some((pic) => pic.modified) || $newPictures.some((pic) => pic.modified)
-			);
-		}
-	);
-
 	function resetUploader() {
 		files = [];
 		uploading = false;
@@ -265,14 +251,9 @@
 	}
 
 	function closeEditor() {
-		// if ($hasModifiedPictures) {
-		// 	if (!confirm('Tem alterações pendentes. Se sair, estas poderão ser perdidas.')) {
-		// 		return;
-		// 	}
-		// }
 		if (
 			$editedStopPictures.some((pic) => pic.modified) ||
-			$newPictures.some((pic) => pic.modified)
+			$newPictures.some((pic) => !pic.metaCompleteness.total)
 		) {
 			if (!confirm('Tem alterações pendentes. Se sair, estas poderão ser perdidas.')) {
 				return;
@@ -294,9 +275,7 @@
 					value="Adicionar"
 					on:click={() => (sendingPictures = true)}
 				/>
-				<!-- {#if $hasModifiedPictures} -->
 				<input type="button" class="btn btn-primary" value="Guardar" on:click={save} />
-				<!-- {/if} -->
 				<input type="button" class="btn btn-neutral" value="Fechar" on:click={closeEditor} />
 			</div>
 
@@ -656,7 +635,11 @@
 							on:click={() => (step = steps.notes)}
 						/>
 						<span class="grow" />
-						<input class="btn btn-error border-black border-2" on:click={deleteImage} value="Apagar" />
+						<input
+							class="btn btn-error border-black border-2"
+							on:click={deleteImage}
+							value="Apagar"
+						/>
 					</div>
 				{/if}
 			{/if}
