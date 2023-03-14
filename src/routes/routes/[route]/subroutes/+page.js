@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { error } from '@sveltejs/kit';
 import { loadToken, loadRoutes } from '$lib/stores.js';
 
 export const csr = true;
@@ -16,6 +17,10 @@ export async function load({ params, fetch, depends }) {
 	}
 
 	let routes = await loadRoutes(fetch);
+
+	if (routes[routeId] === undefined) {
+		throw error(404, 'Route not found');
+	}
 
 	return {
 		route: routes[routeId]
