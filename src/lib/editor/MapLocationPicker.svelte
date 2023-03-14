@@ -78,7 +78,7 @@
 
 		Object.values($stops).forEach((stop) => {
 			let marker = L.marker([stop.lat, stop.lon], { icon: icons['osm'] });
-			marker.bindTooltip(`${stop.id} - ${stop.name || stop.short_name}`);
+			marker.bindTooltip(`${stop.id} - ${stop.official_name || stop.name || stop.short_name}`);
 			stopsLayer.addLayer(marker);
 		});
 

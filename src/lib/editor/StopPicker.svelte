@@ -44,7 +44,7 @@
 			marker.stopId = stop.id;
 
 			marker.on('click', (e) => dispatch('selectStop', e.target.stopId));
-			marker.bindTooltip(`${stop.id} - ${stop.name || stop.short_name}`);
+			marker.bindTooltip(`${stop.id} - ${stop.official_name | stop.name || stop.short_name}`);
 			stopsLayer.addLayer(marker);
 		});
 

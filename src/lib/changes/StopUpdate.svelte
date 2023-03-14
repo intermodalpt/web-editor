@@ -54,9 +54,7 @@
 </script>
 
 <h3 class="font-bold">
-	Alteração paragem {change.original.id}; {change.original.name ||
-		change.original.official_name ||
-		change.osm_name}
+	Alteração paragem {change.original.id}; {change.original.name || change.original.official_name}
 </h3>
 
 {#if expand}

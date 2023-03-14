@@ -107,7 +107,7 @@
 
 				marker.on('click', (e) => (stopInput.value = e.target.stopId));
 
-				let name = stop.name || stop.short_name;
+				let name = stop.name || stop.official_name || stop.short_name;
 
 				marker.bindTooltip(`${stop.id} - ${name}`);
 
@@ -354,7 +354,9 @@
 					<div>
 						{#each stopIds as stopId}
 							<div class="badge badge-outline badge-lg">
-								{stopId} - {$stops[stopId].short_name || $stops[stopId].name}
+								{stopId} - {$stops[stopId].short_name ||
+									$stops[stopId].name ||
+									$stops[stopId].official_name}
 								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
 									✕
 								</div>

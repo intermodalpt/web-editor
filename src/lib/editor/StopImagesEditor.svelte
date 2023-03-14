@@ -36,7 +36,7 @@
 	let tmpLon;
 	let tmpLat;
 	let tmpNotes;
-	let tmpStops;
+	let tmpStops = [];
 	let tmpSensitive;
 	let tmpPublic;
 	let tmpQuality;
@@ -527,7 +527,9 @@
 								</div>
 								{#each tmpStops as stopId}
 									<div class="badge badge-outline badge-lg">
-										{stopId} - {$stops[stopId].short_name || $stops[stopId].name}
+										{stopId} - {$stops[stopId].short_name ||
+											$stops[stopId].name ||
+											$stops[stopId].official_name}
 										<div
 											class="btn btn-error btn-circle btn-xs"
 											on:click={() => removeStop(stopId)}

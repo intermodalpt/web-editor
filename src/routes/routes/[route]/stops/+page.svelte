@@ -309,7 +309,7 @@
 	}
 
 	function stopName(stop) {
-		return stop.official_name || stop.name || stop.osm_name;
+		return stop.official_name || stop.name;
 	}
 
 	function closeModal(index) {
