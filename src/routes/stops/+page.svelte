@@ -227,6 +227,31 @@
 	}
 
 	function saveStopMeta() {
+		if (hasFlags) {
+			if (flagsData.length === 0) {
+				alert('Nenhum postalete inserido');
+				return;
+			}
+
+			// Check if there are flags without ids
+			if (flagsData.some((flag) => flag.id === null)) {
+				alert('Campo id em falta no postalete');
+				return;
+			}
+		}
+		if (hasSchedules) {
+			if (hasSchedules.length === 0) {
+				alert('Nenhum horário inserido');
+				return;
+			}
+
+			// Check if there are schedules with null types
+			if (schedulesData.some((schedule) => schedule.type === null)) {
+				alert('Campo origem em falta no horário');
+				return;
+			}
+		}
+
 		let newMeta = {
 			id: id,
 			name: name,
