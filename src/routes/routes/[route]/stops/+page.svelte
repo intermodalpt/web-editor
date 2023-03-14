@@ -262,6 +262,43 @@
 		closeModal(i);
 	}
 
+	function globalReplaceStop(i) {
+		if ($selectedStop === undefined) {
+			alert('Select another stop first...');
+			return;
+		}
+
+		if ($stopList.includes($selectedStop.id)) {
+			if (!confirm('Route already has this stop. Are you totally sure?')) {
+				return;
+			}
+		}
+
+		if (
+			confirm(`Do you want to replace ${stopName(stops[$stopList[i]])}
+        with ${stopName($selectedStop)}?`)
+		) {
+			fetch(`${apiServer}/v1/actions/migrate_stop/${$stopList[i]}/${$selectedStop.id}`, {
+				method: 'POST',
+				headers: {
+					authorization: `Bearer ${$token}`,
+					'Content-Type': 'application/json'
+				}
+			}).then((resp) => {
+				if (resp.ok) {
+					routeStops[$selectedSubrouteId] = $stopList;
+					$stopList[i] = $selectedStop.id;
+					$stopList = $stopList;
+				} else {
+					alert('An error happened');
+				}
+			});
+
+			closeModal(i);
+		}
+		closeModal(i);
+	}
+
 	function removeStop(i) {
 		if (confirm(`Do you want to remove ${stopName(stops[$stopList[i]])} from this route?`)) {
 			$stopList.splice(i, 1);
@@ -318,6 +355,14 @@
 		map.addLayer(mapLayers.stops);
 		redrawCurrentSubroute();
 	});
+
+	if (browser) {
+		document.addEventListener('keypress', (e) => {
+			if (e.key === '+') {
+				addAfter($stopList.length - 1);
+			}
+		});
+	}
 </script>
 
 <svelte:head>
@@ -436,6 +481,12 @@
 											<li>
 												<a on:mouseup={() => replaceStop(index)}>
 													⮰ Substituir por
+													<b>{stopName($selectedStop)}</b>
+												</a>
+											</li>
+											<li>
+												<a on:mouseup={() => globalReplaceStop(index)}>
+													⮰ Substituir globalmente por
 													<b>{stopName($selectedStop)}</b>
 												</a>
 											</li>
