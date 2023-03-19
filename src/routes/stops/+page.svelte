@@ -5,7 +5,6 @@
 	import { decodedToken, token } from '$lib/stores.js';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import Select from 'svelte-select';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 
@@ -72,14 +71,14 @@
 	let verificationLevel = 0;
 
 	const subforms = {
-		geral: 'geral',
+		info: 'info',
+		pics: 'pics',
 		service: 'service',
-		quality: 'quality',
-		accesibility: 'accessibility',
+		infra: 'infra',
 		extra: 'extra'
 	};
 
-	let currentSubform = null;
+	let currentSubform = subforms.info;
 
 	let selectedTmpIssue;
 
@@ -135,7 +134,20 @@
 	});
 
 	selectedStop.subscribe((stop) => {
-		if (stop == null) {
+		if (map) {
+			if (stop == null) {
+				map.easeTo({
+					padding: { bottom: 0 },
+					duration: 750
+				});
+				return;
+			} else {
+				map.easeTo({
+					padding: { bottom: 350 },
+					duration: 750
+				});
+			}
+		} else if (stop == null) {
 			return;
 		}
 
@@ -666,423 +678,511 @@
 	<meta name="description" content="Dados de paragens do Intermodal" />
 </svelte:head>
 
-<div id="grid-container" class="grid grid-cols-2 h-full">
-	<div id="map" class="h-full cursor-crosshair" />
-	<div id="list" class="h-full overflow-y-auto w-72 lg:w-80">
-		{#if $selectedStop}
-			<label class="input-group p-1">
-				<span class="label-text">{$selectedStop.id}</span>
-				<input
-					type="text"
-					value={$selectedStop.official_name || $selectedStop.osm_name}
-					class="input input-bordered w-full input-sm"
-					disabled
-				/>
-			</label>
-			<div class="flex gap-2 ml-1">
-				<div class="flex">
-					<input
-						class="btn btn-primary btn-xs rounded-r-none"
-						type="button"
-						value={$selectedStop.lat.toFixed(6)}
-						on:click={() => {
-							navigator.clipboard.writeText($selectedStop.lat.toFixed(6));
-						}}
-					/>
-					<input
-						class="btn btn-primary btn-xs rounded-l-none"
-						type="button"
-						value={$selectedStop.lon.toFixed(6)}
-						on:click={() => {
-							navigator.clipboard.writeText($selectedStop.lon.toFixed(6));
-						}}
-					/>
-				</div>
-				<input
-					class="btn btn-secondary btn-xs"
-					type="button"
-					value="Copiar"
-					on:click={() => {
-						navigator.clipboard.writeText(
-							$selectedStop.lat.toFixed(6) + ',' + $selectedStop.lon.toFixed(6)
-						);
-					}}
-				/>
-			</div>
-			<div class="form-control">
-				<label class="label">
-					<span class="label-text">Fotos</span>
-					<input
-						class="btn btn-sm btn-primary"
-						type="button"
-						value="+"
-						on:click={() => {
-							uploadingPics = true;
-						}}
-						disabled={!$decodedToken}
-					/>
-				</label>
-				<div class="flex gap-2 overflow-x-scroll">
-					{#if $stopPictures !== undefined && $stopPictures.length > 0}
-						{#each $stopPictures as picture}
-							<a target="_blank" href={picture.url_full}>
-								<img
-									src={picture.url_medium}
-									class="rounded-box transition-all hover:scale-150 h-16"
-								/>
-							</a>
-						{/each}
-					{/if}
-				</div>
-			</div>
-			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
-				<div
-					class="text-lg font-medium p-2 min-h-0"
-					on:click={() => {
-						currentSubform = currentSubform === subforms.geral ? null : subforms.geral;
-					}}
-				>
-					Dados localização
-				</div>
-				<div class={currentSubform === subforms.geral ? 'px-2 pb-2' : 'max-h-0'}>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Oficial</span>
-							<input
-								type="text"
-								bind:value={officialName}
-								placeholder="Vl. Qts. R Pessoa 29"
-								disabled
-								class="input input-bordered w-full input-xs"
-							/>
-						</label>
-					</div>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Opr. Id</span>
-							<input
-								type="text"
-								bind:value={officialId}
-								placeholder="150000"
-								disabled
-								class="input input-bordered w-full input-xs"
-							/>
-						</label>
-					</div>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Nome</span>
-							<input
-								type="text"
-								bind:value={name}
-								placeholder="Vale das Quintas, Rua Pessoa, 29"
-								class="input input-bordered w-full input-sm"
-								disabled={!$decodedToken?.permissions?.is_admin}
-							/>
-						</label>
-					</div>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Abrev.</span>
-							<input
-								type="text"
-								bind:value={shortName}
-								placeholder="Vl. Quintas, Pessoa"
-								class="input input-bordered w-full input-sm"
-								disabled={!$decodedToken?.permissions?.is_admin}
-							/>
-						</label>
-					</div>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Loc.</span>
-							<input
-								type="text"
-								bind:value={locality}
-								placeholder="Vale das Quintas"
-								class="input input-bordered w-full input-sm"
-								disabled={!$decodedToken}
-							/>
-						</label>
-					</div>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Via</span>
-							<input
-								type="text"
-								bind:value={street}
-								placeholder="Rua Pessoa"
-								class="input input-bordered w-full input-sm"
-								disabled={!$decodedToken}
-							/>
-						</label>
-					</div>
-					<div class="form-control w-full">
-						<label class="input-group">
-							<span class="label-text w-24">Porta</span>
-							<input
-								type="text"
-								bind:value={door}
-								placeholder="29"
-								class="input input-bordered w-full input-sm"
-								disabled={!$decodedToken}
-							/>
-						</label>
-					</div>
-				</div>
-			</div>
-			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
-				<div
-					class="text-lg font-medium p-2 min-h-0 flex justify-between"
-					on:click={() => {
-						currentSubform = currentSubform === subforms.service ? null : subforms.service;
-					}}
-				>
-					<span>Serviço</span>
-					<span class="bg-slate-200 rounded-full"
-						>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span
+<div id="map" class="h-full">
+	<!-- <div>
+		<input
+			type="button"
+			class="input input-info"
+			value="Filtros"
+			on:click={openFilterPicker}
+			on:keypress={openFilterPicker}
+		/>
+		<a class="btn btn-xs" href="/instructions#edit-stops">Instruções</a>
+	</div> -->
+	<div
+		class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750"
+		class:translate-y-[350px]={!$selectedStop}
+	>
+		<div
+			class="h-[350px] w-full bg-white grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl border-t-2 border-neutral"
+			style="grid-template-rows: auto 1fr;"
+		>
+			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
+				<div class="btn-group btn-group-horizontal">
+					<a
+						class="btn btn-xs"
+						class:btn-active={currentSubform === subforms.info}
+						on:click={() => (currentSubform = subforms.info)}
+						on:keypress={() => (currentSubform = subforms.info)}>Info</a
+					>
+					<a
+						href="#fotos"
+						class="btn btn-xs"
+						class:btn-active={currentSubform === subforms.pics}
+						on:click={() => (currentSubform = subforms.pics)}
+						on:keypress={() => (currentSubform = subforms.pics)}>Fotos</a
+					>
+					<a
+						class="btn btn-xs"
+						class:btn-active={currentSubform === subforms.service}
+						on:click={() => (currentSubform = subforms.service)}
+						on:keypress={() => (currentSubform = subforms.service)}>Serviço</a
+					>
+					<a
+						class="btn btn-xs"
+						class:btn-active={currentSubform === subforms.infra}
+						on:click={() => (currentSubform = subforms.infra)}
+						on:keypress={() => (currentSubform = subforms.infra)}>Infra</a
+					>
+					<a
+						class="btn btn-xs"
+						class:btn-active={currentSubform === subforms.extra}
+						on:click={() => (currentSubform = subforms.extra)}
+						on:keypress={() => (currentSubform = subforms.extra)}>Extra</a
 					>
 				</div>
+				<div class="flex gap-2 flex-grow justify-end">
+					<select
+						class="select select-primary max-w-xs select-xs hidden lg:block"
+						bind:value={verificationLevel}
+						disabled={!$decodedToken?.permissions.is_admin}
+					>
+						<!-- The binary mask -->
+						<option value={0}>Não verificado</option>
+						<option value={8}>Infra muito provável</option>
+						<option value={48}>Serviço verificado</option>
+						<option value={12}>Infraestrutura verificada</option>
+						<option value={84}>Errado</option>
+						<option value={252}>Tudo verificado</option>
+					</select>
+					<input
+						type="button"
+						class="btn btn-primary btn-xs"
+						disabled={!$decodedToken}
+						on:click={saveStopMeta}
+						on:keypress={saveStopMeta}
+						value="Guardar"
+					/>
+					<input
+						type="button"
+						class="btn btn-error btn-xs"
+						on:click={() => ($selectedStop = null)}
+						on:keypress={() => ($selectedStop = null)}
+						value="Fechar"
+					/>
+				</div>
+			</div>
+			<div class="w-full overflow-y-scroll p-2">
 				<div
-					class={currentSubform === subforms.service ? 'px-2 pb-2 flex flex-col gap-2' : 'max-h-0'}
+					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+					class:hidden={currentSubform != subforms.info}
 				>
-					<div class="rounded-lg border-base-300 border-2 py-2">
-						<div class="btn-group items-center">
-							<span class="px-2">Postaletes</span>
-							<button
-								class="btn btn-sm px-4"
-								class:btn-active={hasFlags === true}
-								on:click={() => (hasFlags = true)}
-								on:keypress={() => (hasFlags = true)}>Sim</button
-							>
-							<button
-								class="btn btn-sm px-6"
-								class:btn-active={hasFlags === null}
-								on:click={() => (hasFlags = null)}
-								on:keypress={() => (hasFlags = null)}>?</button
-							>
-							<button
-								class="btn btn-sm px-4"
-								class:btn-active={hasFlags === false}
-								on:click={() => (hasFlags = false)}
-								on:keypress={() => (hasFlags = false)}>Não</button
-							>
+					<div class="flex flex-col gap-1">
+						<span class="font-light text-lg">#{$selectedStop?.id}</span>
+						<div class="flex gap-2">
+							<div class="flex">
+								<input
+									class="btn btn-neutral btn-outline btn-xs rounded-r-none"
+									type="button"
+									value={$selectedStop?.lat.toFixed(6)}
+									on:click={() => {
+										navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+									}}
+								/>
+								<input
+									class="btn btn-neutral btn-outline btn-xs rounded-l-none -ml-[1px]"
+									type="button"
+									value={$selectedStop?.lon.toFixed(6)}
+									on:click={() => {
+										navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
+									}}
+								/>
+							</div>
+							<input
+								class="btn btn-secondary btn-xs"
+								type="button"
+								value="Copiar"
+								on:click={() => {
+									navigator.clipboard.writeText(
+										$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
+									);
+								}}
+							/>
 						</div>
-						{#if hasFlags}
-							{#each flagsData as flag, i}
-								<table class="table table-compact w-full">
+						<span>OpenStreetMap</span>
+						<a
+							class="link link-neutral ml-2 text-base"
+							href="https://www.openstreetmap.org/node/{$selectedStop?.external_id}"
+							>{$selectedStop?.osm_name}</a
+						>
+						<span>Completude</span>
+						<div class="flex flex-col gap-2 ml-2 text-base">
+							<div>
+								Serviço:
+								<span class="bg-slate-200 rounded-full"
+									>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span
+								>
+							</div>
+							<div>
+								Atributos:
+								<span class="bg-slate-200 rounded-full"
+									>{($hasSidewalk === null ? 0 : 1) +
+										($hasSidewalkedPath === null ? 0 : 1) +
+										($hasShelter === null ? 0 : 1) +
+										($hasCover === null ? 0 : 1) +
+										($hasBench === null ? 0 : 1) +
+										($hasTrashCan === null ? 0 : 1) +
+										($hasWaitingTimes === null ? 0 : 1) +
+										($hasTicketSeller === null ? 0 : 1) +
+										($hasCostumerSupport === null ? 0 : 1) +
+										(advertisementQty === null ? 0 : 1) +
+										($hasCrossing === null ? 0 : 1) +
+										($hasFlatAccess === null ? 0 : 1) +
+										($hasWideAccess === null ? 0 : 1) +
+										($hasTactileAccess === null ? 0 : 1) +
+										(illuminationPosition === null ? 0 : 1) +
+										(illuminationStrength === null ? 0 : 1) +
+										($hasIlluminatedPath === null ? 0 : 1) +
+										($hasVisibilityFromArea === null ? 0 : 1) +
+										($hasVisibilityFromWithin === null ? 0 : 1) +
+										($isVisibleFromOutside === null ? 0 : 1) +
+										(parkingVisibilityImpairment === null ? 0 : 1) +
+										(parkingLocalAccessImpairment === null ? 0 : 1) +
+										(parkingAreaAccessImpairment === null ? 0 : 1)}/{$hasShelter === true
+										? 23
+										: 22}</span
+								>
+							</div>
+						</div>
+						<div class="flex items-baseline">
+							<span class="label">Autenticidade</span>
+							<select
+								class="select select-primary max-w-xs select-xs"
+								bind:value={verificationLevel}
+								disabled={!$decodedToken?.permissions.is_admin}
+							>
+								<!-- The binary mask -->
+								<option value={0}>Não verificado</option>
+								<option value={8}>Infra muito provável</option>
+								<option value={48}>Serviço verificado</option>
+								<option value={12}>Infraestrutura verificada</option>
+								<option value={84}>Errado</option>
+								<option value={252}>Tudo verificado</option>
+							</select>
+						</div>
+					</div>
+					<div class="flex flex-col gap-1">
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Oficial</span>
+								<input
+									type="text"
+									bind:value={officialName}
+									placeholder="Vl. Qts. R Pessoa 29"
+									disabled
+									class="input input-bordered w-full input-xs"
+								/>
+							</label>
+						</div>
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Opr. Id</span>
+								<input
+									type="text"
+									bind:value={officialId}
+									placeholder="150000"
+									disabled
+									class="input input-bordered w-full input-xs"
+								/>
+							</label>
+						</div>
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Nome</span>
+								<input
+									type="text"
+									bind:value={name}
+									placeholder="Vale das Quintas, Rua Pessoa, 29"
+									class="input input-bordered w-full input-sm"
+									disabled={!$decodedToken?.permissions?.is_admin}
+								/>
+							</label>
+						</div>
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Abrev.</span>
+								<input
+									type="text"
+									bind:value={shortName}
+									placeholder="Vl. Quintas, Pessoa"
+									class="input input-bordered w-full input-sm"
+									disabled={!$decodedToken?.permissions?.is_admin}
+								/>
+							</label>
+						</div>
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Loc.</span>
+								<input
+									type="text"
+									bind:value={locality}
+									placeholder="Vale das Quintas"
+									class="input input-bordered w-full input-sm"
+									disabled={!$decodedToken}
+								/>
+							</label>
+						</div>
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Via</span>
+								<input
+									type="text"
+									bind:value={street}
+									placeholder="Rua Pessoa"
+									class="input input-bordered w-full input-sm"
+									disabled={!$decodedToken}
+								/>
+							</label>
+						</div>
+						<div class="form-control w-full">
+							<label class="input-group">
+								<span class="label-text w-24">Porta</span>
+								<input
+									type="text"
+									bind:value={door}
+									placeholder="29"
+									class="input input-bordered w-full input-sm"
+									disabled={!$decodedToken}
+								/>
+							</label>
+						</div>
+					</div>
+				</div>
+				<div class="w-full" class:hidden={currentSubform != subforms.pics}>
+					<div class="flex flex-col  gap-2 grow">
+						<div class="flex flex-wrap gap-1">
+							{#if $stopPictures !== undefined && $stopPictures.length > 0}
+								{#each $stopPictures as picture}
+									<a target="_blank" href={picture.url_full}>
+										<img
+											src={picture.url_medium}
+											class="rounded-box transition-all hover:scale-150 h-40"
+										/>
+									</a>
+								{/each}
+							{/if}
+						</div>
+						<div class="flex justify-end">
+							<input
+								class="btn btn-sm btn-primary"
+								type="button"
+								value="Editar fotos"
+								on:click={() => {
+									uploadingPics = true;
+								}}
+								disabled={!$decodedToken}
+							/>
+						</div>
+					</div>
+				</div>
+				<div class="w-full hidden" class:hidden={currentSubform != subforms.service}>
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+						<div class="rounded-lg border-base-300 border-2 py-2">
+							<div class="btn-group items-center">
+								<span class="px-2">Postaletes</span>
+								<button
+									class="btn btn-sm px-4"
+									class:btn-active={hasFlags === true}
+									on:click={() => (hasFlags = true)}
+									on:keypress={() => (hasFlags = true)}>Sim</button
+								>
+								<button
+									class="btn btn-sm px-6"
+									class:btn-active={hasFlags === null}
+									on:click={() => (hasFlags = null)}
+									on:keypress={() => (hasFlags = null)}>?</button
+								>
+								<button
+									class="btn btn-sm px-4"
+									class:btn-active={hasFlags === false}
+									on:click={() => (hasFlags = false)}
+									on:keypress={() => (hasFlags = false)}>Não</button
+								>
+							</div>
+							{#if hasFlags}
+								{#each flagsData as flag, i}
+									<table class="table table-compact w-full">
+										<thead>
+											<tr>
+												<th class="text-xs">Id</th>
+												<th class="w-full">
+													<input
+														type="text"
+														class="w-32 input input-xs input-bordered px-0"
+														bind:value={flag.id}
+													/>
+												</th>
+												<th>
+													<input
+														type="button"
+														class="btn btn-error btn-xs"
+														value="-"
+														disabled={!$decodedToken}
+														on:click={() => removeFlag(i)}
+														on:keypress={() => removeFlag(i)}
+													/>
+												</th>
+											</tr>
+											<tr>
+												<th class="text-xs">Nome</th>
+												<th class="w-full">
+													<input
+														type="text"
+														class="w-32 input input-xs input-bordered px-0"
+														bind:value={flag.name}
+													/>
+												</th>
+												<th>
+													<input
+														type="button"
+														class="btn btn-success btn-xs"
+														value="+linha"
+														disabled={!$decodedToken}
+														on:click={() => addFlagRoute(i)}
+														on:keypress={() => addFlagRoute(i)}
+													/>
+												</th>
+											</tr>
+										</thead>
+									</table>
+									<div class="flex flex-wrap">
+										{#each flag.route_codes as code, j}
+											<div class="badge badge-outline badge-lg">
+												{code}
+												<div
+													class="btn btn-error btn-circle btn-xs"
+													on:click={() => removeFlagRoute(i, j)}
+												>
+													✕
+												</div>
+											</div>
+										{/each}
+									</div>
+									<hr />
+								{/each}
+
+								<div class="flex justify-end">
+									<input
+										type="button"
+										class="btn btn-success btn-xs"
+										value="+ postalete"
+										on:click={addFlag}
+									/>
+								</div>
+							{/if}
+						</div>
+						<div class="rounded-lg border-base-300 border-2 py-2">
+							<div class="btn-group items-center">
+								<span class="px-2">Horários</span>
+								<button
+									class="btn btn-sm px-4"
+									class:btn-active={hasSchedules === true}
+									on:click={() => (hasSchedules = true)}
+									on:keypress={() => (hasSchedules = true)}>Sim</button
+								>
+								<button
+									class="btn btn-sm px-6"
+									class:btn-active={hasSchedules === null}
+									on:click={() => (hasSchedules = null)}
+									on:keypress={() => (hasSchedules = null)}>?</button
+								>
+								<button
+									class="btn btn-sm px-4"
+									class:btn-active={hasSchedules === false}
+									on:click={() => (hasSchedules = false)}
+									on:keypress={() => (hasSchedules = false)}>Não</button
+								>
+							</div>
+							{#if hasSchedules}
+								<table class="table table-zebra table-compact w-full">
 									<thead>
 										<tr>
-											<th class="text-xs">Id</th>
-											<th class="w-full">
-												<input
-													type="text"
-													class="w-32 input input-xs input-bordered px-0"
-													bind:value={flag.id}
-												/>
-											</th>
-											<th>
-												<input
-													type="button"
-													class="btn btn-error btn-xs"
-													value="-"
-													disabled={!$decodedToken}
-													on:click={() => removeFlag(i)}
-													on:keypress={() => removeFlag(i)}
-												/>
-											</th>
-										</tr>
-										<tr>
-											<th class="text-xs">Nome</th>
-											<th class="w-full">
-												<input
-													type="text"
-													class="w-32 input input-xs input-bordered px-0"
-													bind:value={flag.name}
-												/>
-											</th>
+											<th class="text-xs">Linha</th>
+											<th class="text-xs">Tipo</th>
+											<th class="text-xs">Discrim.</th>
 											<th>
 												<input
 													type="button"
 													class="btn btn-success btn-xs"
-													value="+linha"
+													value="+"
+													on:click={addScheduleEntry}
+													on:kaypress={addScheduleEntry}
 													disabled={!$decodedToken}
-													on:click={() => addFlagRoute(i)}
-													on:keypress={() => addFlagRoute(i)}
 												/>
 											</th>
 										</tr>
 									</thead>
+									<tbody>
+										{#each schedulesData as schedule, i}
+											<tr>
+												<td>
+													<input
+														type="text"
+														class="w-10 input input-xs input-bordered px-0"
+														bind:value={schedule.code}
+													/>
+												</td>
+												<td class="p-0">
+													<select
+														class="select select-primary max-w-xs select-xs"
+														bind:value={schedule.type}
+														disabled={!$decodedToken}
+													>
+														<option disabled selected value={null}>Tipo?</option>
+														<option value="origin">Origem</option>
+														<option value="prediction">Previs.</option>
+														<option value="frequency">Periód.</option>
+													</select>
+												</td>
+												<td class="p-0">
+													<input
+														type="text"
+														class="w-16 input input-xs input-bordered px-0"
+														bind:value={schedule.discriminator}
+													/>
+												</td>
+												<td>
+													<input
+														type="button"
+														class="btn btn-error btn-xs"
+														value="-"
+														on:click={() => removeScheduleEntry(i)}
+														on:keypress={() => removeScheduleEntry(i)}
+														disabled={!$decodedToken}
+													/>
+												</td>
+											</tr>
+										{/each}
+									</tbody>
 								</table>
-								<div class="flex flex-wrap">
-									{#each flag.route_codes as code, j}
-										<div class="badge badge-outline badge-lg">
-											{code}
-											<div
-												class="btn btn-error btn-circle btn-xs"
-												on:click={() => removeFlagRoute(i, j)}
-											>
-												✕
-											</div>
-										</div>
-									{/each}
-								</div>
-								<hr />
-							{/each}
-
-							<div class="flex justify-end">
+							{/if}
+						</div>
+						<div class="grow">
+							<label class="label"><span class="label-text">Verificação</span></label>
+							<div class="flex">
+								<input
+									type="date"
+									class="input input-xs input-bordered"
+									bind:value={serviceCheckDate}
+								/>
 								<input
 									type="button"
-									class="btn btn-success btn-xs"
-									value="+ postalete"
-									on:click={addFlag}
+									class="btn btn-primary btn-xs"
+									value="Hoje"
+									on:click={() => {
+										serviceCheckDate = new Date().toISOString().split('T')[0];
+									}}
 								/>
 							</div>
-						{/if}
-					</div>
-					<div class="rounded-lg border-base-300 border-2 py-2">
-						<div class="btn-group items-center">
-							<span class="px-2">Horários</span>
-							<button
-								class="btn btn-sm px-4"
-								class:btn-active={hasSchedules === true}
-								on:click={() => (hasSchedules = true)}
-								on:keypress={() => (hasSchedules = true)}>Sim</button
-							>
-							<button
-								class="btn btn-sm px-6"
-								class:btn-active={hasSchedules === null}
-								on:click={() => (hasSchedules = null)}
-								on:keypress={() => (hasSchedules = null)}>?</button
-							>
-							<button
-								class="btn btn-sm px-4"
-								class:btn-active={hasSchedules === false}
-								on:click={() => (hasSchedules = false)}
-								on:keypress={() => (hasSchedules = false)}>Não</button
-							>
 						</div>
-
-						{#if hasSchedules}
-							<table class="table table-zebra table-compact w-full">
-								<thead>
-									<tr>
-										<th class="text-xs">Linha</th>
-										<th class="text-xs">Tipo</th>
-										<th class="text-xs">Discrim.</th>
-										<th>
-											<input
-												type="button"
-												class="btn btn-success btn-xs"
-												value="+"
-												on:click={addScheduleEntry}
-												on:kaypress={addScheduleEntry}
-												disabled={!$decodedToken}
-											/>
-										</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each schedulesData as schedule, i}
-										<tr>
-											<td>
-												<input
-													type="text"
-													class="w-10 input input-xs input-bordered px-0"
-													bind:value={schedule.code}
-												/>
-											</td>
-											<td class="p-0">
-												<select
-													class="select select-primary max-w-xs select-xs"
-													bind:value={schedule.type}
-													disabled={!$decodedToken}
-												>
-													<option disabled selected value={null}>Tipo?</option>
-													<option value="origin">Origem</option>
-													<option value="prediction">Previs.</option>
-													<option value="frequency">Periód.</option>
-												</select>
-											</td>
-											<td class="p-0">
-												<input
-													type="text"
-													class="w-16 input input-xs input-bordered px-0"
-													bind:value={schedule.discriminator}
-												/>
-											</td>
-											<td>
-												<input
-													type="button"
-													class="btn btn-error btn-xs"
-													value="-"
-													on:click={() => removeScheduleEntry(i)}
-													on:keypress={() => removeScheduleEntry(i)}
-													disabled={!$decodedToken}
-												/>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						{/if}
-					</div>
-					<label class="label"><span class="label-text">Verificação</span></label>
-					<div class="flex">
-						<input
-							type="date"
-							class="input input-xs input-bordered"
-							bind:value={serviceCheckDate}
-						/>
-						<input
-							type="button"
-							class="btn btn-primary btn-xs"
-							value="Hoje"
-							on:click={() => {
-								serviceCheckDate = new Date().toISOString().split('T')[0];
-							}}
-						/>
 					</div>
 				</div>
-			</div>
-			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 				<div
-					class="text-lg font-medium p-2 min-h-0 flex justify-between"
-					on:click={() => {
-						currentSubform =
-							currentSubform === subforms.accesibility ? null : subforms.accesibility;
-					}}
+					class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2"
+					class:hidden={currentSubform != subforms.infra}
 				>
-					<span>Infraestrutura</span>
-					<span class="bg-slate-200 rounded-full"
-						>{($hasSidewalk === null ? 0 : 1) +
-							($hasSidewalkedPath === null ? 0 : 1) +
-							($hasShelter === null ? 0 : 1) +
-							($hasCover === null ? 0 : 1) +
-							($hasBench === null ? 0 : 1) +
-							($hasTrashCan === null ? 0 : 1) +
-							($hasWaitingTimes === null ? 0 : 1) +
-							($hasTicketSeller === null ? 0 : 1) +
-							($hasCostumerSupport === null ? 0 : 1) +
-							(advertisementQty === null ? 0 : 1) +
-							($hasCrossing === null ? 0 : 1) +
-							($hasFlatAccess === null ? 0 : 1) +
-							($hasWideAccess === null ? 0 : 1) +
-							($hasTactileAccess === null ? 0 : 1) +
-							(illuminationPosition === null ? 0 : 1) +
-							(illuminationStrength === null ? 0 : 1) +
-							($hasIlluminatedPath === null ? 0 : 1) +
-							($hasVisibilityFromArea === null ? 0 : 1) +
-							($hasVisibilityFromWithin === null ? 0 : 1) +
-							($isVisibleFromOutside === null ? 0 : 1) +
-							(parkingVisibilityImpairment === null ? 0 : 1) +
-							(parkingLocalAccessImpairment === null ? 0 : 1) +
-							(parkingAreaAccessImpairment === null ? 0 : 1)}/{$hasShelter === true ? 23 : 22}</span
-					>
-				</div>
-				<div class={currentSubform === subforms.accesibility ? 'px-2 pb-2' : 'max-h-0'}>
 					<div>
-						<!-- <label class="label"><span class="label-text">Infraestrutura</span></label> -->
+						<label class="label"><span class="label-text">Infraestrutura</span></label>
 						<StopCheckbox
 							text="Passeio"
 							description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
@@ -1119,24 +1219,6 @@
 							state={hasTrashCan}
 							disabled={!$decodedToken}
 						/>
-						<StopCheckbox
-							text="Tempos de espera"
-							description="A paragem dispõe de um painel com os tempos de espera"
-							state={hasWaitingTimes}
-							disabled={!$decodedToken}
-						/>
-						<StopCheckbox
-							text="Ponto de venda"
-							description="Existe um ponto de venda de títulos na paragem"
-							state={hasTicketSeller}
-							disabled={!$decodedToken}
-						/>
-						<StopCheckbox
-							text="Apoio ao passageiro"
-							description="Existe infraestrutura de apoio ao passageiro (balcão, intercomunicador, ...)"
-							state={hasCostumerSupport}
-							disabled={!$decodedToken}
-						/>
 						<select
 							class="select select-primary max-w-xs select-xs"
 							bind:value={advertisementQty}
@@ -1148,6 +1230,8 @@
 							<option value={4}>Muita área de anúncio</option>
 							<option value={6}>Anúncios intrusivos</option>
 						</select>
+					</div>
+					<div>
 						<label class="label"><span class="label-text">Acesso</span></label>
 						<StopCheckbox
 							text="Atravessamento de via"
@@ -1195,13 +1279,14 @@
 							<option value={3}>Moderada</option>
 							<option value={5}>Forte</option>
 						</select>
-
 						<StopCheckbox
 							text="No acesso"
 							description="O acesso para a paragem encontra-se bem iluminado todas as 24 horas"
 							state={hasIlluminatedPath}
 							disabled={!$decodedToken}
 						/>
+					</div>
+					<div>
 						<label class="label"><span class="label-text">Visibilidade</span></label>
 						<StopCheckbox
 							text="Da paragem para autocarro"
@@ -1223,40 +1308,65 @@
 							state={isVisibleFromOutside}
 							disabled={!$decodedToken}
 						/>
+						<label class="label"><span class="label-text">Apoios</span></label>
+						<StopCheckbox
+							text="Tempos de espera"
+							description="A paragem dispõe de um painel com os tempos de espera"
+							state={hasWaitingTimes}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Ponto de venda"
+							description="Existe um ponto de venda de títulos na paragem"
+							state={hasTicketSeller}
+							disabled={!$decodedToken}
+						/>
+						<StopCheckbox
+							text="Apoio ao passageiro"
+							description="Existe infraestrutura de apoio ao passageiro (balcão, intercomunicador, ...)"
+							state={hasCostumerSupport}
+							disabled={!$decodedToken}
+						/>
+					</div>
+					<div>
 						<label class="label"><span class="label-text">Parque automóvel</span></label>
-						<select
-							class="select select-primary max-w-xs select-xs"
-							bind:value={parkingVisibilityImpairment}
-							disabled={!$decodedToken}
-						>
-							<option disabled selected value={null}>Limitação visual?</option>
-							<option value={0}>Sem limitações à visibilidade</option>
-							<option value={2}>Pouco limitante à visibilidade</option>
-							<option value={4}>Algo limitante à visibilidade</option>
-							<option value={6}>Muito limitante à visibilidade</option>
-						</select>
-						<select
-							class="select select-primary max-w-xs select-xs"
-							bind:value={parkingLocalAccessImpairment}
-							disabled={!$decodedToken}
-						>
-							<option disabled selected value={null}>Disfuncional à paragem?</option>
-							<option value={0}>Sem inteferência à paragem</option>
-							<option value={2}>Pouca intreferêcia à paragem</option>
-							<option value={4}>Alguma intreferência à paragem</option>
-							<option value={6}>Muita intreferência à paragem</option>
-						</select>
-						<select
-							class="select select-primary max-w-xs select-xs"
-							bind:value={parkingAreaAccessImpairment}
-							disabled={!$decodedToken}
-						>
-							<option disabled selected value={null}>Disfuncional ao acesso?</option>
-							<option value={0}>Acesso sem inteferência</option>
-							<option value={2}>Acesso com pouca intreferêcia</option>
-							<option value={4}>Acesso com alguma intreferência</option>
-							<option value={6}>Acesso com muita intreferência</option>
-						</select>
+						<div class="flex flex-col">
+							<select
+								class="select select-primary max-w-xs select-xs"
+								bind:value={parkingVisibilityImpairment}
+								disabled={!$decodedToken}
+							>
+								<option disabled selected value={null}>Limitação visual?</option>
+								<option value={0}>Sem limitações à visibilidade</option>
+								<option value={2}>Pouco limitante à visibilidade</option>
+								<option value={4}>Algo limitante à visibilidade</option>
+								<option value={6}>Muito limitante à visibilidade</option>
+							</select>
+							<select
+								class="select select-primary max-w-xs select-xs"
+								bind:value={parkingLocalAccessImpairment}
+								disabled={!$decodedToken}
+							>
+								<option disabled selected value={null}>Disfuncional à paragem?</option>
+								<option value={0}>Sem inteferência à paragem</option>
+								<option value={2}>Pouca intreferêcia à paragem</option>
+								<option value={4}>Alguma intreferência à paragem</option>
+								<option value={6}>Muita intreferência à paragem</option>
+							</select>
+							<select
+								class="select select-primary max-w-xs select-xs"
+								bind:value={parkingAreaAccessImpairment}
+								disabled={!$decodedToken}
+							>
+								<option disabled selected value={null}>Disfuncional ao acesso?</option>
+								<option value={0}>Acesso sem inteferência</option>
+								<option value={2}>Acesso com pouca intreferêcia</option>
+								<option value={4}>Acesso com alguma intreferência</option>
+								<option value={6}>Acesso com muita intreferência</option>
+							</select>
+						</div>
+					</div>
+					<div>
 						<label class="label"><span class="label-text">Verificação</span></label>
 						<div class="flex">
 							<input
@@ -1275,36 +1385,13 @@
 						</div>
 					</div>
 				</div>
-			</div>
-			<div class="collapse collapse-arrow border border-base-300 bg-base-100">
 				<div
-					class="text-lg font-medium p-2 min-h-0"
-					on:click={() => {
-						currentSubform = currentSubform === subforms.extra ? null : subforms.extra;
-					}}
+					class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 grid-flow-row-dense"
+					class:hidden={currentSubform != subforms.extra}
 				>
-					Extra
-				</div>
-				<div class={currentSubform === subforms.extra ? 'px-2 pb-2' : 'max-h-0'}>
-					<div class="form-control">
+					<div class="form-control max-w-xs">
 						<label class="label"><span class="label-text">Defeitos</span></label>
 						<div class="flex flex-col gap-2">
-							<div class="flex gap-2">
-								<div class="grow w-full">
-									<Select
-										items={tmpIssuesOptions}
-										bind:value={selectedTmpIssue}
-										placeholder="Novo defeito"
-									/>
-								</div>
-								<input
-									class="btn btn-sm btn-primary grow-0"
-									type="button"
-									value="+"
-									on:click={addIssue}
-									disabled={!$decodedToken}
-								/>
-							</div>
 							{#each tmpIssues as issue}
 								<div class="badge badge-outline badge-lg">
 									{tmpIssueLabels[issue]}
@@ -1313,9 +1400,35 @@
 									</div>
 								</div>
 							{/each}
+							<div class="grow">
+								<label for="defect-modal" class="btn btn-sm btn-primary modal-button w-full"
+									>Novo defeito</label
+								>
+								<input type="checkbox" id="defect-modal" class="modal-toggle" />
+								<label for="defect-modal" class="modal cursor-pointer">
+									<label class="modal-box relative max-w-2xl" for="">
+										<span class="text-lg"> Que defeito adicionar? </span>
+										<ul class="menu bg-base-100 w-full rounded-box">
+											{#each tmpIssuesOptions as tmpIssue}
+												<li>
+													<a
+														on:mouseup={() => {
+															selectedTmpIssue = tmpIssue;
+															addIssue();
+															document.getElementById('defect-modal').checked = false;
+														}}
+													>
+														{tmpIssue.label}
+													</a>
+												</li>
+											{/each}
+										</ul>
+									</label>
+								</label>
+							</div>
 						</div>
 					</div>
-					<div class="form-control">
+					<div class="form-control max-w-xs">
 						<label class="label">
 							<span class="label-text">Tags</span>
 						</label>
@@ -1346,7 +1459,7 @@
 							{/each}
 						</div>
 					</div>
-					<div class="form-control">
+					<div class="form-control grow">
 						<label class="label">
 							<span class="label-text">Notas</span>
 						</label>
@@ -1359,43 +1472,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="flex items-baseline">
-				<label class="label"><span class="label-text">Autenticidade</span></label>
-				<select
-					class="select select-primary max-w-xs select-xs"
-					bind:value={verificationLevel}
-					disabled={!$decodedToken?.permissions.is_admin}
-				>
-					<!-- The binary mask -->
-					<option value={0}>Não verificado</option>
-					<option value={8}>Infra muito provável</option>
-					<option value={48}>Serviço verificado</option>
-					<option value={12}>Infraestrutura verificada</option>
-					<option value={84}>Errado</option>
-					<option value={252}>Tudo verificado</option>
-				</select>
-			</div>
-		{:else}
-			<p>Escolha uma paragem.</p>
-		{/if}
-	</div>
-	<div id="actions" class="flex gap-2 justify-end">
-		<a class="btn" href="/instructions#edit-stops">Instruções</a>
-		<!-- <input
-			type="button"
-			class="input input-info"
-			value="Filtros"
-			on:click={openFilterPicker}
-			on:keypress={openFilterPicker}
-		/> -->
-		<input
-			type="button"
-			class="btn btn-primary float-right"
-			disabled={!$decodedToken}
-			on:click={saveStopMeta}
-			on:keypress={saveStopMeta}
-			value="Guardar"
-		/>
+		</div>
 	</div>
 </div>
 
@@ -1458,29 +1535,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	#map {
-		border-top-left-radius: 12px;
-		border-bottom-left-radius: 12px;
-		cursor: crosshair !important;
-		grid-area: map;
-	}
-
-	#list {
-		grid-area: list;
-	}
-
-	#actions {
-		grid-area: actions;
-	}
-
-	#grid-container {
-		display: grid;
-		grid-template-areas:
-			'map list'
-			'actions actions';
-		grid-template-columns: 1fr auto;
-		grid-template-rows: minmax(300px, 85vh) auto;
-	}
-</style>

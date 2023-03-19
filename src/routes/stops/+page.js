@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { get } from 'svelte/store';
-import { loadToken, stops, pictures, loadStops, loadPictures } from '$lib/stores.js';
+import { loadToken, stops, loadStops } from '$lib/stores.js';
 
 export const csr = true;
 export const ssr = false;
@@ -10,8 +10,7 @@ export const prerender = false;
 export async function load({ params, fetch }) {
 	if (!browser) {
 		return {
-			stops: {},
-			pictures: {}
+			stops: {}
 		};
 	}
 
