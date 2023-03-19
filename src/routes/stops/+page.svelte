@@ -694,7 +694,7 @@
 		class:translate-y-[350px]={!$selectedStop}
 	>
 		<div
-			class="h-[350px] w-full bg-white grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl border-t-2 border-neutral"
+			class="h-[350px] w-full bg-zinc-500 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl border-t-2 border-neutral"
 			style="grid-template-rows: auto 1fr;"
 		>
 			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
@@ -747,7 +747,7 @@
 					</select>
 					<input
 						type="button"
-						class="btn btn-primary btn-xs"
+						class="btn btn-success btn-xs"
 						disabled={!$decodedToken}
 						on:click={saveStopMeta}
 						on:keypress={saveStopMeta}
@@ -762,7 +762,7 @@
 					/>
 				</div>
 			</div>
-			<div class="w-full overflow-y-scroll p-2">
+			<div class="w-full overflow-y-scroll p-2 bg-base-100">
 				<div
 					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
 					class:hidden={currentSubform != subforms.info}
@@ -976,28 +976,30 @@
 					</div>
 				</div>
 				<div class="w-full hidden" class:hidden={currentSubform != subforms.service}>
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-						<div class="rounded-lg border-base-300 border-2 py-2">
-							<div class="btn-group items-center">
-								<span class="px-2">Postaletes</span>
-								<button
-									class="btn btn-sm px-4"
-									class:btn-active={hasFlags === true}
-									on:click={() => (hasFlags = true)}
-									on:keypress={() => (hasFlags = true)}>Sim</button
-								>
-								<button
-									class="btn btn-sm px-6"
-									class:btn-active={hasFlags === null}
-									on:click={() => (hasFlags = null)}
-									on:keypress={() => (hasFlags = null)}>?</button
-								>
-								<button
-									class="btn btn-sm px-4"
-									class:btn-active={hasFlags === false}
-									on:click={() => (hasFlags = false)}
-									on:keypress={() => (hasFlags = false)}>Não</button
-								>
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
+						<div class="rounded-lg border-base-300 border-l-2 border-r-2">
+							<div class="flex gap-2 items-baseline">
+								<span class="text-base">Postaletes</span>
+								<div class="btn-group items-center">
+									<button
+										class="btn btn-xs px-4"
+										class:btn-active={hasFlags === true}
+										on:click={() => (hasFlags = true)}
+										on:keypress={() => (hasFlags = true)}>Sim</button
+									>
+									<button
+										class="btn btn-xs px-6"
+										class:btn-active={hasFlags === null}
+										on:click={() => (hasFlags = null)}
+										on:keypress={() => (hasFlags = null)}>?</button
+									>
+									<button
+										class="btn btn-xs px-4"
+										class:btn-active={hasFlags === false}
+										on:click={() => (hasFlags = false)}
+										on:keypress={() => (hasFlags = false)}>Não</button
+									>
+								</div>
 							</div>
 							{#if hasFlags}
 								{#each flagsData as flag, i}
@@ -1071,27 +1073,29 @@
 								</div>
 							{/if}
 						</div>
-						<div class="rounded-lg border-base-300 border-2 py-2">
-							<div class="btn-group items-center">
-								<span class="px-2">Horários</span>
-								<button
-									class="btn btn-sm px-4"
-									class:btn-active={hasSchedules === true}
-									on:click={() => (hasSchedules = true)}
-									on:keypress={() => (hasSchedules = true)}>Sim</button
-								>
-								<button
-									class="btn btn-sm px-6"
-									class:btn-active={hasSchedules === null}
-									on:click={() => (hasSchedules = null)}
-									on:keypress={() => (hasSchedules = null)}>?</button
-								>
-								<button
-									class="btn btn-sm px-4"
-									class:btn-active={hasSchedules === false}
-									on:click={() => (hasSchedules = false)}
-									on:keypress={() => (hasSchedules = false)}>Não</button
-								>
+						<div class="rounded-lg border-base-300 border-l-2 border-r-2">
+							<div class="flex gap-2 items-baseline">
+								<span class="text-base">Horários</span>
+								<div class="btn-group items-center">
+									<button
+										class="btn btn-xs px-4"
+										class:btn-active={hasSchedules === true}
+										on:click={() => (hasSchedules = true)}
+										on:keypress={() => (hasSchedules = true)}>Sim</button
+									>
+									<button
+										class="btn btn-xs px-6"
+										class:btn-active={hasSchedules === null}
+										on:click={() => (hasSchedules = null)}
+										on:keypress={() => (hasSchedules = null)}>?</button
+									>
+									<button
+										class="btn btn-xs px-4"
+										class:btn-active={hasSchedules === false}
+										on:click={() => (hasSchedules = false)}
+										on:keypress={() => (hasSchedules = false)}>Não</button
+									>
+								</div>
 							</div>
 							{#if hasSchedules}
 								<table class="table table-zebra table-compact w-full">
@@ -1181,8 +1185,8 @@
 					class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2"
 					class:hidden={currentSubform != subforms.infra}
 				>
-					<div>
-						<label class="label"><span class="label-text">Infraestrutura</span></label>
+					<div class="flex flex-col gap-1">
+						<span>Infraestrutura</span>
 						<StopCheckbox
 							text="Passeio"
 							description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
@@ -1203,7 +1207,7 @@
 						/>
 						<StopCheckbox
 							text="Cobertura"
-							description="A paragem encontra-se debaixo de uma cobertura que resguarde da chuva"
+							description="A paragem encontra-se debaixo de uma cobertura que não um abrigo (ex: telhado)"
 							state={hasCover}
 							disabled={!$decodedToken}
 						/>
@@ -1231,8 +1235,8 @@
 							<option value={6}>Anúncios intrusivos</option>
 						</select>
 					</div>
-					<div>
-						<label class="label"><span class="label-text">Acesso</span></label>
+					<div class="flex flex-col gap-1">
+						<span>Acesso</span>
 						<StopCheckbox
 							text="Atravessamento de via"
 							description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
@@ -1257,27 +1261,27 @@
 							state={hasTactileAccess}
 							disabled={!$decodedToken}
 						/>
-						<label class="label"><span class="label-text">Iluminação</span></label>
+						<span>Iluminação</span><br />
 						<select
 							class="select select-primary max-w-xs select-xs"
 							bind:value={illuminationPosition}
 							disabled={!$decodedToken}
 						>
-							<option disabled selected value={null}>Posição?</option>
-							<option value={0}>Indireta</option>
-							<option value={10}>Directa</option>
-							<option value={20}>Própria</option>
+							<option selected value={null}>Posição?</option>
+							<option value={0}>Iluminação Indireta</option>
+							<option value={10}>Iluminação Directa</option>
+							<option value={20}>Iluminação Própria</option>
 						</select>
 						<select
 							class="select select-primary max-w-xs select-xs"
 							bind:value={illuminationStrength}
 							disabled={!$decodedToken}
 						>
-							<option disabled selected value={null}>Intensidade?</option>
+							<option selected value={null}>Intensidade?</option>
 							<option value={0}>Sem iluminação</option>
-							<option value={1}>Fraca</option>
-							<option value={3}>Moderada</option>
-							<option value={5}>Forte</option>
+							<option value={1}>Iluminação Fraca</option>
+							<option value={3}>Iluminação Moderada</option>
+							<option value={5}>Iluminação Forte</option>
 						</select>
 						<StopCheckbox
 							text="No acesso"
@@ -1286,8 +1290,8 @@
 							disabled={!$decodedToken}
 						/>
 					</div>
-					<div>
-						<label class="label"><span class="label-text">Visibilidade</span></label>
+					<div class="flex flex-col gap-1">
+						<span>Visibilidade</span>
 						<StopCheckbox
 							text="Da paragem para autocarro"
 							description="Estando na paragem (+-5 metros) é possível ver autocarros atempadamente"
@@ -1308,7 +1312,7 @@
 							state={isVisibleFromOutside}
 							disabled={!$decodedToken}
 						/>
-						<label class="label"><span class="label-text">Apoios</span></label>
+						<span>Apoios</span>
 						<StopCheckbox
 							text="Tempos de espera"
 							description="A paragem dispõe de um painel com os tempos de espera"
@@ -1328,46 +1332,44 @@
 							disabled={!$decodedToken}
 						/>
 					</div>
-					<div>
-						<label class="label"><span class="label-text">Parque automóvel</span></label>
-						<div class="flex flex-col">
-							<select
-								class="select select-primary max-w-xs select-xs"
-								bind:value={parkingVisibilityImpairment}
-								disabled={!$decodedToken}
-							>
-								<option disabled selected value={null}>Limitação visual?</option>
-								<option value={0}>Sem limitações à visibilidade</option>
-								<option value={2}>Pouco limitante à visibilidade</option>
-								<option value={4}>Algo limitante à visibilidade</option>
-								<option value={6}>Muito limitante à visibilidade</option>
-							</select>
-							<select
-								class="select select-primary max-w-xs select-xs"
-								bind:value={parkingLocalAccessImpairment}
-								disabled={!$decodedToken}
-							>
-								<option disabled selected value={null}>Disfuncional à paragem?</option>
-								<option value={0}>Sem inteferência à paragem</option>
-								<option value={2}>Pouca intreferêcia à paragem</option>
-								<option value={4}>Alguma intreferência à paragem</option>
-								<option value={6}>Muita intreferência à paragem</option>
-							</select>
-							<select
-								class="select select-primary max-w-xs select-xs"
-								bind:value={parkingAreaAccessImpairment}
-								disabled={!$decodedToken}
-							>
-								<option disabled selected value={null}>Disfuncional ao acesso?</option>
-								<option value={0}>Acesso sem inteferência</option>
-								<option value={2}>Acesso com pouca intreferêcia</option>
-								<option value={4}>Acesso com alguma intreferência</option>
-								<option value={6}>Acesso com muita intreferência</option>
-							</select>
-						</div>
+					<div class="flex flex-col gap-1">
+						<span>Parque automóvel</span>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={parkingVisibilityImpairment}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Limitação visual?</option>
+							<option value={0}>Sem limitações à visibilidade</option>
+							<option value={2}>Pouco limitante à visibilidade</option>
+							<option value={4}>Algo limitante à visibilidade</option>
+							<option value={6}>Muito limitante à visibilidade</option>
+						</select>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={parkingLocalAccessImpairment}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Disfuncional à paragem?</option>
+							<option value={0}>Sem inteferência à paragem</option>
+							<option value={2}>Pouca intreferêcia à paragem</option>
+							<option value={4}>Alguma intreferência à paragem</option>
+							<option value={6}>Muita intreferência à paragem</option>
+						</select>
+						<select
+							class="select select-primary max-w-xs select-xs"
+							bind:value={parkingAreaAccessImpairment}
+							disabled={!$decodedToken}
+						>
+							<option disabled selected value={null}>Disfuncional ao acesso?</option>
+							<option value={0}>Acesso sem inteferência</option>
+							<option value={2}>Acesso com pouca intreferêcia</option>
+							<option value={4}>Acesso com alguma intreferência</option>
+							<option value={6}>Acesso com muita intreferência</option>
+						</select>
 					</div>
 					<div>
-						<label class="label"><span class="label-text">Verificação</span></label>
+						<span class="label-text">Verificação</span>
 						<div class="flex">
 							<input
 								type="date"
@@ -1385,12 +1387,9 @@
 						</div>
 					</div>
 				</div>
-				<div
-					class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 grid-flow-row-dense"
-					class:hidden={currentSubform != subforms.extra}
-				>
-					<div class="form-control max-w-xs">
-						<label class="label"><span class="label-text">Defeitos</span></label>
+				<div class="flex gap-2 flex-wrap" class:hidden={currentSubform != subforms.extra}>
+					<div class="form-control max-w-xs grow basis-64">
+						<span class="text-sm">Defeitos</span>
 						<div class="flex flex-col gap-2">
 							{#each tmpIssues as issue}
 								<div class="badge badge-outline badge-lg">
@@ -1401,7 +1400,7 @@
 								</div>
 							{/each}
 							<div class="grow">
-								<label for="defect-modal" class="btn btn-sm btn-primary modal-button w-full"
+								<label for="defect-modal" class="btn btn-sm btn-secondary modal-button w-full"
 									>Novo defeito</label
 								>
 								<input type="checkbox" id="defect-modal" class="modal-toggle" />
@@ -1428,16 +1427,14 @@
 							</div>
 						</div>
 					</div>
-					<div class="form-control max-w-xs">
-						<label class="label">
-							<span class="label-text">Tags</span>
-						</label>
+					<div class="form-control max-w-xs grow basis-64">
+						<span class="text-sm">Etiquetas</span>
 						<div class="flex flex-col gap-2">
-							<div>
+							<div class="flex w-full">
 								<input
 									id="tag-text"
 									type="text"
-									class="input input-bordered input-sm"
+									class="input input-bordered input-sm grow"
 									placeholder="Creche ABC123"
 									disabled={!$decodedToken}
 								/>
@@ -1459,10 +1456,8 @@
 							{/each}
 						</div>
 					</div>
-					<div class="form-control grow">
-						<label class="label">
-							<span class="label-text">Notas</span>
-						</label>
+					<div class="form-control grow basis-96">
+						<span class="text-sm">Notas</span>
 						<textarea
 							class="textarea textarea-bordered h-32 w-full"
 							placeholder="Falta obter-se uma foto que mostre que a paragem se encontra frente a xyz"
