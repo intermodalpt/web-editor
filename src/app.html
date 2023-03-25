@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="preconnect" href="https://fonts.bunny.net" />
+		<link href="https://fonts.bunny.net/css?family=roboto:400,400i,700,700i" rel="stylesheet" />
 
-<head>
-	<meta charset="utf-8" />
-	<link rel="icon" href="%sveltekit.assets%/favicon.png" />
-	<meta name="viewport" content="width=device-width" />
-	<link rel="preconnect" href="https://fonts.bunny.net">
-	<link href="https://fonts.bunny.net/css?family=roboto:400,400i,700,700i" rel="stylesheet" />
+		%sveltekit.head%
+		<style>
+			:root {
+				font-family: 'Roboto', sans-serif;
+				height: 100%;
+				background: #fafafa;
+			}
 
-	%sveltekit.head%
-	<style>
-		:root {
-			font-family: "Roboto", sans-serif;
-			height: 100%;
-			background: #fafafa;
-		}
-	</style>
-</head>
+			body {
+				height: 100%;
+			}
+		</style>
+	</head>
 
-<body id="app" data-sveltekit-preload-data="hover" data-theme="mytheme" class="bg-base-200 h-[100%]">
-	%sveltekit.body%
-</body>
-
+	<body data-sveltekit-preload-data="hover" data-theme="mytheme" class="bg-base-200">
+		<div id="app" class="h-[100%] overflow-auto">%sveltekit.body%</div>
+	</body>
 </html>
