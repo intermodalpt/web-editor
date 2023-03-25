@@ -1,5 +1,6 @@
 <script>
 	import { decodedToken } from '$lib/stores.js';
+	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -13,7 +14,9 @@
 <div class="flex flex-col gap-4 py-4">
 	<div class="card card-compact self-center bg-base-100 shadow-xl w-full max-w-[900px]">
 		<div class="card-body">
-			<h2 class="card-title">{$decodedToken.uname}<span class="text-xs">(#{$decodedToken.uid})</span></h2>
+			<h2 class="card-title">
+				{$decodedToken.uname}<span class="text-xs">(#{$decodedToken.uid})</span>
+			</h2>
 			<table class="table table-compact">
 				<thead><tr><td>Permissões</td><td /></tr></thead>
 				<tbody>
@@ -62,7 +65,24 @@
 			{#await data.undecidedContributions}
 				A carregar
 			{:then undecidedContributions}
-				<textarea>{JSON.stringify(undecidedContributions, null, 2)}</textarea>
+				{#if undecidedContributions.length === 0}
+					Sem contribuições pendentes.
+				{/if}
+				<ul>
+					{#each undecidedContributions as contribution}
+						<li>
+							<h2 class="card-title text-lg">
+								#{contribution.id}
+								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
+							</h2>
+							<ChangeViewer change={contribution.change} />
+							{#if contribution.comment}
+								<h4 class="font-bold">Comentário:</h4>
+								<textarea class="w-full">{contribution.comment}</textarea>
+							{/if}
+						</li>
+					{/each}
+				</ul>
 			{:catch error}
 				Erro a carregar a informação
 			{/await}
@@ -74,7 +94,24 @@
 			{#await data.decidedContributions}
 				A carregar
 			{:then decidedContributions}
-				<textarea>{JSON.stringify(decidedContributions, null, 2)}</textarea>
+				{#if decidedContributions.length === 0}
+					Sem contribuições aceites.
+				{/if}
+				<ul>
+					{#each decidedContributions as contribution}
+						<li>
+							<h2 class="card-title text-lg">
+								#{contribution.id}
+								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
+							</h2>
+							<ChangeViewer change={contribution.change} />
+							{#if contribution.comment}
+								<h4 class="font-bold">Comentário:</h4>
+								<textarea class="w-full">{contribution.comment}</textarea>
+							{/if}
+						</li>
+					{/each}
+				</ul>
 			{:catch error}
 				Erro a carregar a informação
 			{/await}
