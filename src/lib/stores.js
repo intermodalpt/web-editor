@@ -1,7 +1,8 @@
 import { writable, derived, get } from 'svelte/store';
+import { goto } from "$app/navigation";
+import { browser } from '$app/environment';
 import { apiServer } from '$lib/settings.js';
 import { parseJwt } from '$lib/utils.js';
-import { browser } from '$app/environment';
 
 // FIXME this is not safe but it is good enough for now
 // export const token = writable(browser ? localStorage.getItem('token') : null);
@@ -43,9 +44,10 @@ export const decodedToken = derived(token, ($token) => {
 	}
 });
 
-export function logout() {
+export async function logout() {
 	token.set(null);
 	localStorage.removeItem('token');
+	await goto('/login');
 }
 
 export const routes = writable(undefined);

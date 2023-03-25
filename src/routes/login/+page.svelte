@@ -1,4 +1,5 @@
 <script>
+	import { goto } from '$app/navigation';
 	import { apiServer } from '$lib/settings.js';
 	import { token } from '$lib/stores.js';
 
@@ -23,14 +24,19 @@
 				if (r.ok) {
 					return r.text();
 				} else {
-					alert('Login failed');
-					return;
+					r.text()
+						.then((error) => {
+							alert(`Fracasso no acesso:\n${error}`);
+						})
+						.catch(() => {
+							alert('Fracasso no acesso.');
+						});
 				}
 			})
 			.then((tokenVal) => {
 				$token = tokenVal;
 				localStorage.setItem('token', tokenVal);
-				console.log(tokenVal);
+				return goto('/perfil');
 			});
 	}
 
@@ -60,16 +66,23 @@
 				email: registrationEmail
 			})
 		}).then((r) => {
-			// Tell the user whether the request suceeded or not
-			if (r.status === 200) {
-				alert('Registration successful. Try to login with it');
-				// TODO auto login
+			if (r.ok) {
+				alert('Registo com sucesso.');
+				loginUser = registrationUser;
+				loginPassword = registrationPassword;
 				registrationUser = null;
 				registrationEmail = null;
 				registrationPassword = null;
 				registrationPasswordConfirmation = null;
+				login();
 			} else {
-				alert('Registration failed');
+				r.text()
+					.then((error) => {
+						alert(`Registo falhou:\n${error}`);
+					})
+					.catch(() => {
+						alert('Registo falhou.');
+					});
 			}
 		});
 	}
@@ -80,19 +93,18 @@
 	<meta name="description" content="Autenticação" />
 </svelte:head>
 
-<div class="flex flex-col gap-4 py-4 self-center max-w-[900px]">
-	<div class="card card-compact bg-base-100 shadow-xl">
-		<div class="card-body">
+<div class="flex flex-col gap-4 py-4 self-center">
+	<div class="card card-compact bg-base-100 shadow-md">
+		<form class="card-body" on:submit|preventDefault={login}>
 			<h2 class="card-title">Entrar com conta</h2>
-
-			<div class="flex gap-4">
+			<div class="flex flex-wrap gap-4">
 				<div class="form-control">
 					<label class="input-group input-group-md">
-						<span>Username</span>
+						<span>Utilizador</span>
 						<input
 							id="loginUser"
 							type="text"
-							placeholder="HenriqueCimento123"
+							placeholder="HenriqueFerreira95"
 							class="input input-bordered input-md"
 							bind:value={loginUser}
 							on:keydown={(e) => {
@@ -123,18 +135,18 @@
 			<div class="card-actions justify-end">
 				<button class="btn btn-primary" on:mouseup={login}>Entrar</button>
 			</div>
-		</div>
+		</form>
 	</div>
-	<div class="card card-compact bg-base-100 shadow-xl">
-		<div class="card-body">
+	<div class="card card-compact bg-base-100 shadow-md">
+		<form class="card-body" on:submit|preventDefault={register}>
 			<h2 class="card-title">Registar conta</h2>
 			<div class="flex flex-col gap-2">
 				<div class="form-control">
 					<label class="input-group input-group-md">
-						<span class="w-24">Username</span>
+						<span class="w-24">Utilizador</span>
 						<input
 							type="text"
-							placeholder="HenriqueCimento123"
+							placeholder="HenriqueFerreira95"
 							class="input input-bordered input-md"
 							bind:value={registrationUser}
 						/>
@@ -142,17 +154,17 @@
 				</div>
 				<div class="form-control">
 					<label class="input-group input-group-md">
-						<span class="w-24">Email</span>
+						<span class="w-24">E-mail</span>
 						<input
 							type="text"
-							placeholder="henrique@xmail.com"
+							placeholder="henrique@mail.com"
 							class="input input-bordered input-md"
 							bind:value={registrationEmail}
 						/>
 					</label>
 				</div>
 			</div>
-			<div class="flex gap-4">
+			<div class="flex flex-wrap gap-4">
 				<div class="form-control">
 					<label class="input-group input-group-md">
 						<span class="w-24">Password</span>
@@ -175,11 +187,11 @@
 				</div>
 			</div>
 			<div class="card-actions justify-end">
-				<button class="btn btn-primary" on:mouseup={register}>Registar</button>
+				<button class="btn btn-primary">Registar</button>
 			</div>
-		</div>
+		</form>
 	</div>
-	<div class="card card-compact bg-base-100 shadow-xl">
+	<div class="card card-compact bg-base-100 shadow-md">
 		<div class="card-body">
 			<h2 class="card-title">Esqueci-me da minha conta</h2>
 			<span>Regista outra com o mesmo email ou fala connosco</span>
