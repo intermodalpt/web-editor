@@ -45,10 +45,10 @@
 	</nav>
 	<div>
 		{#if $decodedToken}
-			<a href="/auth">{$decodedToken?.uname}</a>
+			<a href="/login">{$decodedToken?.uname}</a>
 			<input type="button" class="btn btn-error btn-xs" value="Sair" on:mouseup={logout} />
 		{:else}
-			<a href="/auth" class="btn btn-primary btn-xs">Login</a>
+			<a href="/login" class="btn btn-primary btn-xs">Login</a>
 		{/if}
 	</div>
 </header>

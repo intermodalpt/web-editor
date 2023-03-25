@@ -44,7 +44,7 @@
 			{:else}
 				<div>
 					Necessitas de uma conta para poder submeter informações.
-					<a href="/auth" class="link">Faz uma aqui</a>.
+					<a href="/login" class="link">Faz uma aqui</a>.
 				</div>
 			{/if}
 			<h3 class="text-lg">2 - O que podes editar</h3>
