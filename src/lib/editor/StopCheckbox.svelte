@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 
 	export let text = 'Missing label';
-	export let description = 'Missing description';
+	export let description;
 	export let state;
 	export let disabled = false;
 
@@ -58,26 +58,28 @@
 			on:click={rotateState}
 		/>
 		<span class="label-text flex flex-row gap-1 items-center">
-			{text}
-			<label
-				class="btn btn-circle btn-ghost btn-xs text-info"
-				on:click={() => alert('Significado:\n' + description)}
-				on:keypress={() => alert('Significado:\n' + description)}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					class="w-4 h-4 stroke-current"
+			{#if text}{text}{/if}
+			{#if description}
+				<label
+					class="btn btn-circle btn-ghost btn-xs text-info"
+					on:click={() => alert('Significado:\n' + description)}
+					on:keypress={() => alert('Significado:\n' + description)}
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-			</label>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						class="w-4 h-4 stroke-current"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+				</label>
+			{/if}
 		</span>
 	</label>
 </div>
