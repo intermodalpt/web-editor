@@ -1,18 +1,54 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { derived, writable } from 'svelte/store';
+	import { derived, writable, get } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
 	import { decodedToken, token } from '$lib/stores.js';
+	import { stops as storedStops, loadStops as loadStoredStops } from '$lib/stores.js';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
+	import Filters from '$lib/editor/Filters.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
-	const stops = data.stops;
 
+	let stops = {};
 	let map;
+
+	let stopsLoaded = false;
+	let mapLoaded = false;
+	$: loading = !stopsLoaded || !mapLoaded;
+
+	(function () {
+		let headers = {
+			headers: {
+				authorization: `Bearer ${$token}`
+			}
+		};
+		const stopCache = get(storedStops);
+		Promise.all([
+			stopCache === undefined
+				? loadStoredStops(fetch)
+				: new Promise((resolve) => {
+						resolve(stopCache);
+				  }),
+			fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, headers).then((res) => res.json())
+		]).then(([unpatchedStops, patch]) => {
+			const patchedStops = unpatchedStops;
+			for (const stop of patch) {
+				patchedStops[stop.id] = stop;
+			}
+
+			stops = patchedStops;
+			stopsLoaded = true;
+
+			if (mapLoaded) {
+				loadStops();
+			}
+		});
+	})();
+
 	let selectedStop = writable(null);
 	let previewedPic = undefined;
 
@@ -664,7 +700,10 @@
 		);
 
 		map.on('load', function () {
-			loadStops();
+			mapLoaded = true;
+			if (stopsLoaded) {
+				loadStops();
+			}
 		});
 	});
 
@@ -678,7 +717,31 @@
 	<meta name="description" content="Dados de paragens do Intermodal" />
 </svelte:head>
 
-<div id="map" class="h-full">
+<div id="map" class="h-full relative">
+	{#if loading}
+		<div style="background-color: #33336699" class="z-[2000] absolute inset-0" />
+		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
+			<div
+				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl  border-2 border-warning  max-h-full"
+			>
+				<span class="text-xl">A carregar</span>
+				<span
+					>Mapa: <progress
+						class="progress progress-primary w-full"
+						value={mapLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+				<span
+					>Paragens: <progress
+						class="progress progress-primary w-full"
+						value={stopsLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+			</div>
+		</div>
+	{/if}
 	<!-- <div>
 		<input
 			type="button"
