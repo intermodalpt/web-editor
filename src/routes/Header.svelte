@@ -45,8 +45,14 @@
 	</nav>
 	<div>
 		{#if $decodedToken}
-			<a href="/login">{$decodedToken?.uname}</a>
-			<input type="button" class="btn btn-error btn-xs" value="Sair" on:mouseup={logout} />
+			<a href="/perfil">{$decodedToken?.uname}</a>
+			<input
+				type="button"
+				class="btn btn-error btn-xs"
+				value="Sair"
+				on:click={logout}
+				on:keypress={logout}
+			/>
 		{:else}
 			<a href="/login" class="btn btn-primary btn-xs">Login</a>
 		{/if}
