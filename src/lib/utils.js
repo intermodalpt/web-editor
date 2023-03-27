@@ -201,6 +201,12 @@ export const isDeepEqual = (object1, object2) => {
 	return true;
 };
 
+// Duplicates an object, including subfield
+export function deepCopy(object) {
+	return JSON.parse(JSON.stringify(object));
+}
+
+
 export function parseJwt(token) {
 	var base64Url = token.split('.')[1];
 	var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');

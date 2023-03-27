@@ -3,6 +3,7 @@
 	import { derived, writable, get } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
 	import { decodedToken, token } from '$lib/stores.js';
+	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import { stops as storedStops, loadStops as loadStoredStops } from '$lib/stores.js';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -206,7 +207,7 @@
 		} else {
 			hasFlags = true;
 		}
-		flagsData = stop.flags || [];
+		flagsData = deepCopy(stop.flags) || [];
 
 		if (stop.schedules === undefined || stop.schedules === null) {
 			hasSchedules = null;
@@ -215,9 +216,8 @@
 		} else {
 			hasSchedules = true;
 		}
-		schedulesData = stop.schedules || [];
+		schedulesData = deepCopy(stop.schedules) || [];
 
-		$hasCrossing = stop.has_crossing ?? null;
 		$hasSidewalk = stop.has_sidewalk ?? null;
 		$hasSidewalkedPath = stop.has_sidewalked_path ?? null;
 		$hasShelter = stop.has_shelter ?? null;
