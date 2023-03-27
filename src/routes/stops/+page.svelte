@@ -762,36 +762,35 @@
 		>
 			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
 				<div class="btn-group btn-group-horizontal">
-					<a
+					<span
 						class="btn btn-xs"
 						class:btn-active={currentSubform === subforms.info}
 						on:click={() => (currentSubform = subforms.info)}
-						on:keypress={() => (currentSubform = subforms.info)}>Info</a
+						on:keypress={() => (currentSubform = subforms.info)}>Info</span
 					>
-					<a
-						href="#fotos"
+					<span
 						class="btn btn-xs"
 						class:btn-active={currentSubform === subforms.pics}
 						on:click={() => (currentSubform = subforms.pics)}
-						on:keypress={() => (currentSubform = subforms.pics)}>Fotos</a
+						on:keypress={() => (currentSubform = subforms.pics)}>Fotos</span
 					>
-					<a
+					<span
 						class="btn btn-xs"
 						class:btn-active={currentSubform === subforms.service}
 						on:click={() => (currentSubform = subforms.service)}
-						on:keypress={() => (currentSubform = subforms.service)}>Serviço</a
+						on:keypress={() => (currentSubform = subforms.service)}>Serviço</span
 					>
-					<a
+					<span
 						class="btn btn-xs"
 						class:btn-active={currentSubform === subforms.infra}
 						on:click={() => (currentSubform = subforms.infra)}
-						on:keypress={() => (currentSubform = subforms.infra)}>Infra</a
+						on:keypress={() => (currentSubform = subforms.infra)}>Infra</span
 					>
-					<a
+					<span
 						class="btn btn-xs"
 						class:btn-active={currentSubform === subforms.extra}
 						on:click={() => (currentSubform = subforms.extra)}
-						on:keypress={() => (currentSubform = subforms.extra)}>Extra</a
+						on:keypress={() => (currentSubform = subforms.extra)}>Extra</span
 					>
 				</div>
 				<div class="flex gap-2 flex-grow justify-end">
@@ -841,12 +840,18 @@
 									on:click={() => {
 										navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
 									}}
+									on:keypress={() => {
+										navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+									}}
 								/>
 								<input
 									class="btn btn-neutral btn-outline btn-xs rounded-l-none -ml-[1px]"
 									type="button"
 									value={$selectedStop?.lon.toFixed(6)}
 									on:click={() => {
+										navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
+									}}
+									on:keypress={() => {
 										navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
 									}}
 								/>
@@ -856,6 +861,11 @@
 								type="button"
 								value="Copiar"
 								on:click={() => {
+									navigator.clipboard.writeText(
+										$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
+									);
+								}}
+								on:keypress={() => {
 									navigator.clipboard.writeText(
 										$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
 									);
@@ -1016,9 +1026,11 @@
 						<div class="flex flex-wrap gap-1">
 							{#if $stopPictures !== undefined && $stopPictures.length > 0}
 								{#each $stopPictures as picture}
-									<a target="_blank" href={picture.url_full}>
+									<a target="_blank" rel="noreferrer" href={picture.url_full}>
 										<img
 											src={picture.url_medium}
+											rel="noreferrer"
+											alt="Fotografia da paragem"
 											class="rounded-box transition-all hover:scale-150 h-40"
 										/>
 									</a>
@@ -1031,6 +1043,9 @@
 								type="button"
 								value="Editar fotos"
 								on:click={() => {
+									uploadingPics = true;
+								}}
+								on:keypress={() => {
 									uploadingPics = true;
 								}}
 								disabled={!$decodedToken}
@@ -1117,6 +1132,7 @@
 												<div
 													class="btn btn-error btn-circle btn-xs"
 													on:click={() => removeFlagRoute(i, j)}
+													on:keypress={() => removeFlagRoute(i, j)}
 												>
 													✕
 												</div>
@@ -1132,6 +1148,7 @@
 										class="btn btn-success btn-xs"
 										value="+ postalete"
 										on:click={addFlag}
+										on:keypress={addFlag}
 									/>
 								</div>
 							{/if}
@@ -1173,7 +1190,7 @@
 													class="btn btn-success btn-xs"
 													value="+"
 													on:click={addScheduleEntry}
-													on:kaypress={addScheduleEntry}
+													on:keypress={addScheduleEntry}
 													disabled={!$decodedToken}
 												/>
 											</th>
@@ -1225,7 +1242,7 @@
 							{/if}
 						</div>
 						<div class="grow">
-							<label class="label"><span class="label-text">Verificação</span></label>
+							<span class="label-text">Verificação</span>
 							<div class="flex">
 								<input
 									type="date"
@@ -1237,6 +1254,9 @@
 									class="btn btn-primary btn-xs"
 									value="Hoje"
 									on:click={() => {
+										serviceCheckDate = new Date().toISOString().split('T')[0];
+									}}
+									on:keypress={() => {
 										serviceCheckDate = new Date().toISOString().split('T')[0];
 									}}
 								/>
@@ -1291,7 +1311,7 @@
 							bind:value={advertisementQty}
 							disabled={!$decodedToken}
 						>
-							<option disabled selected value={null}>Anúncios?</option>
+							<option selected value={null}>Anúncios?</option>
 							<option value={0}>Sem anúncios</option>
 							<option value={2}>Pouca área de anúncio</option>
 							<option value={4}>Muita área de anúncio</option>
@@ -1446,6 +1466,9 @@
 								on:click={() => {
 									infrastructureCheckDate = new Date().toISOString().split('T')[0];
 								}}
+								on:keypress={() => {
+									infrastructureCheckDate = new Date().toISOString().split('T')[0];
+								}}
 							/>
 						</div>
 					</div>
@@ -1457,7 +1480,11 @@
 							{#each tmpIssues as issue}
 								<div class="badge badge-outline badge-lg">
 									{tmpIssueLabels[issue]}
-									<div class="btn btn-error btn-circle btn-xs" on:click={() => removeIssue(tag)}>
+									<div
+										class="btn btn-error btn-circle btn-xs"
+										on:click={() => removeIssue(issue)}
+										on:keypress={() => removeIssue(issue)}
+									>
 										✕
 									</div>
 								</div>
@@ -1473,7 +1500,7 @@
 										<ul class="menu bg-base-100 w-full rounded-box">
 											{#each tmpIssuesOptions as tmpIssue}
 												<li>
-													<a
+													<span
 														on:mouseup={() => {
 															selectedTmpIssue = tmpIssue;
 															addIssue();
@@ -1481,7 +1508,7 @@
 														}}
 													>
 														{tmpIssue.label}
-													</a>
+													</span>
 												</li>
 											{/each}
 										</ul>
@@ -1506,13 +1533,18 @@
 									type="button"
 									value="+"
 									on:click={addTag}
+									on:keypress={addTag}
 									disabled={!$decodedToken}
 								/>
 							</div>
 							{#each tags as tag}
 								<div class="badge badge-outline badge-lg">
 									{tag}
-									<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>
+									<div
+										class="btn btn-error btn-circle btn-xs"
+										on:click={() => removeTag(tag)}
+										on:keypress={() => removeTag(tag)}
+									>
 										✕
 									</div>
 								</div>
@@ -1549,14 +1581,17 @@
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
 	<div class="modal">
 		<div class="modal-box w-11/12 max-w-5xl">
-			<a target="_blank" href={previewedPic.url_full}>
-				<img src={previewedPic.url_medium} class="rounded-box w-full" />
+			<a target="_blank" rel="noreferrer" href={previewedPic.url_full}>
+				<img src={previewedPic.url_medium} alt="Fotografia da paragem" class="rounded-box w-full" />
 			</a>
 			<div class="modal-action">
 				<label
 					for="pic-preview"
 					class="btn"
 					on:click={() => {
+						previewedPic = undefined;
+					}}
+					on:keypress={() => {
 						previewedPic = undefined;
 					}}>Close</label
 				>
