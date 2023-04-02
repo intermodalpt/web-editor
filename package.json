@@ -31,6 +31,7 @@
 	"type": "module",
 	"dependencies": {
 		"@sveltejs/adapter-node": "^1.0.0",
+		"@turf/turf": "^6.5.0",
 		"daisyui": "^2.33.0",
 		"leaflet": "^1.8.0",
 		"leaflet-contextmenu": "1.4.0",
