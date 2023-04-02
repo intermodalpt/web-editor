@@ -47,28 +47,52 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	let map;
 
 	const selectedStop = writable(null);
-	const selectedStopRoutes = derived(selectedStop, ($selectedStop) => {
-		if ($selectedStop == null) return [];
-		return Array.from($selectedStop.routes).sort((a, b) => a.id.localeCompare(b.id));
+	const selectedStopRoutes = derived(selectedStop, ($selectedGTFSStop) => {
+		if ($selectedGTFSStop == null) return [];
+		return Array.from($selectedGTFSStop.routes)
+			.sort((a, b) => a.id.localeCompare(b.id))
+			.map((r) => {
+				const filteredRoute = Object.assign({}, r);
+				filteredRoute.trips = filteredRoute.trips.filter((t) =>
+					t.stops.includes($selectedGTFSStop.id)
+				);
+				return filteredRoute;
+			});
 	});
+	const previewedTrip = writable(null);
 
 	selectedStop.subscribe((stop) => {
-		if (map) {
-			if (stop == null) {
-				map.easeTo({
-					padding: { left: 0 },
-					duration: 750
-				});
-				return;
-			} else {
-				map.easeTo({
-					padding: { left: 300 },
-					duration: 750
-				});
-			}
-		} else if (stop == null) {
+		previewedTrip.set(null);
+		if (!map) return;
+
+		if (stop == null) {
+			map.easeTo({
+				padding: { left: 0 },
+				duration: 750
+			});
+			return;
+		} else {
+			map.easeTo({
+				padding: { left: 300 },
+				duration: 750
+			});
+		}
+	});
+
+	previewedTrip.subscribe((trip) => {
+		if (!map) return;
+		if (!trip) {
+			map.getSource('trippreview').setData({
+				type: 'LineString',
+				coordinates: []
+			});
 			return;
 		}
+
+		map.getSource('trippreview').setData({
+			type: 'LineString',
+			coordinates: trip.stops.map((stop) => [gtfs_stops[stop].lon, gtfs_stops[stop].lat])
+		});
 	});
 
 	Promise.all([
@@ -130,17 +154,10 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			};
 		};
 
-		// console.log(
-		// 	JSON.stringify({
-		// 		type: 'FeatureCollection',
-		// 		features: verStops.map(matchToFeature)
-		// 	})
-		// );
-
-		// map.getSource('stopmatches-unv').setData({
-		// 	type: 'FeatureCollection',
-		// 	features: unvStops.map(matchToFeature)
-		// });
+		map.getSource('stopmatches-unv').setData({
+			type: 'FeatureCollection',
+			features: unvStops.map(matchToFeature)
+		});
 		map.getSource('stopmatches-ver').setData({
 			type: 'FeatureCollection',
 			features: verStops.map(matchToFeature)
@@ -176,7 +193,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 						},
 						properties: {
 							id: stop.id,
-							name: stop.stop_name
+							// name: stop.stop_name,
+							id_name: `${stop.id} - ${stop.stop_name}`
 						}
 					};
 				})
@@ -199,8 +217,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			return;
 		}
 
-		const origins = prev_succ_pairs.map((w) => gtfs_stops[w[0]]);
-		const destinations = prev_succ_pairs.map((w) => gtfs_stops[w[1]]);
+		const origins = prev_succ_pairs.filter((w) => w[0]).map((w) => gtfs_stops[w[0]]);
+		const destinations = prev_succ_pairs.filter((w) => w[1]).map((w) => gtfs_stops[w[1]]);
 		const ori_points = turf.points(origins.map((s) => [s.stop_lon, s.stop_lat]));
 		const dst_points = turf.points(destinations.map((s) => [s.stop_lon, s.stop_lat]));
 		const avg_ori = turf.center(ori_points);
@@ -283,7 +301,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			source: 'stopmatches-unv',
 			paint: {
 				'line-color': '#c026d3',
-				'line-width': 2
+				'line-width': 3
 			}
 		});
 		map.addLayer({
@@ -292,7 +310,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			source: 'stopmatches-ver',
 			paint: {
 				'line-color': '#e11d48',
-				'line-width': 2
+				'line-width': 3
 			}
 		});
 
@@ -302,14 +320,12 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		map.addSource('stops', {
 			type: 'geojson',
 			data: sources.stops,
-			// cluster: true,
 			clusterRadius: 40,
 			clusterMinPoints: 3
 		});
 		map.addSource('gtfs', {
 			type: 'geojson',
 			data: sources.gtfs,
-			// cluster: true,
 			clusterRadius: 40,
 			clusterMinPoints: 3
 		});
@@ -355,7 +371,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			type: 'symbol',
 			source: 'gtfs',
 			layout: {
-				'text-field': ['get', 'name'],
+				'text-field': ['get', 'id_name'],
 				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
 				'text-size': 8,
 				'text-offset': [5, 0],
@@ -538,12 +554,30 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 		map.addControl(new NavigationControl(), 'top-right');
 
-		// map.on('load', function () {
-		// 	mapLoaded = true;
-		// 	if (stopsLoaded) {
-		// 		loadStops();
-		// 	}
-		// });
+		map.on('load', function () {
+			map.addLayer(
+				{
+					id: 'trippreview',
+					type: 'line',
+					source: {
+						type: 'geojson',
+						data: {
+							type: 'MultiLineString',
+							coordinates: []
+						}
+					},
+					paint: {
+						'line-color': '#67e8f9',
+						'line-width': 4
+					}
+				}
+				// 'gtfs'
+			);
+			// mapLoaded = true;
+			// if (stopsLoaded) {
+			// 	loadStops();
+			// }
+		});
 	});
 
 	onDestroy(() => {
@@ -557,7 +591,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		class:-translate-x-[300px]={!$selectedStop}
 	>
 		<div
-			class="w-[300px] w-full bg-zinc-500 grid grid-cols-1 lg:h-[95%] lg:rounded-r-xl border-r-2 border-neutral"
+			class="w-[300px] bg-zinc-500 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-r-xl border-r-2 border-neutral"
 			style="grid-template-rows: auto 1fr;"
 		>
 			<div class="flex gap-1 justify-between p-1">
@@ -574,12 +608,17 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 								{#each route.trips as trip}
 									<li class="flex flex-col">
 										<div>
-
-										<span class="badge badge-xs badge-outline text-xs">{trip.id}</span>
-										<span>{trip.headsign}</span>
+											<span class="badge badge-xs badge-outline text-xs">{trip.id}</span>
+											<span>{trip.headsign}</span>
 										</div>
 										<div class="flex justify-end">
-											<button class="btn btn-outline btn-xs">Ver</button>
+											<button
+												class="btn btn-outline btn-xs"
+												class:btn-primary={trip === $previewedTrip}
+												on:click={() => {
+													$previewedTrip = trip;
+												}}>Ver</button
+											>
 										</div>
 									</li>
 								{/each}
