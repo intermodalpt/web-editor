@@ -427,8 +427,6 @@
 		maximum += 3.0;
 		score += scoreAttr(stop.schedules, 2.0);
 		maximum += 1.0;
-		score += scoreAttr(stop.has_crossing, 5.0);
-		maximum += 5.0;
 		score += scoreAttr(stop.has_sidewalk, 1.5);
 		maximum += 2.5;
 		score += scoreAttr(stop.has_sidewalked_path, 1.0);
@@ -492,6 +490,7 @@
 					},
 					properties: {
 						stopId: stop.id,
+						name: `${stop.id} - ${stop.osm_name || stop.official_name}`,
 						score: Math.round(stopScore(stop))
 					}
 				};
@@ -509,26 +508,19 @@
 		});
 
 		map.addLayer({
-			id: 'clusters',
-			type: 'circle',
-			source: 'stops',
-			filter: ['has', 'point_count'],
-			paint: {
-				'circle-color': '#aaaaaa',
-				'circle-radius': 15
-			}
-		});
-
-		map.addLayer({
-			id: 'cluster-count',
+			id: 'gtfsLabels',
 			type: 'symbol',
 			source: 'stops',
-			filter: ['has', 'point_count'],
 			layout: {
-				'text-field': ['get', 'point_count_abbreviated'],
-				'text-font': ['Metropolis Regular', 'Noto Sans Regular'],
-				'text-size': 12
-			}
+				'text-field': ['get', 'name'],
+				'text-font': ['Open Sans', 'Arial Unicode MS'],
+				'text-size': 10,
+				'text-offset': [2, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+			},
+			minzoom: 16
 		});
 
 		map.addLayer({
@@ -548,7 +540,14 @@
 					10,
 					'rgb(30, 220, 50)'
 				],
-				'circle-radius': 8,
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 2],
+						[11, 3],
+						[18, 20]
+					]
+				},
 				'circle-stroke-width': 1,
 				'circle-stroke-color': '#fff'
 			}
