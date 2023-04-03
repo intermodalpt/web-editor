@@ -11,9 +11,6 @@
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 	import Filters from '$lib/editor/Filters.svelte';
 
-	/** @type {import('./$types').PageData} */
-	export let data;
-
 	let stops = {};
 	let map;
 
@@ -34,20 +31,29 @@
 				: new Promise((resolve) => {
 						resolve(stopCache);
 				  }),
-			fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, headers).then((res) => res.json())
-		]).then(([unpatchedStops, patch]) => {
-			const patchedStops = unpatchedStops;
-			for (const stop of patch) {
-				patchedStops[stop.id] = stop;
-			}
+			$token
+				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, headers).then((res) => res.json())
+				: new Promise((resolve) => {
+						resolve([]);
+				  })
+		])
+			.then(([unpatchedStops, patch]) => {
+				const patchedStops = unpatchedStops;
+				for (const stop of patch) {
+					patchedStops[stop.id] = stop;
+				}
 
-			stops = patchedStops;
-			stopsLoaded = true;
+				stops = patchedStops;
+				stopsLoaded = true;
 
-			if (mapLoaded) {
-				loadStops();
-			}
-		});
+				if (mapLoaded) {
+					loadStops();
+				}
+			})
+			.catch((e) => {
+				alert('Failed to load stops');
+				console.log(e);
+			});
 	})();
 
 	let selectedStop = writable(null);
