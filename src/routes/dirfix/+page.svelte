@@ -162,7 +162,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			});
 		});
 
-		loadStops();
+		refreshStops();
 
 		// map.getSource('matchline').setData({
 		// 	type: 'LineString',
@@ -203,55 +203,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		});
 	}
 
-	function getStopSources() {
-		return {
-			stops: {
-				type: 'FeatureCollection',
-				features: Object.values(stops).map((stop) => {
-					return {
-						type: 'Feature',
-						geometry: {
-							type: 'Point',
-							coordinates: [stop.lon, stop.lat]
-						},
-						properties: {
-							id: stop.id,
-							osm_name: stop.osm_name
-						}
-					};
-				})
-			},
-			gtfs: {
-				type: 'FeatureCollection',
-				features: Object.values(gtfs_stops).map((stop) => {
-					return {
-						type: 'Feature',
-						geometry: {
-							type: 'Point',
-							coordinates: [stop.stop_lon, stop.stop_lat]
-						},
-						properties: {
-							id: stop.id,
-							// name: stop.stop_name,
-							id_name: `${stop.id} - ${stop.stop_name}`
-						}
-					};
-				})
-			}
-		};
-	}
-
 	function loadCurrentWindow(curr_stop, prev_succ_pairs) {
-		// Cleanup
-		if (map.getLayer('origin')) {
-			map.removeLayer('origin');
-			map.removeSource('origin');
-		}
-		if (map.getLayer('destination')) {
-			map.removeLayer('destination');
-			map.removeSource('destination');
-		}
-
 		if (prev_succ_pairs.length === 0) {
 			return;
 		}
@@ -264,49 +216,21 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		const avg_dst = turf.center(dst_points);
 		const bearing = turf.bearing(avg_ori, avg_dst);
 
-		map.addLayer(
-			{
-				id: 'origin',
-				type: 'line',
-				source: {
-					type: 'geojson',
-					data: {
-						type: 'MultiLineString',
-						coordinates: origins.map((s) => [
-							[s.stop_lon, s.stop_lat],
-							[curr_stop.stop_lon, curr_stop.stop_lat]
-						])
-					}
-				},
-				paint: {
-					'line-color': '#16a34a',
-					'line-width': 2
-				}
-			},
-			'gtfs'
-		);
+		map.getSource('origins').setData({
+			type: 'MultiLineString',
+			coordinates: origins.map((s) => [
+				[s.stop_lon, s.stop_lat],
+				[curr_stop.stop_lon, curr_stop.stop_lat]
+			])
+		});
 
-		map.addLayer(
-			{
-				id: 'destination',
-				type: 'line',
-				source: {
-					type: 'geojson',
-					data: {
-						type: 'MultiLineString',
-						coordinates: destinations.map((s) => [
-							[curr_stop.stop_lon, curr_stop.stop_lat],
-							[s.stop_lon, s.stop_lat]
-						])
-					}
-				},
-				paint: {
-					'line-color': '#bef264',
-					'line-width': 2
-				}
-			},
-			'gtfs'
-		);
+		map.getSource('destinations').setData({
+			type: 'MultiLineString',
+			coordinates: destinations.map((s) => [
+				[curr_stop.stop_lon, curr_stop.stop_lat],
+				[s.stop_lon, s.stop_lat]
+			])
+		});
 
 		// Fly to the current stop
 		map.flyTo({
@@ -318,7 +242,109 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		});
 	}
 
-	function loadStops() {
+	function refreshStops() {
+		refreshMatches();
+
+		map.getSource('stops').setData({
+			type: 'FeatureCollection',
+			features: Object.values(stops).map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {
+						id: stop.id,
+						osm_name: stop.osm_name
+					}
+				};
+			})
+		});
+		map.getSource('gtfs').setData({
+			type: 'FeatureCollection',
+			features: Object.values(gtfs_stops).map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.stop_lon, stop.stop_lat]
+					},
+					properties: {
+						id: stop.id,
+						// name: stop.stop_name,
+						id_name: `${stop.id} - ${stop.stop_name}`
+					}
+				};
+			})
+		});
+	}
+
+	function flyToTrip(trip) {
+		const bounds = new LngLatBounds();
+		trip.stops
+			.map((s) => gtfs_stops[s])
+			.forEach((stop) => {
+				bounds.extend([stop.lon, stop.lat]);
+			});
+		map.fitBounds(bounds, {
+			padding: 50
+		});
+	}
+
+	function flyToGtfsStop(gtfsStop) {
+		map.flyTo({
+			center: [gtfsStop.lon, gtfsStop.lat],
+			zoom: 17.5
+		});
+	}
+
+	function flyToStop(stop) {
+		map.flyTo({
+			center: [stop.lon, stop.lat],
+			zoom: 17.5
+		});
+	}
+
+	function connectStops(stop, gtfsStop) {
+		if (
+			stop.gtfsStop &&
+			stop.gtfsStop != gtfsStop &&
+			!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
+		) {
+			return;
+		}
+
+		const beingUsed = stops.some((s) => {
+			s != stop && s.gtfsStop == gtfsStop;
+		});
+
+		if (beingUsed && !confirm('Paragem GTFS já está ligada a outra paragem. Continuar?')) {
+			return;
+		}
+
+		const headers = {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${$token}`
+		};
+		fetch(`${apiServer}/v1/tml/match/${stop.id}/${gtfsStop.stop_id}?verified=true&source=h1`, {
+			method: 'POST',
+			headers: headers
+		}).then((r) => {
+			if (r.ok) {
+				console.log('ID da paragem atualizado com sucesso.');
+				stop.gtfsStop = gtfsStop;
+				stop.tml_id = gtfsStop.stop_id;
+				stop.tml_id_verified = true;
+				stop.tml_id_source = 'h1';
+				refreshStops();
+			} else {
+				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
+			}
+		});
+	}
+
+	function addSourcesAndLayers() {
 		map.addSource('stopmatches-unv', {
 			type: 'geojson',
 			data: {
@@ -326,14 +352,6 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				features: []
 			}
 		});
-		map.addSource('stopmatches-ver', {
-			type: 'geojson',
-			data: {
-				type: 'FeatureCollection',
-				features: []
-			}
-		});
-
 		map.addLayer({
 			id: 'stopmatches-unv',
 			type: 'line',
@@ -341,6 +359,14 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			paint: {
 				'line-color': '#c026d3',
 				'line-width': 3
+			}
+		});
+
+		map.addSource('stopmatches-ver', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
 			}
 		});
 		map.addLayer({
@@ -353,22 +379,13 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			}
 		});
 
-		refreshMatches();
-
-		let sources = getStopSources();
-		map.addSource('stops', {
-			type: 'geojson',
-			data: sources.stops,
-			clusterRadius: 40,
-			clusterMinPoints: 3
-		});
 		map.addSource('gtfs', {
 			type: 'geojson',
-			data: sources.gtfs,
-			clusterRadius: 40,
-			clusterMinPoints: 3
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
 		});
-
 		map.addLayer({
 			id: 'gtfs',
 			type: 'circle',
@@ -385,6 +402,30 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				},
 				'circle-stroke-width': 1,
 				'circle-stroke-color': '#fff'
+			}
+		});
+		map.addLayer({
+			id: 'gtfsLabels',
+			type: 'symbol',
+			source: 'gtfs',
+			layout: {
+				'text-field': ['get', 'id_name'],
+				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+				'text-size': 8,
+				'text-offset': [5, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+				// 'text-ignore-placement': true
+			},
+			minzoom: 18
+		});
+
+		map.addSource('stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
 			}
 		});
 
@@ -407,22 +448,73 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			}
 		});
 
-		map.addLayer({
-			id: 'gtfsLabels',
-			type: 'symbol',
-			source: 'gtfs',
-			layout: {
-				'text-field': ['get', 'id_name'],
-				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-				'text-size': 8,
-				'text-offset': [5, 0],
-				'text-anchor': 'left',
-				'text-max-width': 150,
-				'text-allow-overlap': false
-				// 'text-ignore-placement': true
+		map.addLayer(
+			{
+				id: 'trippreview',
+				type: 'line',
+				source: {
+					type: 'geojson',
+					data: {
+						type: 'MultiLineString',
+						coordinates: []
+					}
+				},
+				paint: {
+					'line-color': '#67e8f9',
+					'line-width': 4
+				}
 			},
-			minzoom: 18
+			'gtfs'
+		);
+
+		map.addLayer(
+			{
+				id: 'origins',
+				type: 'line',
+				source: {
+					type: 'geojson',
+					data: {
+						type: 'MultiLineString',
+						coordinates: []
+					}
+				},
+				paint: {
+					'line-color': '#16a34a',
+					'line-width': 2
+				}
+			},
+			'gtfs'
+		);
+
+		map.addLayer(
+			{
+				id: 'destinations',
+				type: 'line',
+				source: {
+					type: 'geojson',
+					data: {
+						type: 'MultiLineString',
+						coordinates: []
+					}
+				},
+				paint: {
+					'line-color': '#bef264',
+					'line-width': 2
+				}
+			},
+			'gtfs'
+		);
+
+		map.addSource('matchline', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
 		});
+	}
+
+	function addEvents() {
 		const canvas = map.getCanvasContainer();
 
 		map.on('mouseenter', 'gtfs', () => {
@@ -477,16 +569,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			loadCurrentWindow(stop, Array.from(parsedWindows.keys()));
 		});
 
-		// Add a single point to the map.
-		map.addSource('matchline', {
-			type: 'geojson',
-			data: {
-				type: 'FeatureCollection',
-				features: []
-			}
-		});
-
-		let selectedPoint = null;
+		let draggedGtfsStop = null;
 		let hoveredStop = null;
 
 		function onMove(e) {
@@ -499,7 +582,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				map.getSource('matchline').setData({
 					type: 'LineString',
 					coordinates: [
-						[selectedPoint.lon, selectedPoint.lat],
+						[draggedGtfsStop.lon, draggedGtfsStop.lat],
 						[hoveredStop.lon, hoveredStop.lat]
 					]
 				});
@@ -507,7 +590,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				map.getSource('matchline').setData({
 					type: 'LineString',
 					coordinates: [
-						[selectedPoint.lon, selectedPoint.lat],
+						[draggedGtfsStop.lon, draggedGtfsStop.lat],
 						[coords.lng, coords.lat]
 					]
 				});
@@ -515,19 +598,18 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		}
 
 		function onUp(e) {
-			const coords = e.lngLat;
-
 			canvas.style.cursor = '';
 			map.removeLayer('matchline');
 
 			if (hoveredStop) {
 				console.log('Matched', hoveredStop);
-				console.log('with', selectedPoint);
+				console.log('with', draggedGtfsStop);
+				// connectStops(draggedGtfsStop, hoveredStop);
 			} else {
 				console.log('Unmatched');
 			}
 
-			selectedPoint = null;
+			draggedGtfsStop = null;
 
 			// Unbind mouse/touch events
 			map.off('mousemove', onMove);
@@ -540,7 +622,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 			canvas.style.cursor = 'grab';
 
-			selectedPoint = gtfs_stops[e.features[0].properties.id];
+			draggedGtfsStop = gtfs_stops[e.features[0].properties.id];
 
 			map.addLayer(
 				{
@@ -565,7 +647,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			// Prevent the default map drag behavior.
 			e.preventDefault();
 
-			selectedPoint = gtfs_stops[e.features[0].properties.id];
+			draggedGtfsStop = gtfs_stops[e.features[0].properties.id];
 
 			map.addLayer(
 				{
@@ -592,32 +674,6 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		});
 	}
 
-	function flyToTrip(trip) {
-		const bounds = new LngLatBounds();
-		trip.stops
-			.map((s) => gtfs_stops[s])
-			.forEach((stop) => {
-				bounds.extend([stop.lon, stop.lat]);
-			});
-		map.fitBounds(bounds, {
-			padding: 50
-		});
-	}
-
-	function flyToGtfsStop(gtfsStop) {
-		map.flyTo({
-			center: [gtfsStop.lon, gtfsStop.lat],
-			zoom: 17.5
-		});
-	}
-
-	function flyToStop(stop) {
-		map.flyTo({
-			center: [stop.lon, stop.lat],
-			zoom: 17.5
-		});
-	}
-
 	onMount(() => {
 		map = new Maplibre({
 			container: 'map',
@@ -635,24 +691,9 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		map.addControl(new NavigationControl(), 'top-right');
 
 		map.on('load', function () {
-			map.addLayer(
-				{
-					id: 'trippreview',
-					type: 'line',
-					source: {
-						type: 'geojson',
-						data: {
-							type: 'MultiLineString',
-							coordinates: []
-						}
-					},
-					paint: {
-						'line-color': '#67e8f9',
-						'line-width': 4
-					}
-				}
-				// 'gtfs'
-			);
+			addSourcesAndLayers();
+			addEvents();
+
 			// mapLoaded = true;
 			// if (stopsLoaded) {
 			// 	loadStops();
@@ -855,10 +896,12 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			<button
 				class="btn btn-primary"
 				class:hidden={!($selectedStop && $selectedGtfsStop && !$hasMutualLink)}
-				>Ligar paragens</button
+				on:click={() => {
+					connectStops($selectedStop, $selectedGtfsStop);
+				}}>Ligar paragens</button
 			>
-			<button class="btn btn-warning">Adicionar alerta</button>
-			<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button>
+			<!-- <button class="btn btn-warning">Adicionar alerta</button>
+			<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button> -->
 		</div>
 	</div>
 </div>
