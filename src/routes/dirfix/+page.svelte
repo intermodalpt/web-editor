@@ -47,7 +47,18 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	let map;
 
 	const selectedStop = writable(null);
-	const selectedStopRoutes = derived(selectedStop, ($selectedGTFSStop) => {
+	const selectedGtfsStop = writable(null);
+
+	const hasMutualLink = derived(
+		[selectedStop, selectedGtfsStop],
+		([$selectedStop, $selectedGtfsStop]) => {
+			return (
+				$selectedStop && $selectedGtfsStop && $selectedStop.tml_id === $selectedGtfsStop.stop_id
+			);
+		}
+	);
+
+	const selectedGtfsStopRoutes = derived(selectedGtfsStop, ($selectedGTFSStop) => {
 		if ($selectedGTFSStop == null) return [];
 		return Array.from($selectedGTFSStop.routes)
 			.sort((a, b) => a.id.localeCompare(b.id))
@@ -59,24 +70,44 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				return filteredRoute;
 			});
 	});
+
+	const selectedStopRoutes = derived(selectedStop, ($selectedStop, set) => {
+		if (!$selectedStop) return null;
+
+		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/spider`)
+			.then((r) => r.json())
+			.then((r) => {
+				set(
+					Object.values(r.routes).sort(
+						(a, b) => parseInt(a.code) - parseInt(b.code) || a.code.localeCompare(b.code)
+					)
+				);
+			});
+	});
+
 	const previewedTrip = writable(null);
 
-	selectedStop.subscribe((stop) => {
+	selectedGtfsStop.subscribe((gtfsStop) => {
 		previewedTrip.set(null);
 		if (!map) return;
 
-		if (stop == null) {
-			map.easeTo({
-				padding: { left: 0 },
-				duration: 750
-			});
-			return;
-		} else {
-			map.easeTo({
-				padding: { left: 300 },
-				duration: 750
-			});
-		}
+		console.log('padding', { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 });
+		map.easeTo({
+			padding: { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 },
+			duration: 750
+		});
+		return;
+	});
+
+	selectedStop.subscribe((stop) => {
+		if (!map) return;
+
+		console.log('padding', { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 });
+		map.easeTo({
+			padding: { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 },
+			duration: 750
+		});
+		return;
 	});
 
 	previewedTrip.subscribe((trip) => {
@@ -136,10 +167,10 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 	function refreshMatches() {
 		let unvStops = Object.values(stops).filter(
-			(stop) => stop.tml_id && !['manual', 'flags'].includes(stop.tml_id_source)
+			(stop) => stop.tml_id && !['tml', 'manual', 'flags'].includes(stop.tml_id_source)
 		);
 		let verStops = Object.values(stops).filter(
-			(stop) => stop.tml_id && ['manual', 'flags'].includes(stop.tml_id_source)
+			(stop) => stop.tml_id && ['tml', 'manual', 'flags'].includes(stop.tml_id_source)
 		);
 
 		const matchToFeature = (stop) => {
@@ -339,7 +370,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				'circle-radius': {
 					base: 1.75,
 					stops: [
-						[0, 3],
+						[0, 1.5],
+						[11, 2],
 						[18, 7]
 					]
 				},
@@ -357,7 +389,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				'circle-radius': {
 					base: 1.75,
 					stops: [
-						[0, 3],
+						[0, 1.5],
+						[11, 2],
 						[18, 7]
 					]
 				},
@@ -382,17 +415,31 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			},
 			minzoom: 18
 		});
+		const canvas = map.getCanvasContainer();
 
 		map.on('mouseenter', 'gtfs', () => {
-			map.getCanvas().style.cursor = 'pointer';
+			canvas.style.cursor = 'pointer';
 		});
 		map.on('mouseleave', 'gtfs', () => {
-			map.getCanvas().style.cursor = '';
+			canvas.style.cursor = '';
+		});
+		map.on('mouseenter', 'stops', () => {
+			canvas.style.cursor = 'pointer';
+		});
+		map.on('mouseleave', 'stops', () => {
+			canvas.style.cursor = '';
+		});
+
+		map.on('click', 'stops', (e) => {
+			let stop = stops[e.features[0].properties.id];
+			$selectedStop = stop;
 		});
 
 		map.on('click', 'gtfs', (e) => {
+			if (map.getZoom() < 15) return;
+
 			let stop = gtfs_stops[e.features[0].properties.id];
-			$selectedStop = stop;
+			$selectedGtfsStop = stop;
 
 			// For each route, for each trip, build a three stop window with the previous, current and next stop
 			const windows = new Map();
@@ -433,7 +480,6 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 		let selectedPoint = null;
 		let hoveredStop = null;
-		const canvas = map.getCanvasContainer();
 
 		function onMove(e) {
 			const coords = e.lngLat;
@@ -588,45 +634,143 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 <div id="map" class="h-full relative">
 	<div
 		class="absolute left-0 z-10 flex flex-col justify-center h-full transition duration-750"
-		class:-translate-x-[300px]={!$selectedStop}
+		class:-translate-x-[300px]={!$selectedGtfsStop}
 	>
 		<div
-			class="w-[300px] bg-zinc-500 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-r-xl border-r-2 border-neutral"
+			class="w-[300px] bg-orange-900 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-r-xl border-r-2 border-orange-700"
 			style="grid-template-rows: auto 1fr;"
 		>
 			<div class="flex gap-1 justify-between p-1">
-				<span class="text-base-100 font-bold">{$selectedStop?.stop_name}</span>
+				<span class="text-base-100 font-bold self-center">{$selectedGtfsStop?.stop_name}</span>
+				<button
+					class="btn btn-circle btn-xs btn-error self-start"
+					on:click={() => ($selectedGtfsStop = null)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/></svg
+					>
+				</button>
 			</div>
 			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col lg:rounded-br-xl">
-				<div class="badge badge-primary">{$selectedStop?.stop_id}</div>
+				<div class="flex gap-2">
+					<span class="font-bold">GTFS ID:</span>
+					<div class="badge text-orange-200 bg-orange-600 border-orange-600">
+						{$selectedGtfsStop?.stop_id}
+					</div>
+				</div>
+				<div class="flex flex-col">
+					<h1 class="text-sm font-bold self-center">Rotas</h1>
+					<ul class="flex flex-col gap-3">
+						{#each $selectedGtfsStopRoutes as route}
+							<li class="flex flex-col">
+								<span class="badge badge-secondary badge-outline">{route.id}</span>
+								<ul class="ml-4 flex flex-col gap-2">
+									{#each route.trips as trip}
+										<li class="flex flex-col">
+											<div class="flex">
+												<button
+													class="btn btn-outline btn-xs !rounded-r-0 grow"
+													on:click={() => {}}>{trip.id}</button
+												>
+												<button
+													class="btn btn-outline btn-xs !rounded-l-0"
+													class:btn-primary={trip === $previewedTrip}
+													on:click={() => {
+														$previewedTrip = trip === $previewedTrip ? null : trip;
+													}}>Ver</button
+												>
+											</div>
+											<span>Destino: <span class="font-bold">{trip.headsign}</span></span>
+										</li>
+									{/each}
+								</ul>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div
+		class="absolute right-0 z-10 flex flex-col justify-center h-full transition duration-750"
+		class:translate-x-[300px]={!$selectedStop}
+	>
+		<div
+			class="w-[300px] bg-blue-950 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-l-xl border-l-2 border-blue-700"
+			style="grid-template-rows: auto 1fr;"
+		>
+			<div class="flex gap-1 justify-between p-1">
+				<span class="text-base-100 font-bold self-center">{$selectedStop?.osm_name}</span>
+				<button
+					class="btn btn-circle btn-xs btn-error self-start"
+					on:click={() => ($selectedStop = null)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/></svg
+					>
+				</button>
+			</div>
+			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col lg:rounded-bl-xl">
+				<div class="flex gap-2">
+					<span class="font-bold">IML ID:</span>
+					<div class="badge text-blue-200 bg-blue-600 border-blue-600">{$selectedStop?.id}</div>
+				</div>
+				{#if $selectedStop?.tml_id}
+					<div class="flex gap-1">
+						<h1 class="text-sm font-bold">Ligada a</h1>
+						{#if gtfs_stops[parseInt($selectedStop?.tml_id)]}
+							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+								>{$selectedStop?.tml_id}</button
+							>
+						{:else}
+							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+								>⚠️{$selectedStop?.tml_id}</button
+							>
+							<button class="btn btn-xs btn-error">Apagar erro</button>
+						{/if}
+					</div>
+				{/if}
 				<h1 class="text-sm">Rotas</h1>
-				<ul>
-					{#each $selectedStopRoutes as route}
+				<ul class="flex flex-col gap-3">
+					{#each $selectedStopRoutes || [] as route}
 						<li class="flex flex-col">
-							<span class="badge badge-secondary badge-outline">{route.id}</span>
-							<ul class="ml-2">
-								{#each route.trips as trip}
-									<li class="flex flex-col">
-										<div>
-											<span class="badge badge-xs badge-outline text-xs">{trip.id}</span>
-											<span>{trip.headsign}</span>
-										</div>
-										<div class="flex justify-end">
-											<button
-												class="btn btn-outline btn-xs"
-												class:btn-primary={trip === $previewedTrip}
-												on:click={() => {
-													$previewedTrip = trip;
-												}}>Ver</button
-											>
-										</div>
-									</li>
-								{/each}
-							</ul>
+							<span class="badge badge-secondary badge-outline w-full">{route.code}</span>
+							<span class="font-bold">{route.name}</span>
 						</li>
 					{/each}
 				</ul>
 			</div>
+		</div>
+	</div>
+	<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">
+		<div class="flex justify-center gap-4 lg:w-[50%] mb-4">
+			<button
+				class="btn btn-primary"
+				class:hidden={!($selectedStop && $selectedGtfsStop && !$hasMutualLink)}
+				>Ligar paragens</button
+			>
+			<button class="btn btn-warning">Adicionar alerta</button>
+			<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button>
 		</div>
 	</div>
 </div>
