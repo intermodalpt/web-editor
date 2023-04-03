@@ -49,6 +49,12 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	let gtfs_routes = [];
 	let map;
 
+	let stopsLoaded = false;
+	let gtfsStopsLoaded = false;
+	let gtfsTripsLoaded = false;
+	let mapLoaded = false;
+	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
+
 	const selectedStop = writable(null);
 	const selectedGtfsStop = writable(null);
 
@@ -130,9 +136,24 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	});
 
 	Promise.all([
-		fetch(`${apiServer}/v1/tml/stops`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/tml/gtfs_stops`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/tml/gtfs_routes`).then((r) => r.json())
+		fetch(`${apiServer}/v1/tml/stops`)
+			.then((r) => r.json())
+			.then((r) => {
+				stopsLoaded = true;
+				return r;
+			}),
+		fetch(`${apiServer}/v1/tml/gtfs_stops`)
+			.then((r) => r.json())
+			.then((r) => {
+				gtfsStopsLoaded = true;
+				return r;
+			}),
+		fetch(`${apiServer}/v1/tml/gtfs_routes`)
+			.then((r) => r.json())
+			.then((r) => {
+				gtfsTripsLoaded = true;
+				return r;
+			})
 	]).then(([resp_stops, resp_gtfs_stops, resp_gtfs_routes]) => {
 		gtfs_stops = Object.fromEntries(
 			resp_gtfs_stops.map((stop) => [
@@ -164,15 +185,9 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			});
 		});
 
-		refreshStops();
-
-		// map.getSource('matchline').setData({
-		// 	type: 'LineString',
-		// 	coordinates: [
-		// 		[selectedPoint.lon, selectedPoint.lat],
-		// 		[hoveredStop.lon, hoveredStop.lat]
-		// 	]
-		// });
+		if (!loading) {
+			refreshStops();
+		}
 	});
 
 	function refreshMatches() {
@@ -711,10 +726,10 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			addSourcesAndLayers();
 			addEvents();
 
-			// mapLoaded = true;
-			// if (stopsLoaded) {
-			// 	loadStops();
-			// }
+			mapLoaded = true;
+			if (!loading) {
+				refreshStops();
+			}
 		});
 	});
 
@@ -724,6 +739,44 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 </script>
 
 <div id="map" class="h-full relative">
+	{#if loading}
+		<div style="background-color: #33336699" class="z-[2000] absolute inset-0" />
+		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
+			<div
+				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl  border-2 border-warning  max-h-full"
+			>
+				<span class="text-xl">A carregar</span>
+				<span
+					>Mapa: <progress
+						class="progress progress-primary w-full"
+						value={mapLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+				<span
+					>Paragens: <progress
+						class="progress progress-primary w-full"
+						value={stopsLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+				<span
+					>Precursos GTFS: <progress
+						class="progress progress-primary w-full"
+						value={gtfsTripsLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+				<span
+					>Paragens GTFS: <progress
+						class="progress progress-primary w-full"
+						value={gtfsStopsLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+			</div>
+		</div>
+	{/if}
 	<div
 		class="absolute left-0 z-10 flex flex-col justify-center h-full transition duration-750"
 		class:-translate-x-[300px]={!$selectedGtfsStop}
