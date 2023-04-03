@@ -36,10 +36,11 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { apiServer } from '$lib/settings.js';
 	import * as turf from '@turf/turf';
+	import { decodedToken, token } from '$lib/stores.js';
+	import { apiServer } from '$lib/settings.js';
 
 	let stops = [];
 	let gtfs_stops = [];
@@ -131,7 +132,6 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		fetch(`${apiServer}/v1/tml/gtfs_stops`).then((r) => r.json()),
 		fetch(`${apiServer}/v1/tml/gtfs_routes`).then((r) => r.json())
 	]).then(([resp_stops, resp_gtfs_stops, resp_gtfs_routes]) => {
-		stops = Object.fromEntries(resp_stops.map((stop) => [stop.id, stop]));
 		gtfs_stops = Object.fromEntries(
 			resp_gtfs_stops.map((stop) => [
 				parseInt(stop.stop_id),
@@ -140,6 +140,14 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 					lon: stop.stop_lon,
 					id: parseInt(stop.stop_id),
 					routes: new Set()
+				})
+			])
+		);
+		stops = Object.fromEntries(
+			resp_stops.map((stop) => [
+				stop.id,
+				Object.assign(stop, {
+					gtfsStop: gtfs_stops[parseInt(stop.tml_id)] || null
 				})
 			])
 		);
@@ -180,7 +188,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				type: 'Feature',
 				geometry: {
 					type: 'LineString',
-					coordinates: [[stop.lon, stop.lat], gtfsStop ? [gtfsStop.lon, gtfsStop.lat] : [0.0, 0.0]]
+					coordinates: [[stop.lon, stop.lat], gtfsStop ? [gtfsStop.lon, gtfsStop.lat] : [0.0, 90.0]]
 				}
 			};
 		};
@@ -584,6 +592,32 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		});
 	}
 
+	function flyToTrip(trip) {
+		const bounds = new LngLatBounds();
+		trip.stops
+			.map((s) => gtfs_stops[s])
+			.forEach((stop) => {
+				bounds.extend([stop.lon, stop.lat]);
+			});
+		map.fitBounds(bounds, {
+			padding: 50
+		});
+	}
+
+	function flyToGtfsStop(gtfsStop) {
+		map.flyTo({
+			center: [gtfsStop.lon, gtfsStop.lat],
+			zoom: 17.5
+		});
+	}
+
+	function flyToStop(stop) {
+		map.flyTo({
+			center: [stop.lon, stop.lat],
+			zoom: 17.5
+		});
+	}
+
 	onMount(() => {
 		map = new Maplibre({
 			container: 'map',
@@ -664,12 +698,19 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col lg:rounded-br-xl">
 				<div class="flex gap-2">
 					<span class="font-bold">GTFS ID:</span>
-					<div class="badge text-orange-200 bg-orange-600 border-orange-600">
+					<button
+						class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+						on:click={() => {
+							if ($selectedGtfsStop) {
+								flyToGtfsStop($selectedGtfsStop);
+							}
+						}}
+					>
 						{$selectedGtfsStop?.stop_id}
-					</div>
+					</button>
 				</div>
 				<div class="flex flex-col">
-					<h1 class="text-sm font-bold self-center">Rotas</h1>
+					<h1 class="text-sm font-semibold self-center">Rotas</h1>
 					<ul class="flex flex-col gap-3">
 						{#each $selectedGtfsStopRoutes as route}
 							<li class="flex flex-col">
@@ -680,7 +721,10 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 											<div class="flex">
 												<button
 													class="btn btn-outline btn-xs !rounded-r-0 grow"
-													on:click={() => {}}>{trip.id}</button
+													on:click={() => {
+														flyToTrip(trip);
+														$previewedTrip = trip;
+													}}>{trip.id}</button
 												>
 												<button
 													class="btn btn-outline btn-xs !rounded-l-0"
@@ -730,17 +774,61 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 					>
 				</button>
 			</div>
-			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col lg:rounded-bl-xl">
+			<div
+				class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col gap-1 lg:rounded-bl-xl"
+			>
 				<div class="flex gap-2">
 					<span class="font-bold">IML ID:</span>
-					<div class="badge text-blue-200 bg-blue-600 border-blue-600">{$selectedStop?.id}</div>
+					<div
+						class="btn btn-xs text-blue-200 bg-blue-600 border-blue-600"
+						on:click={() => {
+							flyToStop($selectedStop);
+						}}
+					>
+						{$selectedStop?.id}
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<span class="font-bold">Coord:</span>
+					<div class="flex">
+						<input
+							class="btn btn-primary btn-xs rounded-r-none"
+							type="button"
+							value={$selectedStop?.lat.toFixed(6)}
+							on:click={() => {
+								navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+							}}
+						/>
+						<input
+							class="btn btn-primary btn-xs rounded-l-none"
+							type="button"
+							value={$selectedStop?.lon.toFixed(6)}
+							on:click={() => {
+								navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
+							}}
+						/>
+					</div>
+					<input
+						class="btn btn-secondary btn-xs"
+						type="button"
+						value="Copiar"
+						on:click={() => {
+							navigator.clipboard.writeText(
+								$selectedStop?.lat.toFixed(6) + '\t' + $selectedStop?.lon.toFixed(6)
+							);
+						}}
+					/>
 				</div>
 				{#if $selectedStop?.tml_id}
 					<div class="flex gap-1">
-						<h1 class="text-sm font-bold">Ligada a</h1>
-						{#if gtfs_stops[parseInt($selectedStop?.tml_id)]}
-							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-								>{$selectedStop?.tml_id}</button
+						<h1 class="text-xs font-bold">Ligada a</h1>
+						{#if $selectedStop.gtfsStop}
+							<button
+								class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+								on:click={() => {
+									$selectedGtfsStop = $selectedStop.gtfsStop;
+									flyToGtfsStop($selectedStop.gtfsStop);
+								}}>{$selectedStop?.tml_id}</button
 							>
 						{:else}
 							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
@@ -750,11 +838,11 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 						{/if}
 					</div>
 				{/if}
-				<h1 class="text-sm">Rotas</h1>
+				<h1 class="text-sm self-center font-semibold">Rotas</h1>
 				<ul class="flex flex-col gap-3">
 					{#each $selectedStopRoutes || [] as route}
-						<li class="flex flex-col">
-							<span class="badge badge-secondary badge-outline w-full">{route.code}</span>
+						<li class="flex flex-nowrap gap-1">
+							<span class="badge badge-secondary badge-outline">{route.code}</span>
 							<span class="font-bold">{route.name}</span>
 						</li>
 					{/each}
