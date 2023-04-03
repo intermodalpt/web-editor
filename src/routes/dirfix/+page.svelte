@@ -42,6 +42,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
 
+	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
+
 	let stops = [];
 	let gtfs_stops = [];
 	let gtfs_routes = [];
@@ -175,10 +177,10 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 	function refreshMatches() {
 		let unvStops = Object.values(stops).filter(
-			(stop) => stop.tml_id && !['tml', 'manual', 'flags'].includes(stop.tml_id_source)
+			(stop) => stop.tml_id && !credibleSources.includes(stop.tml_id_source)
 		);
 		let verStops = Object.values(stops).filter(
-			(stop) => stop.tml_id && ['tml', 'manual', 'flags'].includes(stop.tml_id_source)
+			(stop) => stop.tml_id && credibleSources.includes(stop.tml_id_source)
 		);
 
 		const matchToFeature = (stop) => {
@@ -307,15 +309,27 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	}
 
 	function connectStops(stop, gtfsStop) {
-		if (
-			stop.gtfsStop &&
-			stop.gtfsStop != gtfsStop &&
-			!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
+		console.log('connecting stops');
+		console.log(stop);
+		console.log(gtfsStop);
+
+		if (stop.gtfsStop && stop.gtfsStop != gtfsStop) {
+			// GTFS changed
+			if (
+				!credibleSources.includes(stop.tml_id_source) &&
+				!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
+			) {
+				return;
+			}
+		} else if (
+			credibleSources.includes(stop.tml_id_source) &&
+			!confirm('Paragem já tem um ID confirmado. Alterar?')
 		) {
+			//GTFS didn't change but the source is going to change
 			return;
 		}
 
-		const beingUsed = stops.some((s) => {
+		const beingUsed = Object.values(stops).some((s) => {
 			s != stop && s.gtfsStop == gtfsStop;
 		});
 
@@ -338,6 +352,9 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				stop.tml_id_verified = true;
 				stop.tml_id_source = 'h1';
 				refreshStops();
+				// Force data refresh
+				$selectedGtfsStop = $selectedGtfsStop;
+				$selectedStop = $selectedStop;
 			} else {
 				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
 			}
@@ -891,17 +908,24 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			</div>
 		</div>
 	</div>
-	<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">
-		<div class="flex justify-center gap-4 lg:w-[50%] mb-4">
-			<button
-				class="btn btn-primary"
-				class:hidden={!($selectedStop && $selectedGtfsStop && !$hasMutualLink)}
-				on:click={() => {
-					connectStops($selectedStop, $selectedGtfsStop);
-				}}>Ligar paragens</button
-			>
-			<!-- <button class="btn btn-warning">Adicionar alerta</button>
-			<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button> -->
+	{#if $decodedToken?.permissions?.is_admin}
+		<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">
+			<div class="flex justify-center gap-4 lg:w-[50%] mb-4">
+				<button
+					class="btn btn-primary"
+					class:hidden={!(
+						$selectedStop &&
+						$selectedGtfsStop &&
+						(!$hasMutualLink || !credibleSources.includes($selectedStop?.tml_id_source)) &&
+						!($selectedStop.gtfsStop === $selectedGtfsStop && $selectedStop?.tml_id_source === 'h1')
+					)}
+					on:click={() => {
+						connectStops($selectedStop, $selectedGtfsStop);
+					}}>Ligar paragens</button
+				>
+				<!-- <button class="btn btn-warning">Adicionar alerta</button>
+				<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button> -->
+			</div>
 		</div>
-	</div>
+	{/if}
 </div>
