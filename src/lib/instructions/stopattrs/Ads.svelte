@@ -1,3 +1,8 @@
+<script>
+	import FewAds from '$lib/instructions/artwork/fewads.svg';
+	import ManyAds from '$lib/instructions/artwork/manyads.svg';
+</script>
+
 <h2 id="advertisements" class="card-title">
 	Anúncios <span class="font-mono text-xs">advertisements</span>
 </h2>
@@ -29,11 +34,13 @@
 	Afixação de pequeno porte (relativo à paragem).<br />
 	Exemplo: Publicidade no painel de horários do abrigo.
 </p>
+<img class="h-64" src={FewAds} alt="Poucos anúncios" />
 <h4 class="text-md font-semibold">Muita área</h4>
 <p>
-	Afixação de grande porte (relativo à paragem) não intrusiva.<br />
+	Afixação de grande porte (relativo à paragem) não intrusiva de um ponto de vista funcional.<br />
 	Exemplo: Anúncio de 2m² nas costas de um abrigo.
 </p>
+<img class="h-64" src={ManyAds} alt="Muitos anúncios" />
 <h4 class="text-md font-semibold">Intrusivos</h4>
 <p>
 	Afixação que ou prejudica o serviço (ex: cortando visibilidade) ou de tal forma volumosa que
