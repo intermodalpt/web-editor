@@ -206,7 +206,6 @@ export function deepCopy(object) {
 	return JSON.parse(JSON.stringify(object));
 }
 
-
 export function parseJwt(token) {
 	var base64Url = token.split('.')[1];
 	var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -253,4 +252,285 @@ export function getNearestStops(stopList, lat, lon, n = 30) {
 	});
 
 	return stopList.slice(0, n);
+}
+
+function needlemanWunsch(seq1, seq2) {
+	const n = seq1.length;
+	const m = seq2.length;
+	const gapPenalty = -1;
+	const matchScore = 1;
+	const mismatchScore = -1;
+
+	// Initialize the matrix with zeros
+	const matrix = Array.from(Array(n + 1), () => new Array(m + 1).fill(0));
+
+	// Initialize the first row and column with gap penalties
+	for (let i = 0; i <= n; i++) {
+		matrix[i][0] = i * gapPenalty;
+	}
+
+	for (let j = 0; j <= m; j++) {
+		matrix[0][j] = j * gapPenalty;
+	}
+
+	// Fill in the rest of the matrix
+	for (let i = 1; i <= n; i++) {
+		for (let j = 1; j <= m; j++) {
+			const match =
+				matrix[i - 1][j - 1] + (seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore);
+			const deleteScore = matrix[i - 1][j] + gapPenalty;
+			const insertScore = matrix[i][j - 1] + gapPenalty;
+			matrix[i][j] = Math.max(match, deleteScore, insertScore);
+		}
+	}
+
+	// Traceback to find the alignment
+	let alignedSeq1 = [];
+	let alignedSeq2 = [];
+
+	let i = n;
+	let j = m;
+
+	while (i > 0 || j > 0) {
+		if (
+			i > 0 &&
+			j > 0 &&
+			//
+			matrix[i][j] ===
+				matrix[i - 1][j - 1] + (seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
+		) {
+			// Diagonal, no space added
+			alignedSeq1.push(seq1[i - 1]);
+			alignedSeq2.push(seq2[j - 1]);
+			i--;
+			j--;
+		} else if (i > 0 && matrix[i][j] === matrix[i - 1][j] + gapPenalty) {
+			// Up, space added to seq2
+			alignedSeq1.push(seq1[i - 1]);
+			alignedSeq2.push('-');
+			i--;
+		} else {
+			// Left, space added to seq1
+			alignedSeq1.push('-');
+			alignedSeq2.push(seq2[j - 1]);
+			j--;
+		}
+	}
+
+	return [alignedSeq1.reverse(), alignedSeq2.reverse(), matrix];
+}
+
+export function progressiveSequenceAlignment(sequences) {
+	// I'm pretty darn sure that this function can be improved
+	// And I'm pretty darn sure that nobody will ever notice a real
+	// difference between this and the improved version, at least for what we're doing
+
+	const gapPenalty = -1;
+	const matchScore = 1;
+	const mismatchScore = -1;
+
+	let n = sequences.length;
+	if (n === 1) {
+		return sequences;
+	}
+
+	//############################ PICK THE INITIAL PAIR ############################
+
+	// Initialize the matrix with zeros
+	let crossAlignmentScores = Array.from(Array(n), () => new Array(n).fill(0));
+
+	// Find how well sequences match amongst themselves
+	for (let i = 0; i < n; i++) {
+		for (let j = i + 1; j < n; j++) {
+			const [alignedSeq1, alignedSeq2] = needlemanWunsch(sequences[i], sequences[j]);
+			const score = calculateScore(alignedSeq1, alignedSeq2, gapPenalty, matchScore, mismatchScore);
+			// Supperior triangle
+			crossAlignmentScores[i][j] = score;
+			// Inferior triangle
+			crossAlignmentScores[j][i] = score;
+		}
+	}
+
+	let bestSeenScore = -Infinity;
+	let bestMatchRow = 0;
+	let bestMatchCol = 0;
+
+	// Pick the best two matches
+	for (let i = 0; i < n; i++) {
+		for (let j = i + 1; j < n; j++) {
+			if (crossAlignmentScores[i][j] > bestSeenScore) {
+				bestSeenScore = crossAlignmentScores[i][j];
+				bestMatchRow = i;
+				bestMatchCol = j;
+			}
+		}
+	}
+
+	const [alignedSeq1, alignedSeq2] = needlemanWunsch(
+		sequences[bestMatchRow],
+		sequences[bestMatchCol]
+	);
+
+	// Attach original indices so we can sort the output back later
+	sequences = sequences.map((seq, idx) => [seq, idx]);
+	const ordering = [bestMatchRow, bestMatchCol];
+
+	// Remove the aligned sequences (PS: j>i)
+	sequences.splice(bestMatchCol, 1);
+	sequences.splice(bestMatchRow, 1);
+
+	let alignedSequences = [alignedSeq1, alignedSeq2];
+
+	n = sequences.length;
+	if (n === 0) {
+		return alignedSequences;
+	}
+
+	//############################ PROGRESSIVE ALIGNMENT ############################
+	while (n > 0) {
+		const currentConsensus = sequencesConsensus(alignedSequences);
+
+		let bestAlignmentSeq;
+		let bestAlignmentSeqOriIdx;
+		let bestAlignmentMatrix;
+		let bestScore = -Infinity;
+		// Find how well sequences match amongst themselves
+		for (let i = 0; i < n; i++) {
+			const [alignedSeq1, alignedSeq2, alignmentMatrix] = needlemanWunsch(
+				currentConsensus,
+				sequences[i][0]
+			);
+			const score = calculateScore(alignedSeq1, alignedSeq2, gapPenalty, matchScore, mismatchScore);
+
+			if (score > bestScore) {
+				bestScore = score;
+				// This is sequences[i] aligned
+				bestAlignmentSeq = alignedSeq2;
+				// We need this to calculate the new gaps to add to the current alignments
+				bestAlignmentMatrix = alignmentMatrix;
+
+				bestAlignmentSeqOriIdx = i;
+			}
+		}
+
+		// Now we insert the gaps introduced in this alignment to the previous alignments
+		// alignmentMatrix is currentConsensus.length x sequences[bestAlignmentSeqOriIdx].length
+		let i = currentConsensus.length;
+
+		let seq1 = currentConsensus;
+		let seq2 = sequences[bestAlignmentSeqOriIdx][0];
+		let j = seq2.length;
+
+		let paddedIndexes = [];
+
+		while (i > 0 || j > 0) {
+			if (
+				i > 0 &&
+				j > 0 &&
+				bestAlignmentMatrix[i][j] ===
+					bestAlignmentMatrix[i - 1][j - 1] +
+						(seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
+			) {
+				// Diagonal, no space added
+				i--;
+				j--;
+			} else if (
+				i > 0 &&
+				bestAlignmentMatrix[i][j] === bestAlignmentMatrix[i - 1][j] + gapPenalty
+			) {
+				// Up, space added to seq2
+				i--;
+			} else {
+				// Left, space added to seq1
+				paddedIndexes.push(i);
+				j--;
+			}
+		}
+
+		// Add the gaps to the previous alignments
+		alignedSequences.forEach((seq) => {
+			for (const idx of paddedIndexes) {
+				// Insert a gap in the idx position
+				seq.splice(idx, 0, '-');
+			}
+		});
+
+		// And add the new alignment there
+		alignedSequences.push(bestAlignmentSeq);
+		ordering.push(sequences[bestAlignmentSeqOriIdx][1]);
+		sequences.splice(bestAlignmentSeqOriIdx, 1);
+		n = sequences.length;
+	}
+
+	// Sort the output back to the original order
+	const reorderedSequences = alignedSequences
+		.map((seq, i) => [seq, ordering[i]])
+		.sort((a, b) => a[1] - b[1])
+		.map(([seq]) => seq);
+	return reorderedSequences;
+}
+
+function calculateScore(seq1, seq2, gapPenalty, matchScore, mismatchScore) {
+	let score = 0;
+
+	for (let i = 0; i < seq1.length; i++) {
+		if (seq1[i] === '-' || seq2[i] === '-') {
+			score += gapPenalty;
+		} else if (seq1[i] === seq2[i]) {
+			score += matchScore;
+		} else {
+			score += mismatchScore;
+		}
+	}
+	return score;
+}
+
+function sequencesConsensus(sequences) {
+	const n = sequences[0].length;
+
+	let consensus = [];
+
+	for (let i = 0; i < n; i++) {
+		const firstElem = sequences[0][i];
+		if (sequences.every((seq) => seq[i] === firstElem)) {
+			consensus.push(firstElem);
+		} else {
+			consensus.push('-');
+		}
+	}
+	return consensus;
+}
+
+export function longestCommonSubsequence(arr1, arr2) {
+	const m = arr1.length;
+	const n = arr2.length;
+	const lcs = new Array(m + 1).fill(null).map(() => new Array(n + 1).fill(0));
+
+	for (let i = 1; i <= m; i++) {
+		for (let j = 1; j <= n; j++) {
+			if (arr1[i - 1] === arr2[j - 1]) {
+				lcs[i][j] = 1 + lcs[i - 1][j - 1];
+			} else {
+				lcs[i][j] = Math.max(lcs[i][j - 1], lcs[i - 1][j]);
+			}
+		}
+	}
+
+	let result = [];
+	let i = m,
+		j = n;
+
+	while (i > 0 && j > 0) {
+		if (arr1[i - 1] === arr2[j - 1]) {
+			result.unshift(arr1[i - 1]);
+			i--;
+			j--;
+		} else if (lcs[i][j - 1] > lcs[i - 1][j]) {
+			j--;
+		} else {
+			i--;
+		}
+	}
+
+	return result;
 }
