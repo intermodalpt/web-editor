@@ -378,6 +378,20 @@
 		});
 	}
 
+	function flyToGtfsStop(gtfsStop) {
+		map.flyTo({
+			center: [gtfsStop.lon, gtfsStop.lat],
+			zoom: 17.5
+		});
+	}
+
+	function flyToImlStop(stop) {
+		map.flyTo({
+			center: [stop.lon, stop.lat],
+			zoom: 17.5
+		});
+	}
+
 	function handleGTFSSelect(event) {
 		const gtfsRouteId = event.detail.value;
 		$selectedGtfsRoute = gtfsRoutes.find((r) => r.id === gtfsRouteId);
@@ -603,11 +617,17 @@
 														.stop_name}
 												</span>
 											</div>
-											<button class="btn btn-xs bg-orange-200 hover:bg-orange-200 text-orange-950"
-												>{entry.gtfsStop.id}</button
+											<button
+												class="btn btn-xs bg-orange-200 hover:bg-orange-200 text-orange-950"
+												on:click={() => {
+													flyToGtfsStop(entry.gtfsStop);
+												}}>{entry.gtfsStop.id}</button
 											>
-											<button class="btn btn-xs bg-blue-200 hover:bg-blue-200 text-blue-950"
-												>{entry.imlStop.id}</button
+											<button
+												class="btn btn-xs bg-blue-200 hover:bg-blue-200 text-blue-950"
+												on:click={() => {
+													flyToImlStop(entry.imlStop);
+												}}>{entry.imlStop.id}</button
 											>
 										</div>
 									</td>
@@ -619,8 +639,11 @@
 									>
 										<div class="flex flex-col w-full">
 											<div class="flex gap-1">
-												<button class="btn btn-xs bg-blue-200 hover:bg-orange-200 text-blue-950"
-													>{entry.imlStop.id}</button
+												<button
+													class="btn btn-xs bg-blue-200 hover:bg-orange-200 text-blue-950"
+													on:click={() => {
+														flyToImlStop(entry.imlStop);
+													}}>{entry.imlStop.id}</button
 												>
 												<span class="font-semibold">
 													{entry.imlStop.official_name ||
@@ -632,7 +655,9 @@
 												<div class="flex gap-1 rounded-lg">
 													<button
 														class="btn btn-xs bg-orange-200 hover:bg-orange-200 text-orange-950"
-														>{entry.gtfsStop.id}</button
+														on:click={() => {
+															flyToGtfsStop(entry.gtfsStop);
+														}}>{entry.gtfsStop.id}</button
 													>
 													<span class="font-semibold">
 														{entry.gtfsStop.stop_name}
@@ -644,8 +669,11 @@
 								{:else if entry.type === 'gtfs'}
 									<td colspan={entry.colSpan}>
 										<div class="w-full flex gap-1 rounded-lg">
-											<button class="btn btn-xs bg-orange-200 hover:bg-orange-200 text-orange-950"
-												>{entry.gtfsStop.id}</button
+											<button
+												class="btn btn-xs bg-orange-200 hover:bg-orange-200 text-orange-950"
+												on:click={() => {
+													flyToGtfsStop(entry.gtfsStop);
+												}}>{entry.gtfsStop.id}</button
 											>
 											<span class="font-semibold">
 												{entry.gtfsStop.stop_name}
