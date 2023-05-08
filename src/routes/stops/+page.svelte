@@ -5,11 +5,17 @@
 	import { decodedToken, token } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import { stops as storedStops, loadStops as loadStoredStops } from '$lib/stores.js';
+	import {
+		logStopScore,
+		logWeightedStopScore,
+		linearStopScore,
+		weightedStopScore
+	} from '$lib/stops/scoring.js';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
-	import Filters from '$lib/editor/Filters.svelte';
+	import VisualizationSettings from './VisualizationSettings.svelte';
 
 	let stops = {};
 	let map;
@@ -57,13 +63,12 @@
 	})();
 
 	let selectedStop = writable(null);
-	let previewedPic = undefined;
 
-	let filterOnlyNoName = false;
-	let filterOnlyNoOfficialName = false;
-	let filterOnlyNoOSM = false;
-	let filterOnlyNoAttrs = false;
-	let filterOnlyNoPics = false;
+	let showVisualizationSettings = false;
+	let stopFilters = [];
+	let stopVisualization = 'attrs_log';
+
+	let previewedPic = undefined;
 
 	let id = null;
 	let name = null;
@@ -306,6 +311,11 @@
 			}
 		}
 
+		const headers = {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${$token}`
+		};
+
 		let newMeta = {
 			id: id,
 			name: name,
@@ -357,137 +367,209 @@
 			verification_level: verificationLevel
 		};
 
-		newMeta = Object.assign($selectedStop, newMeta);
+		let currStop = $selectedStop;
+		let newStop = Object.assign({}, currStop, newMeta);
+		const stopChanged = !isDeepEqual(newStop, currStop);
 
-		updateStop(newMeta);
-
-		map.getSource('stops').setData(getStopsGeoJSON());
-
-		$selectedStop = null;
-	}
-
-	function updateStop(stop) {
-		let request;
-		const headers = {
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${$token}`
-		};
-		if ($decodedToken?.permissions.is_admin) {
-			request = fetch(`${apiServer}/v1/stops/update/${stop.id}`, {
-				method: 'PATCH',
-				headers: headers,
-				body: JSON.stringify(stop)
-			});
-		} else {
-			let comment = null;
-			if (
-				confirm(
-					'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
-				)
-			) {
-				comment = prompt('Insira o seu comentário');
-			}
-
-			request = fetch(`${apiServer}/v1/contrib/stops/update/${stop.id}`, {
-				method: 'POST',
-				headers: headers,
-				body: JSON.stringify({ contribution: stop, comment: comment })
-			});
-		}
-		// If the request answer is ok, update the stop in the stops array
-		// otherwise show an error message with the response body
-		request
-			.then((r) => {
-				if (r.ok) {
-					Object.assign(stops[stop.id], stop);
-				} else {
-					r.text()
-						.then((error) => {
-							alert(`Erro a atualizar:\n${error}`);
-						})
-						.catch(() => {
-							alert('Erro a atualizar');
-						});
+		if (stopChanged) {
+			console.log('Foram feitas alterações');
+			let request;
+			if ($decodedToken?.permissions.is_admin) {
+				request = fetch(`${apiServer}/v1/stops/update/${currStop.id}`, {
+					method: 'PATCH',
+					headers: headers,
+					body: JSON.stringify(newStop)
+				});
+			} else {
+				let comment = null;
+				if (
+					confirm(
+						'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
+					)
+				) {
+					comment = prompt('Insira o seu comentário');
 				}
-			})
-			.catch(() => {
-				alert('Error requesting update');
-			});
-	}
 
-	function scoreAttr(truthVal, potentialScore) {
-		if (truthVal === undefined || truthVal === null) {
-			return 0.0;
+				request = fetch(`${apiServer}/v1/contrib/stops/update/${currStop.id}`, {
+					method: 'POST',
+					headers: headers,
+					body: JSON.stringify({ contribution: newStop, comment: comment })
+				});
+			}
+			// If the request answer is ok, update the stop in the stops array
+			// otherwise show an error message with the response body
+			request
+				.then((r) => {
+					if (r.ok) {
+						const applyChanges = () => {
+							Object.assign(currStop, newStop);
+							map.getSource('stops').setData(getFilteredData());
+							$selectedStop = null;
+						};
+						if ($decodedToken?.permissions.is_admin) {
+							applyChanges();
+						} else {
+							r.json().then((id) => {
+								if (id === -1) {
+									alert('Erro a atualizar:\nO servidor não reconheceu as alterações');
+								} else {
+									applyChanges();
+								}
+							});
+						}
+					} else {
+						r.text()
+							.then((error) => {
+								alert(`Erro a atualizar:\n${error}`);
+							})
+							.catch(() => {
+								alert('Erro a atualizar');
+							});
+					}
+				})
+				.catch(() => {
+					alert('Error requesting update');
+				});
 		} else {
-			return potentialScore;
+			console.log('Não foram feitas alterações na paragem');
+			$selectedStop = null;
 		}
 	}
 
 	export function stopScore(stop) {
-		let score = 0.0;
-		let maximum = 0.0;
-
-		score += scoreAttr(stop.locality, 0.1);
-		maximum += 1.0;
-		score += scoreAttr(stop.flags, 2.0);
-		maximum += 3.0;
-		score += scoreAttr(stop.schedules, 2.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.has_sidewalk, 1.5);
-		maximum += 2.5;
-		score += scoreAttr(stop.has_sidewalked_path, 1.0);
-		maximum += 2.5;
-		score += scoreAttr(stop.has_shelter, 3.0);
-		maximum += 3.0;
-		score += scoreAttr(stop.has_cover, 2.0);
-		maximum += 2.0;
-		score += scoreAttr(stop.has_bench, 1.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.has_trash_can, 1.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.has_ticket_seller, 0.2);
-		maximum += 1.0;
-		score += scoreAttr(stop.has_costumer_support, 0.2);
-		maximum += 0.2;
-		score += scoreAttr(stop.advertisement_qty, 0.2);
-		maximum += 0.2;
-		score += scoreAttr(stop.has_crossing, 3.0);
-		maximum += 3.0;
-		score += scoreAttr(stop.has_flat_access, 0.2);
-		maximum += 0.5;
-		score += scoreAttr(stop.has_wide_access, 0.2);
-		maximum += 0.5;
-		score += scoreAttr(stop.has_tactile_access, 0.2);
-		maximum += 0.5;
-		score += scoreAttr(stop.illumination_strength, 1.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.illumination_position, 1.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.has_illuminated_path, 1.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.has_visibility_from_area, 2.0);
-		maximum += 2.0;
-		score += scoreAttr(stop.has_visibility_from_within, 0.5);
-		maximum += 0.5;
-		score += scoreAttr(stop.is_visible_from_outside, 2.0);
-		maximum += 2.0;
-		score += scoreAttr(stop.parking_visibility_impairment, 1.0);
-		maximum += 1.0;
-		score += scoreAttr(stop.parking_local_access_impairment, 0.5);
-		maximum += 1.0;
-		score += scoreAttr(stop.parking_area_access_impairment, 0.5);
-		maximum += 0.5;
-		score += scoreAttr(stop.verification_level, 2.0);
-		maximum += 2.0;
-
-		// Truncate number to 1 decimal place
-		return (score / maximum) * 10.0 || 0.0;
+		switch (stopVisualization) {
+			case 'attrs_weighted':
+				return weightedStopScore(stop);
+			case 'attrs':
+				return linearStopScore(stop);
+			case 'attrs_log':
+				return logStopScore(stop);
+			case 'attrs_weighted_log':
+				return logWeightedStopScore(stop);
+			case 'refs':
+				return stop.tml_id ? 1.0 : 0.0;
+			case 'pics':
+				return 0.0;
+		}
 	}
 
-	function getStopsGeoJSON() {
+	function getFilteredData() {
+		const filters = stopFilters.map((filter) => {
+			switch (filter.type) {
+				case 'name':
+					return (stops) => {
+						stops.filter((s) => {
+							if (!filter.nameExp) {
+								return s.name === null || s.osm_name === null;
+							}
+
+							return (
+								(s.name && filter.nameExp.test(s.name)) ||
+								(s.official_name && filter.nameExp.test(s.official_name)) ||
+								(s.osm_name && filter.nameExp.test(s.osm_name))
+							);
+						});
+					};
+				case 'flags':
+					return (stops) => {
+						return stops.filter((s) => {
+							const flags = s.flags;
+							if (!schedules) {
+								return false;
+							}
+
+							if (filter.idExp) {
+								const idMatch = flags.some((id) => flag.id && filter.idExp.test(flag.id));
+								if (!idMatch) {
+									return false;
+								}
+							}
+
+							if (filter.nameExp) {
+								const nameMatch = flags.some((flag) => flag.name && filter.nameExp.test(flag.name));
+								if (!nameMatch) {
+									return false;
+								}
+							}
+
+							return true;
+						});
+					};
+				case 'schedules':
+					return (stops) => {
+						return stops.filter((s) => {
+							const schedules = s.schedules;
+							if (!schedules) {
+								return filter.negated;
+							}
+
+							let codeMatch = true;
+							// TODO
+							// let fromMatch = false;
+							// let toMatch = false;
+
+							if (filter.routeCode) {
+								codeMatch = schedules.some((schedule) => filter.routeCode.test(schedule.code));
+							}
+							if (filter.negated) {
+								return !codeMatch;
+							} else {
+								return codeMatch;
+							}
+						});
+					};
+				case 'attr':
+					return (stops) => stops.filter((s) => s[filter.attr] === filter.expectedVal);
+				case 'infrastructure_check_date':
+					return stops.filter((s) => {
+						if (!s.infrastructure_check_date) {
+							return false;
+						}
+
+						let valid = true;
+
+						if (filter.dateLessThan && s.infrastructure_check_date >= filter.dateLessThan) {
+							valid = false;
+						}
+
+						if (filter.dateGreaterThan && s.infrastructure_check_date <= filter.dateGreaterThan) {
+							valid = false;
+						}
+
+						return valid;
+					});
+				case 'service_check_date':
+					return stops.filter((s) => {
+						if (!s.service_check_date) {
+							return false;
+						}
+
+						let valid = true;
+
+						if (filter.dateLessThan && s.service_check_date >= filter.dateLessThan) {
+							valid = false;
+						}
+
+						if (filter.dateGreaterThan && s.service_check_date <= filter.dateGreaterThan) {
+							valid = false;
+						}
+
+						return valid;
+					});
+				case 'authenticity':
+					return (stops) => stops.filter((s) => s.verification_level === filter.expectedVal);
+			}
+		});
+
+		let filteredStops = Object.values(stops);
+
+		for (const filter of filters) {
+			filteredStops = filter(filteredStops);
+		}
+
 		return {
 			type: 'FeatureCollection',
-			features: Object.values(stops).map((stop) => {
+			features: filteredStops.map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -497,7 +579,7 @@
 					properties: {
 						stopId: stop.id,
 						name: `${stop.id} - ${stop.osm_name || stop.official_name}`,
-						score: Math.round(stopScore(stop))
+						score: stopScore(stop)
 					}
 				};
 			})
@@ -505,84 +587,7 @@
 	}
 
 	function loadStops() {
-		map.addSource('stops', {
-			type: 'geojson',
-			data: getStopsGeoJSON(),
-			// cluster: true,
-			clusterRadius: 40,
-			clusterMinPoints: 3
-		});
-
-		map.addLayer({
-			id: 'gtfsLabels',
-			type: 'symbol',
-			source: 'stops',
-			layout: {
-				'text-field': ['get', 'name'],
-				'text-font': ['Open Sans', 'Arial Unicode MS'],
-				'text-size': 10,
-				'text-offset': [2, 0],
-				'text-anchor': 'left',
-				'text-max-width': 150,
-				'text-allow-overlap': false
-			},
-			minzoom: 16
-		});
-
-		map.addLayer({
-			id: 'unclustered-point',
-			type: 'circle',
-			source: 'stops',
-			filter: ['!', ['has', 'point_count']],
-			paint: {
-				'circle-color': [
-					'interpolate',
-					['linear'],
-					['get', 'score'],
-					0,
-					'rgb(220, 30, 50)',
-					5,
-					'rgb(220, 220, 50)',
-					10,
-					'rgb(30, 220, 50)'
-				],
-				'circle-radius': {
-					base: 1.75,
-					stops: [
-						[0, 2],
-						[11, 3],
-						[18, 20]
-					]
-				},
-				'circle-stroke-width': 1,
-				'circle-stroke-color': '#fff'
-			}
-		});
-
-		// map.addLayer({
-		// 	id: 'unclustered-point-score',
-		// 	type: 'symbol',
-		// 	source: 'stops',
-		// 	filter: ['!', ['has', 'point_count']],
-		// 	paint: {
-		// 		'text-color': 'black'
-		// 	},
-		// 	layout: {
-		// 		'text-field': ['get', 'score'],
-		// 		'text-font': ['Metropolis Regular', 'Noto Sans Regular'],
-		// 		'text-size': 12
-		// 	}
-		// });
-
-		map.on('mouseenter', 'unclustered-point', () => {
-			map.getCanvas().style.cursor = 'pointer';
-		});
-		map.on('mouseleave', 'unclustered-point', () => {
-			map.getCanvas().style.cursor = '';
-		});
-		map.on('click', 'unclustered-point', (e) => {
-			$selectedStop = stops[e.features[0].properties.stopId];
-		});
+		map.getSource('stops').setData(getFilteredData());
 	}
 
 	function addTag() {
@@ -668,20 +673,84 @@
 		tmpIssues = tmpIssues;
 	}
 
-	// function openFilterPicker() {
-	// 	document.getElementById('filter-picker').checked = true;
-	// }
+	function addSourcesAndLayers() {
+		map.addSource('stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			},
+			clusterRadius: 40,
+			clusterMinPoints: 3
+		});
 
-	// function applyFilters() {
-	// 	document.getElementById('filter-picker').checked = false;
-	// 	// TODO ask for a redraw
-	// 	// loadStops();
-	// }
+		map.addLayer({
+			id: 'gtfsLabels',
+			type: 'symbol',
+			source: 'stops',
+			layout: {
+				'text-field': ['get', 'name'],
+				'text-font': ['Open Sans', 'Arial Unicode MS'],
+				'text-size': 10,
+				'text-offset': [2, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+			},
+			minzoom: 16
+		});
+
+		map.addLayer({
+			id: 'unclustered-point',
+			type: 'circle',
+			source: 'stops',
+			filter: ['!', ['has', 'point_count']],
+			paint: {
+				'circle-color': [
+					'interpolate',
+					['linear'],
+					['get', 'score'],
+					0,
+					'rgb(220, 30, 50)',
+					0.5,
+					'rgb(220, 220, 50)',
+					1.0,
+					'rgb(30, 220, 50)'
+				],
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 2],
+						[11, 3],
+						[18, 20]
+					]
+				},
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
+			}
+		});
+	}
+
+	function addEvents() {
+		const canvas = map.getCanvas();
+
+		map.on('mouseenter', 'unclustered-point', () => {
+			canvas.style.cursor = 'pointer';
+		});
+
+		map.on('mouseleave', 'unclustered-point', () => {
+			canvas.style.cursor = '';
+		});
+
+		map.on('click', 'unclustered-point', (e) => {
+			$selectedStop = stops[e.features[0].properties.stopId];
+		});
+	}
 
 	onMount(() => {
 		map = new Map({
 			container: 'map',
-			style: 'https://tiles.intermodal.pt/styles/positron/style.json',
+			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,
@@ -705,6 +774,9 @@
 		);
 
 		map.on('load', function () {
+			addSourcesAndLayers();
+			addEvents();
+
 			mapLoaded = true;
 			if (stopsLoaded) {
 				loadStops();
@@ -727,7 +799,7 @@
 		<div style="background-color: #33336699" class="z-[2000] absolute inset-0" />
 		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
 			<div
-				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl  border-2 border-warning  max-h-full"
+				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl border-2 border-warning max-h-full"
 			>
 				<span class="text-xl">A carregar</span>
 				<span
@@ -747,22 +819,51 @@
 			</div>
 		</div>
 	{/if}
-	<!-- <div>
+
+	<div class="absolute top-2 left-2 z-10">
 		<input
 			type="button"
-			class="input input-info"
-			value="Filtros"
-			on:click={openFilterPicker}
-			on:keypress={openFilterPicker}
+			class="btn btn-sm btn-secondary btn-outline bg-white shadow-lg"
+			value="Visualização"
+			on:click={() => (showVisualizationSettings = true)}
+			on:keypress={() => (showVisualizationSettings = true)}
 		/>
-		<a class="btn btn-xs" href="/instructions#edit-stops">Instruções</a>
-	</div> -->
+	</div>
+	<div
+		class="absolute top-0 z-[11] flex justify-center w-full transition duration-750"
+		class:-translate-y-[110px]={!showVisualizationSettings}
+	>
+		<div
+			class="h-[110px] w-full bg-zinc-500 grid grid-cols-1 lg:w-[95%] lg:rounded-b-xl lg:shadow-xl border-b-2 border-neutral"
+			style="grid-template-rows: 1fr auto;"
+		>
+			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100">
+				<VisualizationSettings
+					bind:filters={stopFilters}
+					bind:visualization={stopVisualization}
+					on:filter_change={loadStops}
+					on:visualization_change={loadStops}
+				/>
+			</div>
+			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
+				<div class="flex gap-2 flex-grow justify-end">
+					<input
+						type="button"
+						class="btn btn-error btn-xs"
+						on:click={() => (showVisualizationSettings = false)}
+						on:keypress={() => (showVisualizationSettings = false)}
+						value="Fechar"
+					/>
+				</div>
+			</div>
+		</div>
+	</div>
 	<div
 		class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750"
 		class:translate-y-[350px]={!$selectedStop}
 	>
 		<div
-			class="h-[350px] w-full bg-zinc-500 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl border-t-2 border-neutral"
+			class="h-[350px] w-full bg-zinc-500 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl lg:shadow-xl border-t-2 border-neutral"
 			style="grid-template-rows: auto 1fr;"
 		>
 			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
@@ -1027,7 +1128,7 @@
 					</div>
 				</div>
 				<div class="w-full" class:hidden={currentSubform != subforms.pics}>
-					<div class="flex flex-col  gap-2 grow">
+					<div class="flex flex-col gap-2 grow">
 						<div class="flex flex-wrap gap-1">
 							{#if $stopPictures !== undefined && $stopPictures.length > 0}
 								{#each $stopPictures as picture}
@@ -1339,7 +1440,7 @@
 						/>
 						<StopCheckbox
 							text="Acesso largo"
-							description="O acesso é suficientemente largo (incluindo obstaculos) que possibilite a passagem de uma cadeira de rodas."
+							description="O acesso é suficientemente largo (incluindo obstáculos) que possibilite a passagem de uma cadeira de rodas."
 							state={hasWideAccess}
 							disabled={!$decodedToken}
 						/>
@@ -1604,32 +1705,3 @@
 		</div>
 	</div>
 {/if}
-
-<input type="checkbox" id="filter-picker" class="modal-toggle" />
-<div class="modal">
-	<div class="modal-box">
-		<h3 class="font-bold text-lg">Filtros</h3>
-		<p class="py-4 flex flex-col">
-			<label>
-				<input type="checkbox" class="mr-2" bind:value={filterOnlyNoName} />Só sem nome (nosso)
-			</label>
-			<label>
-				<input type="checkbox" class="mr-2" bind:value={filterOnlyNoOfficialName} />Só sem nome
-				oficial
-			</label>
-			<label>
-				<input type="checkbox" class="mr-2" bind:value={filterOnlyNoOSM} />Só sem nome osm
-			</label>
-			<label>
-				<input type="checkbox" class="mr-2" bind:value={filterOnlyNoAttrs} />Só com atributos em
-				falta
-			</label>
-			<label>
-				<input type="checkbox" class="mr-2" bind:value={filterOnlyNoPics} />Só sem fotos
-			</label>
-		</p>
-		<div class="modal-action">
-			<!-- <label class="btn" on:mouseup={applyFilters}>Aplicar</label> -->
-		</div>
-	</div>
-</div>
