@@ -18,11 +18,13 @@
 	import VisualizationSettings from './VisualizationSettings.svelte';
 
 	let stops = {};
+	let picsPerStop = {};
 	let map;
 
 	let stopsLoaded = false;
+	let stopPicsLoaded = false;
 	let mapLoaded = false;
-	$: loading = !stopsLoaded || !mapLoaded;
+	$: loading = !stopsLoaded || !stopPicsLoaded || !mapLoaded;
 
 	(function () {
 		let headers = {
@@ -32,25 +34,36 @@
 		};
 		const stopCache = get(storedStops);
 		Promise.all([
-			stopCache === undefined
+			(stopCache === undefined
 				? loadStoredStops(fetch)
 				: new Promise((resolve) => {
 						resolve(stopCache);
-				  }),
+				  })
+			).then((r) => {
+				stopsLoaded = true;
+				return r;
+			}),
+			fetch(`${apiServer}/v1/stop_pics/by_stop`)
+				.then((r) => r.json())
+				.then((r) => {
+					stopPicsLoaded = true;
+					return r;
+				}),
 			$token
 				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, headers).then((res) => res.json())
 				: new Promise((resolve) => {
 						resolve([]);
 				  })
 		])
-			.then(([unpatchedStops, patch]) => {
+			.then(([unpatchedStops, pictures, patch]) => {
+				picsPerStop = pictures;
+
 				const patchedStops = unpatchedStops;
 				for (const stop of patch) {
 					patchedStops[stop.id] = stop;
 				}
 
 				stops = patchedStops;
-				stopsLoaded = true;
 
 				if (mapLoaded) {
 					loadStops();
@@ -437,6 +450,8 @@
 	}
 
 	export function stopScore(stop) {
+		// This funcion is a bit less than ideal as this condition must be verified for every stop
+		// If there ever is a performance issue, this is a good place to start
 		switch (stopVisualization) {
 			case 'attrs_weighted':
 				return weightedStopScore(stop);
@@ -449,7 +464,22 @@
 			case 'refs':
 				return stop.tml_id ? 1.0 : 0.0;
 			case 'pics':
-				return 0.0;
+				const pics = picsPerStop[stop.id];
+				if (!pics) {
+					return 0.0;
+				}
+				switch (pics) {
+					case 0:
+						return 0.0;
+					case 1:
+						return 0.4;
+					case 2:
+						return 0.6;
+					case 3:
+						return 0.8;
+					default:
+						return 1.0;
+				}
 		}
 	}
 
@@ -813,6 +843,13 @@
 					>Paragens: <progress
 						class="progress progress-primary w-full"
 						value={stopsLoaded ? 100 : 0}
+						max="100"
+					/></span
+				>
+				<span
+					>Fotografias: <progress
+						class="progress progress-primary w-full"
+						value={stopPicsLoaded ? 100 : 0}
 						max="100"
 					/></span
 				>
