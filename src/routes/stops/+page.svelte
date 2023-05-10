@@ -462,7 +462,19 @@
 			case 'attrs_weighted_log':
 				return logWeightedStopScore(stop);
 			case 'refs':
-				return stop.tml_id ? 1.0 : 0.0;
+				if (!stop.tml_id) {
+					return 0.0;
+				}
+				switch (stop.tml_id_source) {
+					case 'manual':
+						return 1.0;
+					case 'flags':
+						return 0.9;
+					case 'h1':
+						return 0.8;
+					default:
+						return 0.5;
+				}
 			case 'pics':
 				const pics = picsPerStop[stop.id];
 				if (!pics) {
