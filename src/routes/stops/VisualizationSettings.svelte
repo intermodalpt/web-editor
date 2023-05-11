@@ -25,6 +25,7 @@
 			(filterType === 'flags' &&
 				((expectedText1 && isRegexValid(expectedText1)) ||
 					(expectedText2 && isRegexValid(expectedText2)))) ||
+			(filterType === 'schedules' && isRegexValid(expectedText1)) ||
 			(filterType === 'attr' && selectedAttr) ||
 			(filterType === 'infrastructure_check_date' && (dateLessThan || dateGreaterThan) !== null) ||
 			(filterType === 'service_check_date' && (dateLessThan || dateGreaterThan) !== null) ||
@@ -258,6 +259,7 @@
 					<input
 						class="input input-primary input-xs"
 						type="date"
+						disabled
 						placeholder="Mais recente que"
 						bind:value={dateLessThan}
 					/>
@@ -265,6 +267,7 @@
 					<input
 						class="input input-primary input-xs"
 						type="date"
+						disabled
 						placeholder="Mais antigo que"
 						bind:value={dateGreaterThan}
 					/>

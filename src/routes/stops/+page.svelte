@@ -500,7 +500,7 @@
 			switch (filter.type) {
 				case 'name':
 					return (stops) => {
-						stops.filter((s) => {
+						return stops.filter((s) => {
 							if (!filter.nameExp) {
 								return s.name === null || s.osm_name === null;
 							}
@@ -516,12 +516,12 @@
 					return (stops) => {
 						return stops.filter((s) => {
 							const flags = s.flags;
-							if (!schedules) {
+							if (!flags) {
 								return false;
 							}
 
 							if (filter.idExp) {
-								const idMatch = flags.some((id) => flag.id && filter.idExp.test(flag.id));
+								const idMatch = flags.some((flag) => flag.id && filter.idExp.test(flag.id));
 								if (!idMatch) {
 									return false;
 								}
@@ -563,41 +563,45 @@
 				case 'attr':
 					return (stops) => stops.filter((s) => s[filter.attr] === filter.expectedVal);
 				case 'infrastructure_check_date':
-					return stops.filter((s) => {
-						if (!s.infrastructure_check_date) {
-							return false;
-						}
+					return (stops) => {
+						return stops.filter((s) => {
+							if (!s.infrastructure_check_date) {
+								return false;
+							}
 
-						let valid = true;
+							let valid = true;
 
-						if (filter.dateLessThan && s.infrastructure_check_date >= filter.dateLessThan) {
-							valid = false;
-						}
+							if (filter.dateLessThan && s.infrastructure_check_date >= filter.dateLessThan) {
+								valid = false;
+							}
 
-						if (filter.dateGreaterThan && s.infrastructure_check_date <= filter.dateGreaterThan) {
-							valid = false;
-						}
+							if (filter.dateGreaterThan && s.infrastructure_check_date <= filter.dateGreaterThan) {
+								valid = false;
+							}
 
-						return valid;
-					});
+							return valid;
+						});
+					};
 				case 'service_check_date':
-					return stops.filter((s) => {
-						if (!s.service_check_date) {
-							return false;
-						}
+					return (stops) => {
+						return stops.filter((s) => {
+							if (!s.service_check_date) {
+								return false;
+							}
 
-						let valid = true;
+							let valid = true;
 
-						if (filter.dateLessThan && s.service_check_date >= filter.dateLessThan) {
-							valid = false;
-						}
+							if (filter.dateLessThan && s.service_check_date >= filter.dateLessThan) {
+								valid = false;
+							}
 
-						if (filter.dateGreaterThan && s.service_check_date <= filter.dateGreaterThan) {
-							valid = false;
-						}
+							if (filter.dateGreaterThan && s.service_check_date <= filter.dateGreaterThan) {
+								valid = false;
+							}
 
-						return valid;
-					});
+							return valid;
+						});
+					};
 				case 'authenticity':
 					return (stops) => stops.filter((s) => s.verification_level === filter.expectedVal);
 				case 'score':
