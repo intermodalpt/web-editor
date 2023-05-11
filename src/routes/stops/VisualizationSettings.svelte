@@ -16,6 +16,8 @@
 
 	let expectedBoolVal = null;
 	let expectedSelectorVal = null;
+	let expectedRangeVal1 = null;
+	let expectedRangeVal2 = null;
 
 	$: isFilterValid =
 		filterType &&
@@ -26,7 +28,8 @@
 			(filterType === 'attr' && selectedAttr) ||
 			(filterType === 'infrastructure_check_date' && (dateLessThan || dateGreaterThan) !== null) ||
 			(filterType === 'service_check_date' && (dateLessThan || dateGreaterThan) !== null) ||
-			(filterType === 'authenticity' && expectedSelectorVal !== null));
+			(filterType === 'authenticity' && expectedSelectorVal !== null) ||
+			(filterType === 'score' && (expectedRangeVal1 !== null || expectedRangeVal2 !== null)));
 
 	const boolAttrs = [
 		'has_sidewalk',
@@ -59,10 +62,13 @@
 
 	function clearInputs() {
 		expectedText1 = null;
+		expectedText2 = null;
 		dateLessThan = null;
 		dateGreaterThan = null;
 		expectedBoolVal = null;
 		expectedSelectorVal = null;
+		expectedRangeVal1 = null;
+		expectedRangeVal2 = null;
 	}
 
 	function addFilter() {
@@ -129,6 +135,12 @@
 			return {
 				type: 'authenticity',
 				expectedVal: expectedSelectorVal
+			};
+		} else if (filterType === 'score') {
+			return {
+				type: 'score',
+				lowerBound: expectedRangeVal1,
+				upperBound: expectedRangeVal2
 			};
 		}
 	}
@@ -204,6 +216,7 @@
 				<option value="service_check_date">Verificação do Serviço</option>
 				<option value="infrastructure_check_date">Verificação da Infraestrutura</option>
 				<option value="authenticity">Autenticidade</option>
+				<option value="score">Pontuação</option>
 			</select>
 			<div class="flex flex-col">
 				{#if filterType === 'name'}
@@ -327,6 +340,31 @@
 						<option value={84}>Errado</option>
 						<option value={252}>Tudo verificado</option>
 					</select>
+				{:else if filterType === 'score'}
+					<span class="text-md">Pontuação</span>
+					<div class="flex gap-1 items-center">
+						Entre
+						<input
+							type="number"
+							min="0"
+							max="1"
+							step="0.1"
+							placeholder="0.1"
+							bind:value={expectedRangeVal1}
+							class="input input-primary input-sm w-16"
+						/>
+						e
+						<input
+							type="number"
+							min="0"
+							max="1"
+							step="0.1"
+							placeholder="0.9"
+							bind:value={expectedRangeVal2}
+							class="input input-primary input-sm w-16"
+						/>
+					</div>
+					<span>(0.0 = incompleto; 1.0 = completo)</span>
 				{/if}
 			</div>
 			{#if filterType === 'attr' && selectedAttr}

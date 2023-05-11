@@ -600,6 +600,16 @@
 					});
 				case 'authenticity':
 					return (stops) => stops.filter((s) => s.verification_level === filter.expectedVal);
+				case 'score':
+					return (stops) => {
+						const lowerBound = filter.lowerBound || 0.0;
+						const upperBound = filter.upperBound || 1.0;
+
+						return stops.filter((s) => {
+							let score = stopScore(s);
+							return score >= lowerBound && score <= upperBound;
+						});
+					};
 			}
 		});
 
