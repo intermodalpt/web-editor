@@ -384,10 +384,10 @@
 					</select>
 				{:else if selectedAttr === 'illumination_strength'}
 					<select class="select select-primary select-xs" bind:value={expectedSelectorVal}>
-						<option selected value={null}>Desconhecido</option>
-						<option value={0}>Iluminação Indireta</option>
-						<option value={10}>Iluminação Directa</option>
-						<option value={20}>Iluminação Própria</option>
+						<option value={0}>Sem iluminação</option>
+						<option value={1}>Iluminação Fraca</option>
+						<option value={3}>Iluminação Moderada</option>
+						<option value={5}>Iluminação Forte</option>
 					</select>
 				{:else if selectedAttr === 'illumination_position'}
 					<select class="select select-primary select-xs" bind:value={expectedSelectorVal}>
