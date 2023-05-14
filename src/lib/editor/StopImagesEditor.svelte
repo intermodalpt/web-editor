@@ -11,6 +11,8 @@
 	export let stopPictures;
 	export let newPictures;
 
+	const POSITION_REQUIRED = false;
+
 	const dispatch = createEventDispatcher();
 
 	const steps = {
@@ -62,7 +64,7 @@
 			const visibility = pic.tagged;
 			const quality = pic.tagged;
 			const stops = pic.stops != null && pic.stops.length > 0;
-			const total = position && visibility && quality && stops;
+			const total = !(POSITION_REQUIRED && !position) && visibility && quality && stops;
 			const fixable =
 				!total &&
 				(pic.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin);
@@ -94,7 +96,7 @@
 		const quality = pic.tagged || pic.metaCompleteness?.quality;
 		const stops = pic.stops != null && pic.stops.length > 0;
 
-		pic.metaCompleteness.total = position && visibility && quality && stops;
+		pic.metaCompleteness.total = !(POSITION_REQUIRED && !position) && visibility && quality && stops;
 		// Trigger hasModifiedPictues update
 		$newPictures = $newPictures;
 	}
@@ -602,8 +604,8 @@
 						<input
 							type="button"
 							class="btn btn-success"
-							class:btn-success={$selectedImage.metaCompleteness.position}
-							class:btn-error={!$selectedImage.metaCompleteness.position}
+							class:btn-success={$selectedImage.metaCompleteness.position || !POSITION_REQUIRED}
+							class:btn-error={!$selectedImage.metaCompleteness.position && POSITION_REQUIRED}
 							value="Posição"
 							on:click={() => (step = steps.position)}
 						/>
