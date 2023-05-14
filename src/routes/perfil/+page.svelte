@@ -78,7 +78,7 @@
 							<ChangeViewer change={contribution.change} />
 							{#if contribution.comment}
 								<h4 class="font-bold">Comentário:</h4>
-								<textarea class="w-full">{contribution.comment}</textarea>
+								<textarea disable class="w-full">{contribution.comment}</textarea>
 							{/if}
 						</li>
 					{/each}
@@ -107,7 +107,7 @@
 							<ChangeViewer change={contribution.change} />
 							{#if contribution.comment}
 								<h4 class="font-bold">Comentário:</h4>
-								<textarea class="w-full">{contribution.comment}</textarea>
+								<textarea disable class="w-full">{contribution.comment}</textarea>
 							{/if}
 						</li>
 					{/each}

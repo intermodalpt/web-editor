@@ -9,7 +9,6 @@
 	export let change;
 </script>
 
-
 {#if 'StopUpdate' in change}
 	<StopUpdate change={change.StopUpdate} />
 {:else if 'StopPicUpload' in change}
@@ -23,5 +22,5 @@
 {:else if 'SubrouteDeletion' in change}
 	<SubrouteDeletion change={change.SubrouteDeletion} />
 {:else}
-	<textarea class="w-full">{JSON.stringify(change)}</textarea>
+	<textarea disabled class="w-full">{JSON.stringify(change)}</textarea>
 {/if}
