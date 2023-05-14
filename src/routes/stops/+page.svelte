@@ -1733,18 +1733,17 @@
 			</div>
 		</div>
 	</div>
+	{#if uploadingPics}
+		<StopImagesEditor
+			stop={selectedStop}
+			{stopPictures}
+			{newPictures}
+			on:save={() => {
+				uploadingPics = false;
+			}}
+		/>
+	{/if}
 </div>
-
-{#if uploadingPics}
-	<StopImagesEditor
-		stop={selectedStop}
-		{stopPictures}
-		{newPictures}
-		on:save={() => {
-			uploadingPics = false;
-		}}
-	/>
-{/if}
 
 {#if previewedPic}
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />

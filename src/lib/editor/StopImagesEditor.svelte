@@ -127,7 +127,7 @@
 				label.textContent = '7 - Paragem não é sujeito principal';
 				break;
 			case 80:
-				label.textContent = '8 - Pessoas, veiculos ou lixo';
+				label.textContent = '8 - Pessoas, veículos ou lixo';
 				break;
 			case 90:
 				label.textContent = '9 - Imperfeições menores (seria possivel fazer melhor?)';
@@ -263,90 +263,91 @@
 	}
 </script>
 
-<input type="checkbox" id="managing-pics" class="modal-toggle" checked />
-<div class="modal">
-	<div class="modal-box w-11/12 max-w-5xl">
-		<input type="checkbox" id="uploading-pics" class="modal-toggle" checked />
-		<div class="card w-full max-w-5xl self-center">
-			<div class="flex gap-2 justify-end">
-				<input
-					type="button"
-					class="btn btn-secondary"
-					value="Adicionar"
-					on:click={() => (sendingPictures = true)}
+<div
+	class="absolute h-full w-full p-2 bg-white z-20 overflow-y-auto grid grid-cols-1"
+	style="grid-template-rows: auto auto 1fr auto;"
+>
+	<div class="flex gap-2 overflow-x-scroll">
+		{#each $editedStopPictures as picture}
+			<div class="relative">
+				{#if picture.metaCompleteness.total || !picture.metaCompleteness.fixable}
+					<span
+						class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
+						>✓</span
+					>
+				{:else if !picture.metaCompleteness.total && picture.metaCompleteness.fixable}
+					<span
+						class="absolute bottom-0 right-0 text-warning-content bg-warning rounded-full w-8 h-8 text-center text-lg"
+						>!</span
+					>
+				{:else}
+					<span
+						class="absolute bottom-0 right-0 bg-error text-error-content rounded-full w-8 h-8 text-center text-lg cursor-pointer"
+						>X</span
+					>
+				{/if}
+				<img
+					src={picture.url_medium}
+					class="rounded-box transition-all h-24 max-w-xl border-primary cursor-pointer"
+					class:border-b-4={$selectedImage === picture}
+					on:click={() => {
+						$selectedImage = picture;
+						step = null;
+					}}
 				/>
-				<input type="button" class="btn btn-primary" value="Guardar" on:click={save} />
-				<input type="button" class="btn btn-neutral" value="Fechar" on:click={closeEditor} />
 			</div>
-
-			<div class="flex gap-2 overflow-x-scroll">
-				{#each $editedStopPictures as picture}
-					<div class="relative">
-						{#if picture.metaCompleteness.total || !picture.metaCompleteness.fixable}
-							<span
-								class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
-								>✓</span
-							>
-						{:else if !picture.metaCompleteness.total && picture.metaCompleteness.fixable}
-							<span
-								class="absolute bottom-0 right-0 text-warning-content bg-warning rounded-full w-8 h-8 text-center text-lg"
-								>!</span
-							>
-						{:else}
-							<span
-								class="absolute bottom-0 right-0  bg-error text-error-content rounded-full w-8 h-8 text-center text-lg cursor-pointer"
-								>X</span
-							>
-						{/if}
-						<img
-							src={picture.url_medium}
-							class="rounded-box transition-all h-24 border-primary cursor-pointer"
-							class:border-b-4={$selectedImage === picture}
-							on:click={() => {
-								$selectedImage = picture;
-								step = null;
-							}}
-						/>
-					</div>
-				{/each}
-				{#each $newPictures as picture}
-					<div class="relative">
-						{#if picture.metaCompleteness.total}
-							<span
-								class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
-								>✓</span
-							>
-						{:else}
-							<span
-								class="absolute bottom-0 right-0  bg-error text-error-content rounded-full w-8 h-8 text-center text-lg cursor-pointer"
-								>X</span
-							>
-						{/if}
-						<img
-							src={picture.url_medium}
-							class="rounded-box transition-all h-24 border-primary cursor-pointer"
-							class:border-b-4={$selectedImage === picture}
-							on:click={() => {
-								$selectedImage = picture;
-								step = null;
-							}}
-						/>
-					</div>
-				{/each}
+		{/each}
+		{#each $newPictures as picture}
+			<div class="relative">
+				{#if picture.metaCompleteness.total}
+					<span
+						class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
+						>✓</span
+					>
+				{:else}
+					<span
+						class="absolute bottom-0 right-0 bg-error text-error-content rounded-full w-8 h-8 text-center text-lg cursor-pointer"
+						>X</span
+					>
+				{/if}
+				<img
+					src={picture.url_medium}
+					class="rounded-box transition-all h-24 max-w-xl border-primary cursor-pointer"
+					class:border-b-4={$selectedImage === picture}
+					on:click={() => {
+						$selectedImage = picture;
+						step = null;
+					}}
+				/>
 			</div>
-			{#if $selectedImage}
-				<hr />
-				<div
-					class="bg-cover bg-center rounded-lg w-full h-40 sm:h-80 relative"
-					style="background-image: url('{$selectedImage.url_medium}');"
-				>
+		{/each}
+	</div>
+	<hr />
+	<div
+		class="m-4 bg-base-200 border-base-300 border-2 rounded-md shadow-sm grid grid-cols-1"
+		style="grid-template-rows: auto 1fr;"
+	>
+		{#if $selectedImage}
+			<div class="flex flex-col">
+				<div class="relative w-fit self-center">
+					<img
+						src={$selectedImage.url_medium}
+						class="rounded-lg w-full max-w-[1200px] max-h-[40vh]"
+					/>
 					<a
 						target="_blank"
 						href={$selectedImage.url_full}
 						class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
 						>Ver completa</a
 					>
+
+					<span
+						class="absolute top-0 right-0 rounded-tl-lg btn btn-error btn-xs"
+						on:click={deleteImage}>Apagar</span
+					>
 				</div>
+			</div>
+			<div>
 				{#if step === steps.position}
 					Onde se encontrava quando tirou esta fotografia? (pin azul)
 					<MapLocationPicker
@@ -475,7 +476,7 @@
 						As qualidades acima descritas são sugestões e não critérios.<br />
 						Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma
 						pontuação de 10 indica uma fotografia de qualidade profissional com excelente iluminação,
-						ausência de individuos e veiculos na via pública, cosméticamente agradavel...
+						ausência de individuos e veículos na via pública, cosméticamente agradavel...
 					</span>
 					<div class="flex justify-end gap-4">
 						<input
@@ -636,16 +637,21 @@
 							value="Notas"
 							on:click={() => (step = steps.notes)}
 						/>
-						<span class="grow" />
-						<input
-							class="btn btn-error border-black border-2"
-							on:click={deleteImage}
-							value="Apagar"
-						/>
 					</div>
 				{/if}
-			{/if}
-		</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class="flex gap-2 justify-end">
+		<input
+			type="button"
+			class="btn btn-secondary"
+			value="Adicionar"
+			on:click={() => (sendingPictures = true)}
+		/>
+		<input type="button" class="btn btn-primary" value="Guardar" on:click={save} />
+		<input type="button" class="btn btn-neutral" value="Fechar" on:click={closeEditor} />
 	</div>
 </div>
 
