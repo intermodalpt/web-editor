@@ -3,6 +3,14 @@
 	import { listDifferences, getNearestStops } from '$lib/utils.js';
 	import { stops } from '$lib/stores.js';
 	import { tick } from 'svelte';
+	import FlagsWidget from '$lib/instructions/widgets/Flags.svelte';
+	import SchedulesWidget from '$lib/instructions/widgets/Schedules.svelte';
+	import AdvertisementQtySelector from '$lib/changes/selectors/AdvertisementQtySelector.svelte';
+	import IlluminationPositionSelector from '$lib/changes/selectors/IlluminationPositionSelector.svelte';
+	import IlluminationStrengthSelector from '$lib/changes/selectors/IlluminationStrengthSelector.svelte';
+	import ParkingAreaAccessImpairmentSelector from '$lib/changes/selectors/ParkingAreaAccessImpairmentSelector.svelte';
+	import ParkingLocalAccessImpairmentSelector from '$lib/changes/selectors/ParkingLocalAccessImpairmentSelector.svelte';
+	import ParkingVisibilityImpairmentSelector from '$lib/changes/selectors/ParkingVisibilityImpairmentSelector.svelte';
 
 	export let change;
 
@@ -63,8 +71,44 @@
 			{#each diffs as diff}
 				<li>
 					{diff.key}:
-					{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
-					<span class="bg-green-300">{diff.new}</span>
+					{#if diff.key === 'flags'}
+						<!-- <FlagsWidget flagsData={diff.new} /> -->
+					{:else if diff.key === 'schedules'}
+						<!-- <SchedulesWidget schedulesData={diff.new} /> -->
+					{:else if diff.key === 'advertisement_qty'}
+						{#if diff.original}
+							<AdvertisementQtySelector val={diff.original} wrong={true} />
+						{/if}
+						<AdvertisementQtySelector val={diff.new} />
+					{:else if diff.key === 'illumination_strength'}
+						{#if diff.original}
+							<IlluminationStrengthSelector val={diff.original} wrong={true} />
+						{/if}
+						<IlluminationStrengthSelector val={diff.new} />
+					{:else if diff.key === 'illumination_position'}
+						{#if diff.original}
+							<IlluminationPositionSelector val={diff.original} wrong={true} />
+						{/if}
+						<IlluminationPositionSelector val={diff.new} />
+					{:else if diff.key === 'parking_visibility_impairment'}
+						{#if diff.original}
+							<ParkingVisibilityImpairmentSelector val={diff.original} wrong={true} />
+						{/if}
+						<ParkingVisibilityImpairmentSelector val={diff.new} />
+					{:else if diff.key === 'parking_local_access_impairment'}
+						{#if diff.original}
+							<ParkingLocalAccessImpairmentSelector val={diff.original} wrong={true} />
+						{/if}
+						<ParkingLocalAccessImpairmentSelector val={diff.new} />
+					{:else if diff.key === 'parking_area_access_impairment'}
+						{#if diff.original}
+							<ParkingAreaAccessImpairmentSelector val={diff.original} wrong={true} />
+						{/if}
+						<ParkingAreaAccessImpairmentSelector val={diff.new} />
+					{:else}
+						{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
+						<span class="bg-green-300">{diff.new}</span>
+					{/if}
 				</li>
 			{/each}
 		</ul>
