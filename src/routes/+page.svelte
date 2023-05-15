@@ -34,7 +34,7 @@
 		<div class="card-body">
 			<h1 class="card-title">Contribuir</h1>
 			<div>
-				Sê bem-vind@. Neste portal podes contibuir com informações em falta ou que, não estando em
+				Sê bem-vind@. Neste portal podes contribuir com informações em falta ou que, não estando em
 				falta, acrescentam valor ao projeto.
 			</div>
 			<h3 class="text-lg">1 - Cria uma conta</h3>
@@ -49,36 +49,18 @@
 			{/if}
 			<h3 class="text-lg">2 - O que podes editar</h3>
 			<p>
-				Enquanto convidado podes adicionar carateristicas às paragens e fotografias do que
+				Enquanto convidado podes adicionar caraterísticas às paragens e fotografias do que
 				observares.<br />
 				Assim que submetas novos conteúdos os mesmos podem não ficar logo visíveis. Existe um processo
 				de aprovação de modificações para prevenir vandalismo.
 			</p>
 			<p>Estamos a estudar a concessão de mais capacidades de edição a convidados.</p>
-
-			<h3 class="text-lg">3 - O que significam os valores</h3>
-			<p>
-				<StopCheckbox
-					text="Carateristica verdadeira"
-					description="Sabe-se que o valor é verdadeiro"
-					state={readable(true)}
-				/>
-				<StopCheckbox
-					text="Carateristica falsa"
-					description="Sabe-se que o valor é falso"
-					state={readable(false)}
-				/>
-				<StopCheckbox
-					text="Carateristica desconhecida"
-					description="Não se sabe o valor"
-					state={readable(null)}
-				/>
-			</p>
-			<h3 class="text-lg">4 - Condições</h3>
+			<h3 class="text-lg">3 - Condições</h3>
 			<div>
 				Consideram-se as submissões doadas. Naturalmente é necessário que se detenha direitos sobre
 				o que se doa. (O nome de uma paragem não é sujeita a direitos de autor, uma fotografia é).
-				Todas as contribuições serão disponibilizadas em formatos abertos.
+				Todas as contribuições serão disponibilizadas em formatos abertos e eventualmente exportadas
+				para o OpenStreetMap.
 			</div>
 			<div class="card-actions justify-end">
 				{#if !$token}
