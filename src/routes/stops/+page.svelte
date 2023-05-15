@@ -194,6 +194,23 @@
 		newPictures.set([]);
 	});
 
+	const latestPictureDate = derived(stopPictures, ($stopPictures) => {
+		if (!$stopPictures || !$stopPictures.length) {
+			return null;
+		}
+		// Find the newest date
+		let newestDate = null;
+		for (const pic of $stopPictures) {
+			if (!pic.capture_date) continue;
+			const date = new Date(pic.capture_date);
+			if (newestDate == null || date > newestDate) {
+				newestDate = date;
+			}
+		}
+
+		return newestDate;
+	});
+
 	selectedStop.subscribe((stop) => {
 		if (map) {
 			if (stop == null) {
@@ -1429,6 +1446,19 @@
 										serviceCheckDate = new Date().toISOString().split('T')[0];
 									}}
 								/>
+								{#if $latestPictureDate}
+									<input
+										type="button"
+										class="btn btn-info btn-xs"
+										value="Fotos"
+										on:click={() => {
+											serviceCheckDate = $latestPictureDate.toISOString().split('T')[0];
+										}}
+										on:keypress={() => {
+											serviceCheckDate = $latestPictureDate.toISOString().split('T')[0];
+										}}
+									/>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -1639,6 +1669,19 @@
 									infrastructureCheckDate = new Date().toISOString().split('T')[0];
 								}}
 							/>
+							{#if $latestPictureDate}
+								<input
+									type="button"
+									class="btn btn-info btn-xs"
+									value="Fotos"
+									on:click={() => {
+										infrastructureCheckDate = $latestPictureDate.toISOString().split('T')[0];
+									}}
+									on:keypress={() => {
+										infrastructureCheckDate = $latestPictureDate.toISOString().split('T')[0];
+									}}
+								/>
+							{/if}
 						</div>
 					</div>
 				</div>
