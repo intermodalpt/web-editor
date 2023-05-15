@@ -17,7 +17,7 @@
 {#if compact}
 	{#if state}
 		<button
-			class="btn btn-sm border-0 bg-green-400 hover:bg-green-500 text-green-900 w-10"
+			class="btn btn-xs border-0 bg-green-400 hover:bg-green-500 text-green-900 w-10"
 			class:!bg-green-300={disabled}
 			class:!hover:bg-green-300={disabled}
 			class:cursor-not-allowed={disabled}
@@ -25,7 +25,7 @@
 		>
 	{:else if state === false}
 		<button
-			class="btn btn-sm border-0 bg-red-400 hover:bg-red-500 text-yellow-900 w-10"
+			class="btn btn-xs border-0 bg-red-400 hover:bg-red-500 text-yellow-900 w-10"
 			class:!bg-red-300={disabled}
 			class:!hover:bg-red-300={disabled}
 			class:cursor-not-allowed={disabled}
@@ -33,7 +33,7 @@
 		>
 	{:else}
 		<button
-			class="btn btn-sm border-0 bg-yellow-400 hover:bg-yellow-500 text-red-900 w-10"
+			class="btn btn-xs border-0 bg-yellow-400 hover:bg-yellow-500 text-red-900 w-10"
 			class:!bg-yellow-300={disabled}
 			class:!hover:bg-yellow-300={disabled}
 			class:cursor-not-allowed={disabled}

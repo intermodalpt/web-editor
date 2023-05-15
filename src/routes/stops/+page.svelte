@@ -14,6 +14,7 @@
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
+	import BooleanFormAttr from '$lib/editor/BooleanFormAttr.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
 
@@ -1469,42 +1470,43 @@
 				>
 					<div class="flex flex-col gap-1">
 						<span>Infraestrutura</span>
-						<StopCheckbox
-							text="Passeio"
-							description="A paragem encontra-se fora da via de rodagem, berma ou de terreno"
-							state={hasSidewalk}
+						<BooleanFormAttr
+							label="Passeio"
+							bind:state={$hasSidewalk}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_sidewalk"
 						/>
-						<StopCheckbox
-							text="Passeio no acesso"
-							description="Existe um passeio ao longo de todo o acesso à paragem"
-							state={hasSidewalkedPath}
+						<BooleanFormAttr
+							label="Passeio no acesso"
+							bind:state={$hasSidewalkedPath}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_sidewalk"
 						/>
-						<StopCheckbox
-							text="Abrigo"
-							description="A paragem encontra-se inserida num abrigo que resguarde da chuva e do vento"
-							state={hasShelter}
+						<BooleanFormAttr
+							label="Abrigo"
+							bind:state={$hasShelter}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_shelter"
 						/>
-						<StopCheckbox
-							text="Cobertura"
-							description="A paragem encontra-se debaixo de uma cobertura que não um abrigo (ex: telhado)"
-							state={hasCover}
+						<BooleanFormAttr
+							label="Cobertura"
+							bind:state={$hasCover}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_cover"
 						/>
-						<StopCheckbox
-							text="Banco"
-							description="A paragem tem bancos onde os passageiros se possam sentar"
-							state={hasBench}
+						<BooleanFormAttr
+							label="Banco"
+							bind:state={$hasBench}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_bench"
 						/>
-						<StopCheckbox
-							text="Caixote do lixo"
-							description="A paragem dispõe de um caixote do lixo a menos de 20 metros"
-							state={hasTrashCan}
+						<BooleanFormAttr
+							label="Caixote do lixo"
+							bind:state={$hasTrashCan}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_trash_can"
 						/>
+
 						<select
 							class="select select-primary max-w-xs select-xs"
 							bind:value={advertisementQty}
@@ -1519,29 +1521,30 @@
 					</div>
 					<div class="flex flex-col gap-1">
 						<span>Acesso</span>
-						<StopCheckbox
-							text="Atravessamento de via"
-							description="Existem infraestruturas ou sinalizações que permitam o atravessamento de via"
-							state={hasCrossing}
+
+						<BooleanFormAttr
+							label="Atravessamento de via"
+							bind:state={$hasCrossing}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_crossing"
 						/>
-						<StopCheckbox
-							text="Acesso sem ressaltos"
-							description="O acesso não é feito exclusivamente por degraus (>1cm) ou declives abruptos"
-							state={hasFlatAccess}
+						<BooleanFormAttr
+							label="Acesso sem ressaltos"
+							bind:state={$hasFlatAccess}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_flat_access"
 						/>
-						<StopCheckbox
-							text="Acesso largo"
-							description="O acesso é suficientemente largo (incluindo obstáculos) que possibilite a passagem de uma cadeira de rodas."
-							state={hasWideAccess}
+						<BooleanFormAttr
+							label="Acesso largo"
+							bind:state={$hasWideAccess}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_wide_access"
 						/>
-						<StopCheckbox
-							text="Acesso táctil"
-							description="É possível alcançar a paragem através de um percurso táctil"
-							state={hasTactileAccess}
+						<BooleanFormAttr
+							label="Acesso táctil"
+							bind:state={$hasTactileAccess}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_tactile_access"
 						/>
 						<span>Iluminação</span><br />
 						<select
@@ -1565,53 +1568,53 @@
 							<option value={3}>Iluminação Moderada</option>
 							<option value={5}>Iluminação Forte</option>
 						</select>
-						<StopCheckbox
-							text="No acesso"
-							description="O acesso para a paragem encontra-se bem iluminado todas as 24 horas"
-							state={hasIlluminatedPath}
+						<BooleanFormAttr
+							label="No acesso"
+							bind:state={$hasIlluminatedPath}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_illuminated_path"
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
 						<span>Visibilidade</span>
-						<StopCheckbox
-							text="Da paragem para autocarro"
-							description="Estando na paragem (+-5 metros) é possível ver autocarros atempadamente"
-							state={hasVisibilityFromArea}
+						<BooleanFormAttr
+							label="Da paragem para autocarro"
+							bind:state={$hasVisibilityFromArea}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_visibility_from_area"
 						/>
 						{#if $hasShelter}
-							<StopCheckbox
-								text="Do abrigo para autocarro"
-								description="Estando sentado no abrigo é possível ver autocarros atempadamente"
-								state={hasVisibilityFromWithin}
+							<BooleanFormAttr
+								label="Do abrigo para autocarro"
+								bind:state={$hasVisibilityFromWithin}
 								disabled={!$decodedToken}
+								infoUrl="/instructions/stopattrs#has_visibility_from_within"
 							/>
 						{/if}
-						<StopCheckbox
-							text="Do autocarro para paragem"
-							description="Enquanto motorista, é possível ver devidamente a paragem sem abrandar"
-							state={isVisibleFromOutside}
+						<BooleanFormAttr
+							label="Do autocarro para paragem"
+							bind:state={$isVisibleFromOutside}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#is_visible_from_outside"
 						/>
 						<span>Apoios</span>
-						<StopCheckbox
-							text="Tempos de espera"
-							description="A paragem dispõe de um painel com os tempos de espera"
-							state={hasWaitingTimes}
+						<BooleanFormAttr
+							label="Tempos de espera"
+							bind:state={$hasWaitingTimes}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_crossing"
 						/>
-						<StopCheckbox
-							text="Ponto de venda"
-							description="Existe um ponto de venda de títulos na paragem"
-							state={hasTicketSeller}
+						<BooleanFormAttr
+							label="Ponto de venda"
+							bind:state={$hasTicketSeller}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_ticket_seller"
 						/>
-						<StopCheckbox
-							text="Apoio ao passageiro"
-							description="Existe infraestrutura de apoio ao passageiro (balcão, intercomunicador, ...)"
-							state={hasCostumerSupport}
+						<BooleanFormAttr
+							label="Apoio ao passageiro"
+							bind:state={$hasCostumerSupport}
 							disabled={!$decodedToken}
+							infoUrl="/instructions/stopattrs#has_costumer_support"
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
