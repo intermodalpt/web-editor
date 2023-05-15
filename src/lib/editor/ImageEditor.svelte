@@ -190,7 +190,7 @@
 				label.textContent = 'Paragem não é sujeito principal';
 				break;
 			case 80:
-				label.textContent = 'Pessoas, veiculos ou lixo';
+				label.textContent = 'Pessoas, veículos ou lixo';
 				break;
 			case 90:
 				label.textContent = 'Imperfeições menores (seria possivel fazer melhor?)';
@@ -291,132 +291,133 @@
 	}
 </script>
 
-<div class="modal modal-bottom  modal-open">
-	<div class="modal-box w-full max-w-full">
-		<div class="flex flex-col gap-1">
-			<div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
-				<a target="_blank" href={$image.url_full} class="block shrink-0">
-					<img class="rounded-lg h-96" alt="Visualização paragem" src={$image.url_medium} />
-				</a>
-				<div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction />
+<div
+	class="fixed top-0 bottom-0 left-0 right-0 overflow-y-scroll grid grid-cols-1 bg-base-100 p-4"
+	style="grid-template-rows: 1fr auto;"
+>
+	<div class="flex flex-col gap-1">
+		<div class="flex lg:flex-row flex-col-reverse gap-1 items-center">
+			<a target="_blank" href={$image.url_full} class="block shrink-0">
+				<img class="rounded-lg h-96 max-w-xl" alt="Visualização paragem" src={$image.url_medium} />
+			</a>
+			<div class="rounded-lg grow-1 h-96 w-full cursor-crosshair" use:mapAction />
+		</div>
+		<div class="flex justify-between space-x-5">
+			<div>
+				<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
+					{#if isSensitive}Sensitive{:else}Not sensitive{/if}
+					<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
+				</label>
+				<label class="btn btn-success w-40" class:btn-error={!isPublic} for="is-public">
+					{#if isPublic}Can be public{:else}Private{/if}
+					<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
+				</label>
 			</div>
-			<div class="flex justify-between space-x-5">
+			<div class="">
+				<span>Location:</span>
+				<span>
+					{#if location.lat}{location.lat};{location.lon}{:else}Unset{/if}
+				</span>
+			</div>
+		</div>
+		<div>
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Quality</span>
+					<span class="label-text" id="quality-label">Sem informação</span>
+				</label>
+				<input
+					type="range"
+					min="0"
+					max="100"
+					class="range"
+					step="10"
+					bind:value={quality}
+					on:change={adjustQualityLabel}
+				/>
+				<div class="w-full flex justify-between text-xs px-2">
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+				</div>
+			</div>
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Stops</span>
+				</label>
 				<div>
-					<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
-						{#if isSensitive}Sensitive{:else}Not sensitive{/if}
-						<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
-					</label>
-					<label class="btn btn-success w-40" class:btn-error={!isPublic} for="is-public">
-						{#if isPublic}Can be public{:else}Private{/if}
-						<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
-					</label>
-				</div>
-				<div class="">
-					<span>Location:</span>
-					<span>
-						{#if location.lat}{location.lat};{location.lon}{:else}Unset{/if}
-					</span>
-				</div>
-			</div>
-			<div>
-				<div class="form-control">
-					<label class="label">
-						<span class="label-text">Quality</span>
-						<span class="label-text" id="quality-label">Sem informação</span>
-					</label>
+					{#each stopIds as stopId}
+						<div class="badge badge-outline badge-lg">
+							{stopId} - {$stops[stopId].short_name ||
+								$stops[stopId].name ||
+								$stops[stopId].official_name}
+							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
+								✕
+							</div>
+						</div>
+					{/each}
 					<input
-						type="range"
-						min="0"
-						max="100"
-						class="range"
-						step="10"
-						bind:value={quality}
-						on:change={adjustQualityLabel}
+						type="number"
+						disabled
+						class="input input-bordered"
+						id="stop-id"
+						placeholder="Select on map"
+						bind:this={stopInput}
 					/>
-					<div class="w-full flex justify-between text-xs px-2">
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-						<span>|</span>
-					</div>
-				</div>
-				<div class="form-control">
-					<label class="label">
-						<span class="label-text">Stops</span>
-					</label>
-					<div>
-						{#each stopIds as stopId}
-							<div class="badge badge-outline badge-lg">
-								{stopId} - {$stops[stopId].short_name ||
-									$stops[stopId].name ||
-									$stops[stopId].official_name}
-								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
-									✕
-								</div>
-							</div>
-						{/each}
-						<input
-							type="number"
-							disabled
-							class="input input-bordered"
-							id="stop-id"
-							placeholder="Select on map"
-							bind:this={stopInput}
-						/>
-						<select id="stop-pos" class="select select-bordered">
-							<option>Foreground</option>
-							<option>Background</option>
-						</select>
-						<input class="btn" type="button" value="Add" on:click={addStop} />
-					</div>
-				</div>
-			</div>
-			<div>
-				<div class="form-control">
-					<label class="label"><span class="label-text">Tags</span></label>
-					<div>
-						{#each tags as tag}
-							<div class="badge badge-outline badge-lg">
-								{tag}
-								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
-							</div>
-						{/each}
-						<input
-							id="tag-text"
-							type="text"
-							class="input input-bordered"
-							placeholder="Creche ABC123"
-						/>
-						<input class="btn" type="button" value="Add" on:click={addTag} />
-					</div>
-				</div>
-			</div>
-			<div>
-				<div class="form-control">
-					<label class="label">
-						<span class="label-text">Notes</span>
-					</label>
-					<textarea
-						class="textarea textarea-bordered h-12"
-						placeholder="Eg. While not seen properly there's a schedule to that side."
-						on:change={(e) => (notes = e.target.value.trim() === '' ? null : e.target.value)}
-					/>
+					<!-- <select id="stop-pos" class="select select-bordered">
+						<option>Foreground</option>
+						<option>Background</option>
+					</select> -->
+					<input class="btn" type="button" value="Add" on:click={addStop} />
 				</div>
 			</div>
 		</div>
-		<div class="modal-action">
-			<button class="btn btn-error" on:click={deleteImage}>Delete</button>
-			<span class="grow" />
-			<button class="btn" on:click={close}>Close without saving</button>
-			<button class="btn btn-primary" on:click={save}>Save</button>
+		<div>
+			<div class="form-control">
+				<label class="label"><span class="label-text">Tags</span></label>
+				<div>
+					{#each tags as tag}
+						<div class="badge badge-outline badge-lg">
+							{tag}
+							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
+						</div>
+					{/each}
+					<input
+						id="tag-text"
+						type="text"
+						class="input input-bordered"
+						placeholder="Creche ABC123"
+					/>
+					<input class="btn" type="button" value="Add" on:click={addTag} />
+				</div>
+			</div>
 		</div>
+		<div>
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Notes</span>
+				</label>
+				<textarea
+					class="textarea textarea-bordered h-12"
+					placeholder="Eg. While not seen properly there's a schedule to that side."
+					on:change={(e) => (notes = e.target.value.trim() === '' ? null : e.target.value)}
+				/>
+			</div>
+		</div>
+	</div>
+	<div class="modal-action">
+		<button class="btn btn-error" on:click={deleteImage}>Delete</button>
+		<span class="grow" />
+		<button class="btn" on:click={close}>Close without saving</button>
+		<button class="btn btn-primary" on:click={save}>Save</button>
 	</div>
 </div>
 

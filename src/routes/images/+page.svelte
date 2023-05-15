@@ -85,10 +85,8 @@
 				<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 					{#each orderedUntaggedPictures as pic}
 						<div class="p-2 flex justify-center items-center cursor-pointer">
-							<!-- {pic.id};{pic.capture_date} -->
-							<!-- {JSON.stringify(pic)} -->
 							<img
-								src="{pic.url_medium}"
+								src={pic.url_medium}
 								class="rounded-box transition-all hover:scale-105"
 								on:click={() => {
 									openPic(pic.id);

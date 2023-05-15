@@ -104,8 +104,6 @@
 		const diff = {};
 		const keys = Object.keys($stops[changed.id]);
 
-		console.log('yo');
-
 		for (const key of keys) {
 			if ($stops[changed.id][key] !== changed[key]) {
 				diff[key] = changed[key];
