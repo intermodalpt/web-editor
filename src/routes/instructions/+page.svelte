@@ -1,30 +1,3 @@
-<script>
-	import InstructionCard from '$lib/instructions/InstructionCard.svelte';
-
-	import Flags from '$lib/instructions/stopattrs/Flags.svelte';
-	import Schedules from '$lib/instructions/stopattrs/Schedules.svelte';
-	import Sidewalk from '$lib/instructions/stopattrs/Sidewalk.svelte';
-	import Bench from '$lib/instructions/stopattrs/Bench.svelte';
-	import Trash from '$lib/instructions/stopattrs/Trash.svelte';
-	import WaitingTimes from '$lib/instructions/stopattrs/WaitingTimes.svelte';
-	import CostumerSupport from '$lib/instructions/stopattrs/CostumerSupport.svelte';
-	import Ads from '$lib/instructions/stopattrs/Ads.svelte';
-	import Crossing from '$lib/instructions/stopattrs/Crossing.svelte';
-	import FlatAccess from '$lib/instructions/stopattrs/FlatAccess.svelte';
-	import WideAccess from '$lib/instructions/stopattrs/WideAccess.svelte';
-	import TactileAccess from '$lib/instructions/stopattrs/TactileAccess.svelte';
-	import IlluminationPosition from '$lib/instructions/stopattrs/IlluminationPosition.svelte';
-	import IlluminationStrength from '$lib/instructions/stopattrs/IlluminationStrength.svelte';
-	import IlluminatedPath from '$lib/instructions/stopattrs/IlluminatedPath.svelte';
-	import VisibilityArea from '$lib/instructions/stopattrs/VisibilityArea.svelte';
-	import VisibilityWithin from '$lib/instructions/stopattrs/VisibilityWithin.svelte';
-	import VisibleFromOutside from '$lib/instructions/stopattrs/VisibleFromOutside.svelte';
-	import ParkingVisibilityImpairment from '$lib/instructions/stopattrs/ParkingVisibilityImpairment.svelte';
-	import ParkingLocalImpairment from '$lib/instructions/stopattrs/ParkingLocalImpairment.svelte';
-	import ParkingAccessImpairment from '$lib/instructions/stopattrs/ParkingAccessImpairment.svelte';
-	import Issues from '$lib/instructions/stopattrs/Issues.svelte';
-</script>
-
 <svelte:head>
 	<title>Intermodal - Instruções</title>
 	<meta name="description" content="Instruções" />
