@@ -28,18 +28,8 @@ export async function load({ params, fetch, depends }) {
 		await loadToken(fetch);
 	}
 
-
-	const [stops, routes, issue] = await Promise.all([
-		loadStops(fetch),
-		loadRoutes(fetch),
-		fetch(`${apiServer}/v1/issues/${issueId}`).then((r) => r.json())
-	]);
-
-
 	return {
-		stops: stops,
-		routes: routes,
 		operator: operators[operatorId],
-		issue: issue,
+		issue: fetch(`${apiServer}/v1/issues/${issueId}`).then((r) => r.json())
 	};
 }

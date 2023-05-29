@@ -1,33 +1,25 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { token, operators } from '$lib/stores.js';
+	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
 	import { apiServer } from '$lib/settings.js';
-	import Select from 'svelte-select';
 	import { Map, Marker } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { liveQuery } from 'dexie';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
-	const issues = data.issues;
-	const stops = data.stops;
-	const routes = data.routes;
 
-	console.log(routes);
+	const stops = liveQuery(() => getStops());
+	const routes = liveQuery(() => getRoutes());
 
-	const routeOptions = Object.values(routes)
-		.sort((a, b) => a.code?.localeCompare(b.code))
-		.map((route) => {
-			return {
-				value: route.id,
-				label: `${route.code} - ${route.name}`
-			};
-		});
+	async function loadData() {
+		await Promise.all([fetchStops(), fetchRoutes()]);
+	}
 
-	const stopOptions = Object.values(stops).map((stop) => {
-		return {
-			value: stop.id,
-			label: `${stop.id} - ${stop.name || stop.official_name || stop.osm_name}`
-		};
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
 	});
 
 	let title;
@@ -47,14 +39,6 @@
 	let pointPickerMap;
 	let pointPickerMarker;
 	let geojsonMap;
-
-	function onRoutesSelect(e) {
-		console.log(e);
-	}
-
-	function onStopsSelect(e) {
-		console.log(e);
-	}
 
 	function removeStop(stopId) {
 		issueStops = issueStops.filter((e) => e !== stopId);
@@ -266,7 +250,7 @@
 					<input
 						type="button"
 						value="Adicionar"
-						disabled={!routes[parseInt(pendingRoute)]}
+						disabled={!$routes || !$routes[parseInt(pendingRoute)]}
 						on:click={() => {
 							issueRoutes.push(parseInt(pendingRoute));
 							issueRoutes = issueRoutes;
@@ -284,7 +268,7 @@
 					<div>
 						{#each issueRoutes as routeId}
 							<div class="badge badge-outline badge-lg">
-								{routeId} - {routes[routeId].name}
+								{routeId} - {$routes[routeId].name}
 								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeRoute(routeId)}>
 									✕
 								</div>
@@ -305,7 +289,7 @@
 					<input
 						type="button"
 						value="Adicionar"
-						disabled={!stops[parseInt(pendingStop)]}
+						disabled={!$stops || !$stops[parseInt(pendingStop)]}
 						on:click={() => {
 							issueStops.push(parseInt(pendingStop));
 							issueStops = issueStops;
@@ -323,9 +307,9 @@
 					<div>
 						{#each issueStops as stopId}
 							<div class="badge badge-outline badge-lg">
-								{stopId} - {stops[stopId].name ||
-									stops[stopId].official_name ||
-									stops[stopId].osm_name}
+								{stopId} - {$stops[stopId].name ||
+									$stops[stopId].official_name ||
+									$stops[stopId].osm_name}
 								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
 									✕
 								</div>
@@ -382,22 +366,6 @@
 					>Submeter</button
 				>
 			</div>
-
-			<Select
-				items={routeOptions}
-				on:select2={() => {}}
-				isClearable={true}
-				multiple={true}
-				placeholder="Rotas"
-			/>
-
-			<Select
-				items={stopOptions}
-				on:select2={() => {}}
-				isClearable={true}
-				multiple={true}
-				placeholder="Paragens"
-			/>
 		</div>
 	</div>
 </div>

@@ -33,6 +33,7 @@
 		"@sveltejs/adapter-node": "1.2.3",
 		"@turf/turf": "^6.5.0",
 		"daisyui": "^2.51.5",
+		"dexie": "^4.0.1-alpha.11",
 		"leaflet": "^1.8.0",
 		"leaflet-contextmenu": "1.4.0",
 		"leaflet.featuregroup.subgroup": "1.0.2",

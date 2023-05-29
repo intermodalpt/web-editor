@@ -1,6 +1,5 @@
 import { browser } from '$app/environment';
-import { loadToken, loadRoutes, loadStops } from '$lib/stores.js';
-import { apiServer } from '$lib/settings';
+import { loadToken } from '$lib/stores.js';
 
 export const csr = true;
 export const ssr = false;
@@ -12,17 +11,5 @@ export async function load({ params, fetch }) {
 		return;
 	}
 
-	let token = await loadToken(fetch);
-
-
-	const [stops, routes] = await Promise.all([
-		loadStops(fetch),
-		loadRoutes(fetch)
-	]);
-
-
-	return {
-		stops: stops,
-		routes: routes
-	};
+	await loadToken(fetch);
 }

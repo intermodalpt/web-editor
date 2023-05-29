@@ -1,17 +1,31 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { operators } from '$lib/stores.js';
+	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
 	import { Map as Maplibre } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
+	import { liveQuery } from 'dexie';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
 	const operator = data.operator;
 	const issue = data.issue;
-	const stops = data.stops;
-	const routes = data.routes;
+
+	const stops = liveQuery(() => getStops());
+	const routes = liveQuery(() => getRoutes());
+
+	issue.creation = new Date(issue.creation);
+
+	async function loadData() {
+		await Promise.all([fetchStops(), fetchRoutes()]);
+	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
 
 	const geojson = (issue.geojson = JSON.parse(issue.geojson) || null);
 	const bbox = geojson ? turf.bbox(geojson) : null;
@@ -111,23 +125,31 @@
 			{/if}
 			<span class="label-text">Linhas</span>
 			<div class="flex gap-2 ml-1">
-				{#each issue.route_ids as id}
-					<div class="flex">
-						<span
-							class="rounded-l-full px-1 font-bold text-md h-6"
-							style="color: {routes[id].badge_text}; background-color: {routes[id].badge_bg}"
-						>
-							{routes[id].code}
-						</span>
-						<span class="badge rounded-r-full badge-outline text-md h-6">{routes[id].name}</span>
-					</div>
-				{/each}
+				{#if $routes}
+					{#each issue.route_ids as id}
+						<div class="flex">
+							<span
+								class="rounded-l-full px-1 font-bold text-md h-6"
+								style="color: {$routes[id].badge_text}; background-color: {$routes[id].badge_bg}"
+							>
+								{$routes[id].code}
+							</span>
+							<span class="badge rounded-r-full badge-outline text-md h-6">{$routes[id].name}</span>
+						</div>
+					{/each}
+				{:else}
+					<span>Linhas a carregar...</span>
+				{/if}
 			</div>
 			<span class="label-text">Paragens</span>
 			<div class="flex gap-2 ml-1">
-				{#each issue.stop_ids as id}
-					<span class="badge badge-outline text-md h-6">{id} - {stops[id].name}</span>
-				{/each}
+				{#if $stops}
+					{#each issue.stop_ids as id}
+						<span class="badge badge-outline text-md h-6">{id} - {$stops[id].name}</span>
+					{/each}
+				{:else}
+					<span>Paragens a carregar...</span>
+				{/if}
 			</div>
 
 			<span class="label-text">Estado</span>
@@ -148,13 +170,17 @@
 				<span class="label-text">Justificação</span>
 				<span class="ml-1">{issue.state_justification}</span>
 			{/if}
-			<hr>
-			<span class="label-text">Criado em {new Date(issue.creation).toDateString()}</span>
+			<hr />
+			<span class="label-text">
+				Criado a {issue.creation.toLocaleString('pt-pt',{day: 'numeric', month:'long', year:'numeric'})}
+			</span>
 			<div class="flex gap-1">
 				<span>Afecto a</span>
 				<div class="flex">
 					{#each issue.operator_ids as id}
-						<a class="badge badge-secondary" href="/operators/{operator.tag}">{operators[id].name}</a>
+						<a class="badge badge-secondary" href="/operators/{operator.tag}"
+							>{operators[id].name}</a
+						>
 					{/each}
 				</div>
 			</div>
