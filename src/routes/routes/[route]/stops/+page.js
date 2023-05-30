@@ -1,5 +1,6 @@
-import { get } from 'svelte/store';
-import { loadToken, stops, loadStops, routes, loadRoutes } from '$lib/stores.js';
+import { browser } from '$app/environment';
+import { loadToken } from '$lib/stores.js';
+import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
 import { apiServer } from '$lib/settings';
 
 export const csr = true;
@@ -8,22 +9,32 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch, depends }) {
+	if (!browser) {
+		return;
+	}
+
 	const routeId = params.route;
 
 	await loadToken(fetch);
 
 	depends('app:subroute-stops')
 
+	const [, , routeStopsRes] = await Promise.all([fetchStops(), fetchRoutes(), fetch(`${apiServer}/v1/routes/${routeId}/stops`)]);
+	const [stopData, routesData, routeStops] = await Promise.all([getStops(), getRoutes(), routeStopsRes.json().then((data) => {
+		const stops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute.stops]));
 
-	let stopData = get(stops);
-	if (stopData === undefined) {
-		stopData = await loadStops(fetch);
-	}
-
-	let routesData = get(routes);
-	if (routesData === undefined) {
-		routesData = await loadRoutes(fetch);
-	}
+		// // TODO is this still needed?
+		// // (I think it was due to JOINS not returning stopless subroutes)
+		// for (const subroute of route.subroutes) {
+		// 	if (!(subroute.id in stops)) {
+		// 		stops[subroute.id] = [];
+		// 	}
+		// }
+		return stops;
+	}).catch((e) => {
+		console.error(e);
+	})
+	]);
 
 	const sortedRoutes = Object.values(routesData).sort((ra, rb) => {
 		if (!ra.code) {
@@ -35,30 +46,11 @@ export async function load({ params, fetch, depends }) {
 		}
 	});
 
-	const route = routesData[routeId];
-
-	const routeStops = await fetch(`${apiServer}/v1/routes/${routeId}/stops`)
-			.then((r) => r.json())
-			.then((data) => {
-				const stops = Object.fromEntries(data.map((subroute) => [subroute.subroute, subroute.stops]));
-
-				// TODO is this still needed?
-				// (I think it was due to JOINS not returning stopless subroutes)
-				for (const subroute of route.subroutes) {
-					if (!(subroute.id in stops)) {
-						stops[subroute.id] = [];
-					}
-				}
-				return stops;
-			})
-			.catch((e) => {
-				console.error(e);
-			});
 
 	return {
 		stops: stopData,
 		routeStops: routeStops,
 		routes: sortedRoutes,
-		route: route,
+		route: routesData[routeId],
 	};
 }

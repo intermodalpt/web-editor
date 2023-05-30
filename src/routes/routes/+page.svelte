@@ -1,17 +1,51 @@
 <script>
 	import { operators } from '$lib/stores.js';
+	import { writable, derived } from 'svelte/store';
+	import { fetchRoutes, getRoutes, loadMissing } from '$lib/db';
+	import { liveQuery } from 'dexie';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
-	const routes = data.routes;
-	let filter = null;
+	const routes = liveQuery(() => getRoutes());
+	const filter = writable('');
+
+	const sortedRoutes = derived([routes, filter], ([$routes, $filter]) => {
+		if (!$routes) return [];
+
+		const filterFunc = $filter
+			? (r) =>
+					r.name.toLowerCase().includes($filter.toLowerCase()) ||
+					r.code?.toLowerCase().includes($filter.toLowerCase())
+			: () => true;
+
+		return Object.values($routes)
+			.filter(filterFunc)
+			.sort((ra, rb) => {
+				if (!ra.code) {
+					return -1;
+				} else if (!rb.code) {
+					return 1;
+				} else {
+					return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
+				}
+			});
+	});
+
+	async function loadData() {
+		await fetchRoutes();
+	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
 </script>
 
 <div class="form-control self-end">
 	<div class="input-group">
 		<span>Filtro:</span>
-		<input type="text" class="input input-border" bind:value={filter} />
+		<input type="text" class="input input-border" bind:value={$filter} />
 	</div>
 </div>
 
@@ -29,15 +63,15 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each routes as route}
-						{#if route.operator == operator_id && (!filter || route.name
-									.toLowerCase()
-									.includes(filter?.toLowerCase()) || route.code
-									?.toLowerCase()
-									.includes(filter?.toLowerCase()))}
+					{#each $sortedRoutes as route}
+						{#if route.operator == operator_id}
 							<tr>
 								<th style="color: {route.badge_text}; background-color: {route.badge_bg}">
-									{route.code}
+									{#if route.code}
+										{route.code}
+									{:else}
+										<span class="text-gray-500">N/A</span>
+									{/if}
 								</th>
 								<td>
 									<div class="collapse">

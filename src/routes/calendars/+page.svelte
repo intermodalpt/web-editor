@@ -1,19 +1,32 @@
 <script>
-	import { invalidate } from '$app/navigation';
 	import Select from 'svelte-select';
 	import { apiServer } from '$lib/settings.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
 	import { token, decodedToken, operators } from '$lib/stores.js';
+	import { liveQuery } from 'dexie';
+	import { fetchCalendars, getCalendars, loadMissing } from '$lib/db';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
+	const calendars = liveQuery(() => getCalendars());
+
+	async function loadData() {
+		await fetchCalendars();
+	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
+
 	let selectedOperatorId = null;
-	$: operatorCalendars = selectedOperatorId
-		? Object.values(data.calendars)
-				.filter((value) => value.operator_id === selectedOperatorId)
-				.sort((a, b) => a.name.localeCompare(b.name))
-		: [];
+	$: operatorCalendars =
+		selectedOperatorId && $calendars
+			? Object.values($calendars)
+					.filter((value) => value.operator_id === selectedOperatorId)
+					.sort((a, b) => a.name.localeCompare(b.name))
+			: [];
 
 	let formTitle = null;
 	let formNewConditionType = null;
@@ -99,9 +112,9 @@
 				calendar: formCalendar
 			})
 		})
-			.then((response) => {
+			.then(async (response) => {
 				if (response.ok) {
-					invalidate('app:calendars');
+					await fetchCalendars(false);
 				} else {
 					alert('Erro ao criar calendário');
 				}
@@ -123,9 +136,9 @@
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${$token}`
 			}
-		}).then((response) => {
+		}).then(async (response) => {
 			if (response.ok) {
-				invalidate('app:calendars');
+				await fetchCalendars(false);
 			} else {
 				alert('Erro ao apagar calendário');
 			}

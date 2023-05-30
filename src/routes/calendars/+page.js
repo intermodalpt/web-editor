@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { loadToken, loadCalendars } from '$lib/stores.js';
+import { loadToken } from '$lib/stores.js';
 
 export const csr = true;
 export const ssr = false;
@@ -12,10 +12,4 @@ export async function load({ fetch, depends }) {
 	}
 
 	await loadToken(fetch);
-
-	depends('app:calendars');
-
-	return {
-		calendars: await loadCalendars(fetch)
-	};
 }

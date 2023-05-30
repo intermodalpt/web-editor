@@ -1,4 +1,5 @@
 import { get } from 'svelte/store';
+import { browser } from '$app/environment';
 import { loadToken, routes, loadRoutes } from '$lib/stores.js';
 
 export const csr = true;
@@ -7,7 +8,11 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
-	const token = await loadToken(fetch);
+	if (!browser) {
+		return;
+	}
+	
+	await loadToken(fetch);
 
 	let routesData = get(routes);
 	if (routesData === undefined) {
