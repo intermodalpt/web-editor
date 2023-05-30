@@ -1,10 +1,10 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { derived, writable, get } from 'svelte/store';
+	import { derived, writable } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
-	import { stops as storedStops, loadStops as loadStoredStops } from '$lib/stores.js';
+	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import {
 		logStopScore,
 		logWeightedStopScore,
@@ -13,12 +13,11 @@
 	} from '$lib/stops/scoring.js';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
 	import BooleanFormAttr from '$lib/editor/BooleanFormAttr.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
+	import { liveQuery } from 'dexie';
 
-	let stops = {};
 	let picsPerStop = {};
 	let map;
 
@@ -27,44 +26,50 @@
 	let mapLoaded = false;
 	$: loading = !stopsLoaded || !stopPicsLoaded || !mapLoaded;
 
-	(function () {
-		let headers = {
-			headers: {
-				authorization: `Bearer ${$token}`
+	const stops = liveQuery(() => getStops());
+	const userPatches = writable([]);
+
+	const patchedStops = derived([stops, userPatches], ([$stops, $userPatches], set) => {
+		if ($stops && $token) {
+			const patched = Object.assign({}, $stops);
+
+			for (const stop of $userPatches) {
+				patched[stop.id] = stop;
 			}
-		};
-		const stopCache = get(storedStops);
+			set(patched);
+		} else {
+			set($stops);
+		}
+	});
+
+	async function loadData() {
 		Promise.all([
-			(stopCache === undefined
-				? loadStoredStops(fetch)
-				: new Promise((resolve) => {
-						resolve(stopCache);
-				  })
-			).then((r) => {
+			// Ensure that stops are available in indexedDB
+			fetchStops().then((r) => {
 				stopsLoaded = true;
 				return r;
 			}),
+			// Get the pictures each stop has (TODO this can be loaded in background)
 			fetch(`${apiServer}/v1/stop_pics/by_stop`)
 				.then((r) => r.json())
 				.then((r) => {
 					stopPicsLoaded = true;
 					return r;
 				}),
+			// Either get the current user's patches or an empty array if no user is logged in
 			$token
-				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, headers).then((res) => res.json())
+				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, {
+						headers: {
+							authorization: `Bearer ${$token}`
+						}
+				  }).then((res) => res.json())
 				: new Promise((resolve) => {
 						resolve([]);
 				  })
 		])
-			.then(([unpatchedStops, pictures, patch]) => {
+			.then(([unpatchedStops, pictures, patches]) => {
+				$userPatches = patches;
 				picsPerStop = pictures;
-
-				const patchedStops = unpatchedStops;
-				for (const stop of patch) {
-					patchedStops[stop.id] = stop;
-				}
-
-				stops = patchedStops;
 
 				if (mapLoaded) {
 					loadStops();
@@ -73,8 +78,17 @@
 			.catch((e) => {
 				alert('Failed to load stops');
 				console.log(e);
+			})
+			.then(async () => {
+				console.log('data loaded');
+				await loadMissing();
 			});
-	})();
+	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
 
 	let selectedStop = writable(null);
 
@@ -313,7 +327,7 @@
 	});
 
 	export function selectStop(stopId) {
-		$selectedStop = stops[stopId];
+		$selectedStop = $patchedStops[stopId];
 	}
 
 	function saveStopMeta() {
@@ -434,6 +448,9 @@
 					if (r.ok) {
 						const applyChanges = () => {
 							Object.assign(currStop, newStop);
+							fetchStops(false).then(() => {
+								console.log('Stop database updated');
+							});
 							map.getSource('stops').setData(getFilteredData());
 							$selectedStop = null;
 						};
@@ -635,7 +652,7 @@
 			}
 		});
 
-		let filteredStops = Object.values(stops);
+		let filteredStops = Object.values($patchedStops);
 
 		for (const filter of filters) {
 			filteredStops = filter(filteredStops);
@@ -817,7 +834,7 @@
 		});
 
 		map.on('click', 'unclustered-point', (e) => {
-			$selectedStop = stops[e.features[0].properties.stopId];
+			$selectedStop = $patchedStops[e.features[0].properties.stopId];
 		});
 	}
 
