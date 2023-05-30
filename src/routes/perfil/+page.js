@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 import { loadToken } from '$lib/stores.js';
 import { apiServer } from '$lib/settings';
+import { fetchStops } from '$lib/db';
 
 export const csr = true;
 export const ssr = false;
@@ -19,23 +20,23 @@ export async function load({ params, fetch }) {
 		return goto('/login');
 	}
 
-	const undecidedContributions = await fetch(
-		`${apiServer}/v1/contrib/contributions/own/undecided?p=0`,
-		{
-			headers: {
-				authorization: `Bearer ${token}`
-			}
+	const headers = {
+		headers: {
+			authorization: `Bearer ${token}`
 		}
-	).then((r) => r.json());
+	};
 
-	const decidedContributions = await fetch(
-		`${apiServer}/v1/contrib/contributions/own/decided?p=0`,
-		{
-			headers: {
-				authorization: `Bearer ${token}`
-			}
-		}
-	).then((r) => r.json());
+	const [decidedContributions, undecidedContributions, ] = await Promise.all([
+		fetch(
+			`${apiServer}/v1/contrib/contributions/own/undecided?p=0`,
+			headers
+		).then((r) => r.json()),
+		fetch(
+			`${apiServer}/v1/contrib/contributions/own/decided?p=0`,
+			headers
+		).then((r) => r.json()),
+		fetchStops()
+	]);
 
 	return {
 		decidedContributions: decidedContributions,

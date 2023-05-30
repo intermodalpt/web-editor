@@ -1,9 +1,17 @@
 <script>
 	import { decodedToken } from '$lib/stores.js';
+	import { getStops } from '$lib/db';
+	import { writable } from 'svelte/store';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+
+	const stops = writable({});
+
+	getStops().then((res) => {
+		stops.set(res);
+	});
 </script>
 
 <svelte:head>
@@ -75,7 +83,7 @@
 								#{contribution.id}
 								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
 							</h2>
-							<ChangeViewer change={contribution.change} />
+							<ChangeViewer change={contribution.change} {stops} />
 							{#if contribution.comment}
 								<h4 class="font-bold">Comentário:</h4>
 								<textarea disable class="w-full">{contribution.comment}</textarea>
@@ -104,7 +112,7 @@
 								#{contribution.id}
 								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
 							</h2>
-							<ChangeViewer change={contribution.change} />
+							<ChangeViewer change={contribution.change} {stops} />
 							{#if contribution.comment}
 								<h4 class="font-bold">Comentário:</h4>
 								<textarea disable class="w-full">{contribution.comment}</textarea>

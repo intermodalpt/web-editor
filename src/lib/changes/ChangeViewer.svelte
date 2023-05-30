@@ -7,10 +7,11 @@
 	import SubrouteDeletion from '$lib/changes/SubrouteDeletion.svelte';
 
 	export let change;
+	export let stops;
 </script>
 
 {#if 'StopUpdate' in change}
-	<StopUpdate change={change.StopUpdate} />
+	<StopUpdate change={change.StopUpdate} {stops}/>
 {:else if 'StopPicUpload' in change}
 	<StopPicUpload change={change.StopPicUpload} />
 {:else if 'RouteUpdate' in change}

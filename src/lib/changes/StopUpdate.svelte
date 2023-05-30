@@ -1,7 +1,9 @@
 <script>
-	import L from 'leaflet?client';
+	import { Map, Marker } from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { listDifferences, getNearestStops } from '$lib/utils.js';
-	import { stops } from '$lib/stores.js';
+	import { onDestroy } from 'svelte';
+	import { derived } from 'svelte/store';
 	import { tick } from 'svelte';
 	import FlagsWidget from '$lib/instructions/widgets/Flags.svelte';
 	import SchedulesWidget from '$lib/instructions/widgets/Schedules.svelte';
@@ -124,8 +126,3 @@
 		}}>Mostrar</span
 	>
 {/if}
-
-<style>
-	@import 'leaflet/dist/leaflet.css';
-	@import 'leaflet.markercluster/dist/MarkerCluster.css';
-</style>

@@ -1,8 +1,9 @@
 import { browser } from '$app/environment';
-import { loadToken, loadStops } from '$lib/stores.js';
+import { loadToken } from '$lib/stores.js';
 import { parseJwt } from '$lib/utils.js';
 import { apiServer } from '$lib/settings';
 import { goto } from '$app/navigation';
+import { fetchStops } from '$lib/db';
 
 export const csr = true;
 export const ssr = false;
@@ -40,16 +41,14 @@ export async function load({ params, fetch }) {
 		}
 	};
 
-	const [decided, undecided, changesets, stops] = await Promise.all([
+	const [decided, changesets, ] = await Promise.all([
 		fetch(`${apiServer}/v1/contrib/contributions/decided`, headers).then((res) => res.json()),
-		fetch(`${apiServer}/v1/contrib/contributions/undecided`, headers).then((res) => res.json()),
 		fetch(`${apiServer}/v1/contrib/changelog`, headers).then((res) => res.json()),
-		loadStops(fetch)
+		fetchStops()
 	]);
 
 	return {
 		decided: decided,
-		undecided: undecided,
 		changesets: changesets
 	};
 }

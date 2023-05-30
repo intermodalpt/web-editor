@@ -1,14 +1,35 @@
 <script>
 	import { token } from '$lib/stores.js';
+	import { writable } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
+	import { getStops } from '$lib/db';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
+	const stops = writable({});
+
+	getStops().then((res) => {
+		stops.set(res);
+	});
+
+	let undecidedContributions = [];
 	let changelogPage = 1;
 
-	function acceptContribution(contribution_id) {
+	loadUndecidedPage(1).then((res) => {
+		undecidedContributions = res;
+	});
+
+	async function loadUndecidedPage(page) {
+		return fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${page}`, {
+			headers: {
+				authorization: `Bearer ${$token}`
+			}
+		}).then((res) => res.json());
+	}
+
+	function acceptContribution(contribution_id, index) {
 		fetch(`${apiServer}/v1/contrib/${contribution_id}/accept`, {
 			method: 'POST',
 			headers: {
@@ -20,11 +41,13 @@
 				alert(r.error);
 			} else {
 				alert('Approved!');
+				undecidedContributions.splice(index, 1);
+				undecidedContributions = undecidedContributions;
 			}
 		});
 	}
 
-	function declineContribution(contribution_id) {
+	function declineContribution(contribution_id, index) {
 		fetch(`${apiServer}/v1/contrib/${contribution_id}/decline`, {
 			method: 'POST',
 			headers: {
@@ -36,6 +59,8 @@
 				alert(r.error);
 			} else {
 				alert('Rejected!');
+				undecidedContributions.splice(index, 1);
+				undecidedContributions = undecidedContributions;
 			}
 		});
 	}
@@ -54,13 +79,13 @@
 			<div class="card-body">
 				<h2 class="card-title">Contribuições por decidir</h2>
 				<ul>
-					{#each data.undecided as contribution}
+					{#each undecidedContributions as contribution, i}
 						<li>
 							<h2 class="card-title text-lg">
 								#{contribution.id} por {contribution.author_username} -
 								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
 							</h2>
-							<ChangeViewer change={contribution.change} />
+							<ChangeViewer change={contribution.change} {stops}/>
 							{#if contribution.comment}
 								<h4 class="font-bold">Comentário:</h4>
 								<textarea disabled class="w-full">{contribution.comment}</textarea>
@@ -70,13 +95,13 @@
 							<button
 								class="btn btn-success"
 								on:mouseup={() => {
-									acceptContribution(contribution.id);
+									acceptContribution(contribution.id, i);
 								}}>Aceitar</button
 							>
 							<button
 								class="btn btn-error"
 								on:mouseup={() => {
-									declineContribution(contribution.id);
+									declineContribution(contribution.id, i);
 								}}>Recusar</button
 							>
 						</div>
@@ -95,7 +120,7 @@
 								{contribution.accepted ? 'aprovou' : 'recusou'} #{contribution.id} por {contribution.author_username}
 								- {new Date(contribution.submission_date).toString().split(' GMT')[0]}
 							</h2>
-							<ChangeViewer change={contribution.change} />
+							<ChangeViewer change={contribution.change} {stops} />
 							{#if contribution.comment}
 								<h4 class="font-bold">Comentário:</h4>
 								<textarea disabled class="w-full">{contribution.comment}</textarea>
@@ -118,7 +143,7 @@
 							<ul>
 								{#each changeset.changes as change}
 									<li>
-										<ChangeViewer {change} />
+										<ChangeViewer {change} {stops}/>
 									</li>
 								{/each}
 							</ul>
