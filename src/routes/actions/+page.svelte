@@ -1,6 +1,7 @@
 <script>
 	import { apiServer } from '$lib/settings.js';
 	import { token, stops, routes, pictures } from '$lib/stores.js';
+	import { wipeCachedData, loadMissing } from '$lib/db';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -28,10 +29,12 @@
 
 	async function wipeCache() {
 		alert('Função temporáriamente desactivada');
-		// cacheRebuilding = true;
-		// await new Promise((resolve) => setTimeout(resolve, 10));
-		// refreshCache($token);
-		// cacheRebuilding = false;
+		cacheRebuilding = true;
+		wipeCachedData().then(async () => {
+			cacheRebuilding = false;
+			alert('Cache limpa');
+			await loadMissing();
+		});
 	}
 
 	async function migrateStops() {
@@ -109,13 +112,23 @@
 
 	<div class="form-control">
 		<label class="input-group">
-		  <span>Migrar paragem</span>
-		  <input type="text" placeholder="Id de paragem" class="input input-bordered" bind:value={fromStopId}/>
-		  <span>para</span>
-		  <input type="text" placeholder="Id de paragem" class="input input-bordered" bind:value={toStopId} />
-		  <input type="button" class="btn btn-primary" value="Aplicar" on:click={migrateStops}>
+			<span>Migrar paragem</span>
+			<input
+				type="text"
+				placeholder="Id de paragem"
+				class="input input-bordered"
+				bind:value={fromStopId}
+			/>
+			<span>para</span>
+			<input
+				type="text"
+				placeholder="Id de paragem"
+				class="input input-bordered"
+				bind:value={toStopId}
+			/>
+			<input type="button" class="btn btn-primary" value="Aplicar" on:click={migrateStops} />
 		</label>
-	  </div>
+	</div>
 
 	<span class="justify-center text-center text-lg font-bold">Debug info</span>
 	<input
