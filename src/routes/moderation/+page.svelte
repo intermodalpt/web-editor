@@ -4,9 +4,12 @@
 	import { apiServer } from '$lib/settings.js';
 	import { getStops } from '$lib/db';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
+	import ContributionPrompt from '$lib/changes/ContributionPrompt.svelte';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+
+	let keepVerification = false;
 
 	const stops = writable({});
 
@@ -15,9 +18,9 @@
 	});
 
 	let undecidedContributions = [];
-	let changelogPage = 1;
+	let changelogPage = 0;
 
-	loadUndecidedPage(1).then((res) => {
+	loadUndecidedPage(0).then((res) => {
 		undecidedContributions = res;
 	});
 
@@ -27,42 +30,6 @@
 				authorization: `Bearer ${$token}`
 			}
 		}).then((res) => res.json());
-	}
-
-	function acceptContribution(contribution_id, index) {
-		fetch(`${apiServer}/v1/contrib/${contribution_id}/accept`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
-		}).then((r) => {
-			if (r.error) {
-				alert(r.error);
-			} else {
-				alert('Approved!');
-				undecidedContributions.splice(index, 1);
-				undecidedContributions = undecidedContributions;
-			}
-		});
-	}
-
-	function declineContribution(contribution_id, index) {
-		fetch(`${apiServer}/v1/contrib/${contribution_id}/decline`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
-		}).then((r) => {
-			if (r.error) {
-				alert(r.error);
-			} else {
-				alert('Rejected!');
-				undecidedContributions.splice(index, 1);
-				undecidedContributions = undecidedContributions;
-			}
-		});
 	}
 </script>
 
@@ -77,34 +44,28 @@
 	{:then data}
 		<div class="card bg-base-100 shadow-md">
 			<div class="card-body">
+				<div class="input-group">
+					<span>Manter verificação</span>
+					<input type="checkbox" bind:checked={keepVerification} />
+				</div>
 				<h2 class="card-title">Contribuições por decidir</h2>
 				<ul>
-					{#each undecidedContributions as contribution, i}
-						<li>
-							<h2 class="card-title text-lg">
-								#{contribution.id} por {contribution.author_username} -
-								{new Date(contribution.submission_date).toString().split(' GMT')[0]}
-							</h2>
-							<ChangeViewer change={contribution.change} {stops}/>
-							{#if contribution.comment}
-								<h4 class="font-bold">Comentário:</h4>
-								<textarea disabled class="w-full">{contribution.comment}</textarea>
-							{/if}
-						</li>
-						<div class="card-actions justify-end">
-							<button
-								class="btn btn-success"
-								on:mouseup={() => {
-									acceptContribution(contribution.id, i);
-								}}>Aceitar</button
-							>
-							<button
-								class="btn btn-error"
-								on:mouseup={() => {
-									declineContribution(contribution.id, i);
-								}}>Recusar</button
-							>
-						</div>
+					{#each undecidedContributions as contribution}
+						<ContributionPrompt
+							{contribution}
+							{stops}
+							{keepVerification}
+							on:accept={(e) => {
+								undecidedContributions = undecidedContributions.filter(
+									(c) => c.id !== e.detail.contribution_id
+								);
+							}}
+							on:reject={(e) => {
+								undecidedContributions = undecidedContributions.filter(
+									(c) => c.id !== e.detail.contribution_id
+								);
+							}}
+						/>
 					{/each}
 				</ul>
 			</div>
@@ -143,7 +104,7 @@
 							<ul>
 								{#each changeset.changes as change}
 									<li>
-										<ChangeViewer {change} {stops}/>
+										<ChangeViewer {change} {stops} />
 									</li>
 								{/each}
 							</ul>

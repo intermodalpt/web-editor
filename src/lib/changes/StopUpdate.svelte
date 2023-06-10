@@ -15,107 +15,205 @@
 	import ParkingVisibilityImpairmentSelector from '$lib/changes/selectors/ParkingVisibilityImpairmentSelector.svelte';
 
 	export let change;
+	export let stops;
+	export let ignoredKeys;
 
 	let expand = false;
-	let loadTimestamp = Date.now();
-	const mapId = 'map-' + loadTimestamp;
 	let mapElem;
+	let map;
+
+	let originalStop;
+
+	const problematic_fields = ['has_waiting_times', 'has_cover', 'illumination_strength'];
+
+	const nearestStops = derived(stops, ($stops) => {
+		if (!$stops) return [];
+		originalStop = $stops[change.original.id];
+
+		return originalStop
+			? getNearestStops(Object.values($stops), originalStop.lat, originalStop.lon, 30)
+			: getNearestStops(Object.values($stops), change.original.lat, change.original.lon, 30);
+	});
+
+	const updateMapSource = (stops) => {
+		map.getSource('stops').setData({
+			type: 'FeatureCollection',
+			features: stops.map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {}
+				};
+			})
+		});
+	};
+
+	nearestStops.subscribe((stops) => {
+		if (map) {
+			updateMapSource(stops);
+		}
+	});
+
+	const currentStop = $stops[change.original.id];
 
 	$: diffs = listDifferences(change.original, change.patch);
+	let currentDiffs = currentStop
+		? listDifferences(currentStop, change.original).filter((diff) => {
+				return diff.key != 'lat' && diff.key != 'lon';
+		  })
+		: [];
+
+	onDestroy(() => {
+		if (map) {
+			map.remove();
+		}
+	});
 
 	function loadMap() {
-		const map = L.map(mapElem, {
-			contextmenu: true,
-			minZoom: 10,
+		map = new Map({
+			container: mapElem,
+			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			center: [change.original.lon, change.original.lat],
+			zoom: 17,
+			minZoom: 8,
 			maxZoom: 20,
-			zoomControl: false,
-			closePopupOnClick: false,
-			maxBounds: new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0)),
-			maxBoundsViscosity: 1.0
-		}).setView([change.original.lat, change.original.lon], 18);
-
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '© OpenStreetMap e contribuidores'
-		}).addTo(map);
-
-		let icon = L.divIcon({
-			className:
-				'rounded-full bg-accent-content border-2 text-accent border-accent text-xl font-mono font-bold !flex justify-center items-center',
-			iconSize: [16, 16],
-			tooltipAnchor: [16, 0]
+			maxBounds: [
+				[-10.0, 38.3],
+				[-8.0, 39.35]
+			]
 		});
 
-		L.marker([change.original.lat, change.original.lon], { icon: icon }).addTo(map);
+		new Marker()
+			.setLngLat(
+				originalStop
+					? [originalStop.lon, originalStop.lat]
+					: [change.original.lon, change.original.lat]
+			)
+			.addTo(map);
 
-		let othersIcon = L.divIcon({
-			className:
-				'rounded-full bg-primary-content border-2 border-primary text-xl !flex justify-center items-center',
-			iconSize: [16, 16],
-			tooltipAnchor: [16, 0]
-		});
-
-		getNearestStops(Object.values($stops), change.original.lat, change.original.lon, 30)
-			.slice(1)
-			.forEach((stop) => {
-				L.marker([stop.lat, stop.lon], { icon: othersIcon }).addTo(map);
+		map.on('load', function () {
+			map.addSource('stops', {
+				type: 'geojson',
+				data: {
+					type: 'FeatureCollection',
+					features: []
+				}
 			});
+			map.addLayer({
+				id: 'stops',
+				type: 'circle',
+				source: 'stops',
+				paint: {
+					'circle-color': '#7799ff',
+					'circle-radius': 8,
+					'circle-opacity': 0.5,
+					'circle-stroke-width': 1,
+					'circle-stroke-color': '#ffffff'
+				}
+			});
+
+			if ($nearestStops) {
+				updateMapSource($nearestStops);
+			}
+		});
 	}
 </script>
 
 <h3 class="font-bold">
 	Alteração paragem {change.original.id}; {change.original.name || change.original.official_name}
+	{originalStop ? '' : '(⚠️Apagada)'}
+	<a
+		class="btn btn-xs btn-info"
+		rel="noreferrer"
+		href={`https://www.openstreetmap.org/node/${change.original.external_id}`}>OSM</a
+	>
+	<a
+		class="btn btn-xs btn-info"
+		rel="noreferrer"
+		href={`https://www.google.com/maps/@${change.original.lat},${change.original.lon},20.00z`}
+		>GMaps</a
+	>
 </h3>
 
 {#if expand}
 	<div class="grid grid-cols-2">
 		<ul>
 			{#each diffs as diff}
-				<li>
-					{diff.key}:
-					{#if diff.key === 'flags'}
-						<!-- <FlagsWidget flagsData={diff.new} /> -->
-					{:else if diff.key === 'schedules'}
-						<!-- <SchedulesWidget schedulesData={diff.new} /> -->
-					{:else if diff.key === 'advertisement_qty'}
-						{#if diff.original}
-							<AdvertisementQtySelector val={diff.original} wrong={true} />
+				{#if ignoredKeys && !ignoredKeys.includes(diff.key)}
+					<li>
+						<span
+							class="btn btn-xs btn-circle btn-error btn-outline"
+							on:click={() => {
+								ignoredKeys.push(diff.key);
+								ignoredKeys = ignoredKeys;
+							}}>✕</span
+						>
+						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{diff.key}:
+						{#if diff.key === 'flags'}
+							<FlagsWidget flagsData={diff.new} />
+						{:else if diff.key === 'schedules'}
+							<SchedulesWidget schedulesData={diff.new} />
+						{:else if diff.key === 'advertisement_qty'}
+							{#if diff.original}
+								<AdvertisementQtySelector val={diff.original} wrong={true} />
+							{/if}
+							<AdvertisementQtySelector val={diff.new} />
+						{:else if diff.key === 'illumination_strength'}
+							{#if diff.original}
+								<IlluminationStrengthSelector val={diff.original} wrong={true} />
+							{/if}
+							<IlluminationStrengthSelector val={diff.new} />
+						{:else if diff.key === 'illumination_position'}
+							{#if diff.original}
+								<IlluminationPositionSelector val={diff.original} wrong={true} />
+							{/if}
+							<IlluminationPositionSelector val={diff.new} />
+						{:else if diff.key === 'parking_visibility_impairment'}
+							{#if diff.original}
+								<ParkingVisibilityImpairmentSelector val={diff.original} wrong={true} />
+							{/if}
+							<ParkingVisibilityImpairmentSelector val={diff.new} />
+						{:else if diff.key === 'parking_local_access_impairment'}
+							{#if diff.original}
+								<ParkingLocalAccessImpairmentSelector val={diff.original} wrong={true} />
+							{/if}
+							<ParkingLocalAccessImpairmentSelector val={diff.new} />
+						{:else if diff.key === 'parking_area_access_impairment'}
+							{#if diff.original}
+								<ParkingAreaAccessImpairmentSelector val={diff.original} wrong={true} />
+							{/if}
+							<ParkingAreaAccessImpairmentSelector val={diff.new} />
+						{:else}
+							{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
+							<span class="bg-green-300">{diff.new}</span>
 						{/if}
-						<AdvertisementQtySelector val={diff.new} />
-					{:else if diff.key === 'illumination_strength'}
-						{#if diff.original}
-							<IlluminationStrengthSelector val={diff.original} wrong={true} />
-						{/if}
-						<IlluminationStrengthSelector val={diff.new} />
-					{:else if diff.key === 'illumination_position'}
-						{#if diff.original}
-							<IlluminationPositionSelector val={diff.original} wrong={true} />
-						{/if}
-						<IlluminationPositionSelector val={diff.new} />
-					{:else if diff.key === 'parking_visibility_impairment'}
-						{#if diff.original}
-							<ParkingVisibilityImpairmentSelector val={diff.original} wrong={true} />
-						{/if}
-						<ParkingVisibilityImpairmentSelector val={diff.new} />
-					{:else if diff.key === 'parking_local_access_impairment'}
-						{#if diff.original}
-							<ParkingLocalAccessImpairmentSelector val={diff.original} wrong={true} />
-						{/if}
-						<ParkingLocalAccessImpairmentSelector val={diff.new} />
-					{:else if diff.key === 'parking_area_access_impairment'}
-						{#if diff.original}
-							<ParkingAreaAccessImpairmentSelector val={diff.original} wrong={true} />
-						{/if}
-						<ParkingAreaAccessImpairmentSelector val={diff.new} />
-					{:else}
-						{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
-						<span class="bg-green-300">{diff.new}</span>
-					{/if}
-				</li>
+					</li>
+				{/if}
 			{/each}
 		</ul>
 		<div bind:this={mapElem} class="h-96" />
 	</div>
+	{#if ignoredKeys && ignoredKeys.length > 0}
+		<h3 class="font-bold">Chaves ignoradas</h3>
+		<div class="flex flex-wrap">
+			{#each ignoredKeys as key}
+				<span class="badge badge-outline badge-error"
+					>{key}
+					<div
+						class="btn btn-error btn-circle btn-xs"
+						on:click={() => {
+							ignoredKeys = ignoredKeys.filter((ignored) => ignored != key);
+						}}
+					>
+						✕
+					</div>
+				</span>
+			{/each}
+		</div>
+	{/if}
 {:else}
 	<span
 		class="link"

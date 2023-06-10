@@ -8,10 +8,11 @@
 
 	export let change;
 	export let stops;
+	export let ignoredKeys;
 </script>
 
 {#if 'StopUpdate' in change}
-	<StopUpdate change={change.StopUpdate} {stops}/>
+	<StopUpdate change={change.StopUpdate} {stops} bind:ignoredKeys={ignoredKeys}/>
 {:else if 'StopPicUpload' in change}
 	<StopPicUpload change={change.StopPicUpload} />
 {:else if 'RouteUpdate' in change}
