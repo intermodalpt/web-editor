@@ -11,16 +11,9 @@ db.version(2).stores({
     settings: 'key',
 });
 
-let cacheInvalidated = false;
-
 export let stopsLoaded = false;
 export let routesLoaded = false;
 export let calendarsLoaded = false;
-
-export async function invalidateCache() {
-    cacheInvalidated = true;
-};
-
 
 function timestampKey(tableName) {
     return `${tableName}_updated`;
@@ -41,7 +34,6 @@ async function updateCacheTimestamp(tableName) {
     const now = new Date().toISOString();
     await db.settings.put({ key: timestampKey(tableName), value: now });
 }
-
 
 export async function fetchStops(ifMissing = true) {
     console.log('loadingStops');
@@ -156,4 +148,16 @@ export async function loadMissing() {
     }
 
     await Promise.all(missing);
+}
+
+export async function wipeCachedData() {
+    await Promise.all([
+        db.stops.clear(),
+        db.routes.clear(),
+        db.calendars.clear()
+    ]).then(() => {
+        stopsLoaded = false;
+        routesLoaded = false;
+        calendarsLoaded = false;
+    });
 }
