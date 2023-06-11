@@ -1,567 +1,707 @@
 <script>
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
-	import { invalidate } from '$app/navigation';
-	import L from 'leaflet?client';
-	import 'leaflet.markercluster?client';
+	import { onDestroy, onMount } from 'svelte';
+	import { derived, writable } from 'svelte/store';
+	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
+	import * as turf from '@turf/turf';
+	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
-	import { token, decodedToken } from '$lib/stores.js';
-	import { calc_route_multipoly } from '$lib/utils.js';
-	import { icons } from '$lib/assets.js';
-	import { writable, derived } from 'svelte/store';
+	export let data = null;
 
-	/** @type {import('./$types').PageData} */
-	export let data;
+	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
+	let stops = data.stops;
+	let routeStops = data.routeStops;
+	let routes = data.routes;
+	let route = data.route;
+	console.log(data);
 	let map;
-	let mapLayers;
-	let changes = false;
-	let importFromSubrouteId = null;
 
-	const stops = data.stops;
-	const route = data.route;
-	const routeStops = data.routeStops;
-
-	$: subroutes = Object.fromEntries(route.subroutes.map((subroute) => [subroute.id, subroute]));
+	let stopsLoaded = false;
+	let gtfsStopsLoaded = false;
+	let gtfsTripsLoaded = false;
+	let mapLoaded = false;
+	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
 
 	const selectedStop = writable(null);
-	const selectedSubrouteId = writable(route.subroutes[0]?.id);
+	const selectedGtfsStop = writable(null);
 
-	const selectedSubrouteStops = derived(selectedSubrouteId, ($selectedSubrouteId) => {
-		if ($selectedSubrouteId) {
-			return routeStops[$selectedSubrouteId];
-		} else {
-			return [];
-		}
-	});
-	const importableSubroutesIds = derived(routeStops, ($routeStops) => {
-		return Object.entries($routeStops)
-			.filter(([_, val]) => {
-				return val?.stops?.length > 0;
-			})
-			.map(([key, _]) => {
-				return parseInt(key);
-			});
-	});
-
-	const stopList = writable([...$selectedSubrouteStops]);
-
-	selectedSubrouteStops.subscribe((subrouteStops) => {
-		stopList.set([...subrouteStops]);
-		if (map) {
-			redrawCurrentSubroute();
-		}
-	});
-
-	stopList.subscribe(() => {
-		if (map) {
-			updateDrawing();
-		}
-	});
-
-	function updateDrawing() {
-		if ($stopList) {
-			drawStopSegment($stopList);
-		}
-	}
-
-	function redrawCurrentSubroute() {
-		if ($stopList) {
-			let polyLine = drawStopSegment($stopList);
-			let bounds = polyLine.getBounds();
-			if (polyLine && bounds.isValid()) {
-				map.fitBounds(bounds);
-			}
-		}
-	}
-
-	function drawStopSegment(stop_ids) {
-		let segments = calc_route_multipoly(stops, stop_ids);
-
-		mapLayers.subrouteDrawing.removeFrom(map);
-		mapLayers.subrouteDrawing = L.layerGroup();
-		if (segments) {
-			let polyLine = L.polyline(segments, { color: 'red' }).addTo(mapLayers.subrouteDrawing);
-
-			mapLayers.subrouteDrawing.addTo(map);
-			return polyLine;
-		}
-	}
-
-	function createStopMarker(info) {
-		let marker;
-		let markerOptions = { rinseOnHover: true, draggable: true };
-		if (icons[info.source] === undefined) {
-			marker = L.marker([info.lat, info.lon], markerOptions);
-		} else {
-			marker = L.marker(
-				[info.lat, info.lon],
-				Object.assign({}, markerOptions, { icon: icons[info.source] })
+	const hasMutualLink = derived(
+		[selectedStop, selectedGtfsStop],
+		([$selectedStop, $selectedGtfsStop]) => {
+			return (
+				$selectedStop && $selectedGtfsStop && $selectedStop.tml_id === $selectedGtfsStop.stop_id
 			);
 		}
+	);
 
-		marker.stopId = info.id;
+	const selectedGtfsStopRoutes = derived(selectedGtfsStop, ($selectedGTFSStop) => {
+		if ($selectedGTFSStop == null) return [];
+		return Array.from($selectedGTFSStop.routes)
+			.sort((a, b) => a.id.localeCompare(b.id))
+			.map((r) => {
+				const filteredRoute = Object.assign({}, r);
+				filteredRoute.trips = filteredRoute.trips.filter((t) =>
+					t.stops.includes($selectedGTFSStop.id)
+				);
+				return filteredRoute;
+			});
+	});
 
-		marker.on('click', (e) => {
-			$selectedStop = stops[e.target.stopId];
+	const selectedStopRoutes = derived(selectedStop, ($selectedStop, set) => {
+		if (!$selectedStop) return null;
+
+		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/spider`)
+			.then((r) => r.json())
+			.then((r) => {
+				set(
+					Object.values(r.routes).sort(
+						(a, b) => parseInt(a.code) - parseInt(b.code) || a.code.localeCompare(b.code)
+					)
+				);
+			});
+	});
+
+	const previewedTrip = writable(null);
+
+	selectedGtfsStop.subscribe((gtfsStop) => {
+		previewedTrip.set(null);
+		if (!map) return;
+
+		console.log('padding', { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 });
+		map.easeTo({
+			padding: { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 },
+			duration: 750
+		});
+		return;
+	});
+
+	selectedStop.subscribe((stop) => {
+		if (!map) return;
+
+		console.log('padding', { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 });
+		map.easeTo({
+			padding: { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 },
+			duration: 750
+		});
+		return;
+	});
+
+	previewedTrip.subscribe((trip) => {
+		if (!map) return;
+		if (!trip) {
+			map.getSource('trippreview').setData({
+				type: 'LineString',
+				coordinates: []
+			});
+			return;
+		}
+
+		map.getSource('trippreview').setData({
+			type: 'LineString',
+			coordinates: trip.stops.map((stop) => [gtfs_stops[stop].lon, gtfs_stops[stop].lat])
+		});
+	});
+
+	function refreshMatches() {
+		let unvStops = Object.values(stops).filter(
+			(stop) => stop.tml_id && !credibleSources.includes(stop.tml_id_source)
+		);
+		let verStops = Object.values(stops).filter(
+			(stop) => stop.tml_id && credibleSources.includes(stop.tml_id_source)
+		);
+
+		const matchToFeature = (stop) => {
+			let gtfsStop = gtfs_stops[parseInt(stop.tml_id)];
+
+			return {
+				type: 'Feature',
+				geometry: {
+					type: 'LineString',
+					coordinates: [[stop.lon, stop.lat], gtfsStop ? [gtfsStop.lon, gtfsStop.lat] : [0.0, 90.0]]
+				}
+			};
+		};
+
+		map.getSource('stopmatches-unv').setData({
+			type: 'FeatureCollection',
+			features: unvStops.map(matchToFeature)
+		});
+		map.getSource('stopmatches-ver').setData({
+			type: 'FeatureCollection',
+			features: verStops.map(matchToFeature)
+		});
+	}
+
+	function loadCurrentWindow(curr_stop, prev_succ_pairs) {
+		// Fly to the current stop
+		// map.flyTo({
+		// 	center: [curr_stop.stop_lon, curr_stop.stop_lat],
+		// 	zoom: 16,
+		// 	bearing: bearing,
+		// 	duration: 2000,
+		// 	pitch: 45
+		// });
+	}
+
+	function refreshStops() {
+		refreshMatches();
+
+		map.getSource('stops').setData({
+			type: 'FeatureCollection',
+			features: Object.values(stops).map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {
+						id: stop.id,
+						osm_name: stop.osm_name
+					}
+				};
+			})
+		});
+	}
+
+	function flyToTrip(trip) {
+		const bounds = new LngLatBounds();
+		trip.stops
+			.map((s) => gtfs_stops[s])
+			.forEach((stop) => {
+				bounds.extend([stop.lon, stop.lat]);
+			});
+		map.fitBounds(bounds, {
+			padding: 50
+		});
+	}
+
+	function flyToGtfsStop(gtfsStop) {
+		map.flyTo({
+			center: [gtfsStop.lon, gtfsStop.lat],
+			zoom: 17.5
+		});
+	}
+
+	function flyToStop(stop) {
+		map.flyTo({
+			center: [stop.lon, stop.lat],
+			zoom: 17.5
+		});
+	}
+
+	function connectStops(stop, gtfsStop) {
+		console.log('connecting stops');
+		console.log(stop);
+		console.log(gtfsStop);
+
+		if (stop.gtfsStop && stop.gtfsStop != gtfsStop) {
+			// GTFS changed
+			if (
+				!credibleSources.includes(stop.tml_id_source) &&
+				!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
+			) {
+				return;
+			}
+		} else if (
+			credibleSources.includes(stop.tml_id_source) &&
+			!confirm('Paragem já tem um ID confirmado. Alterar?')
+		) {
+			//GTFS didn't change but the source is going to change
+			return;
+		}
+
+		const beingUsed = Object.values(stops).some((s) => {
+			s != stop && s.gtfsStop == gtfsStop;
 		});
 
-		let name = info.official_name || info.name || info.short_name || info.osm_name;
-
-		marker.bindTooltip(`${info.id} - ${name}`);
-
-		return marker;
-	}
-
-	function goTo(stopId) {
-		const stop = stops[stopId];
-		if (stop.lat && stop.lon) {
-			map.setView([stop.lat, stop.lon], 18);
-		}
-	}
-
-	function importStopsPrompt() {
-		let input = prompt('Insert the stop array below');
-
-		if (!input) {
+		if (beingUsed && !confirm('Paragem GTFS já está ligada a outra paragem. Continuar?')) {
 			return;
 		}
 
-		try {
-			let newStopList = JSON.parse(input);
-			// Check if the input is an integer array
-			if (!Array.isArray(newStopList) || newStopList.some((stop) => !Number.isInteger(stop))) {
-				alert('Invalid input');
-				return;
+		const headers = {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${$token}`
+		};
+		fetch(`${apiServer}/v1/tml/match/${stop.id}/${gtfsStop.stop_id}?verified=true&source=h1`, {
+			method: 'POST',
+			headers: headers
+		}).then((r) => {
+			if (r.ok) {
+				console.log('ID da paragem atualizado com sucesso.');
+				stop.gtfsStop = gtfsStop;
+				stop.tml_id = gtfsStop.stop_id;
+				stop.tml_id_verified = true;
+				stop.tml_id_source = 'h1';
+				refreshStops();
+				// Force data refresh
+				$selectedGtfsStop = $selectedGtfsStop;
+				$selectedStop = $selectedStop;
+			} else {
+				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
 			}
-			$stopList = newStopList;
-			changes = true;
-			console.log(newStopList);
-		} catch (e) {
-			alert('Invalid input');
-			return;
+		});
+	}
+
+	function addSourcesAndLayers() {
+		map.addSource('routeline', {
+			type: 'geojson',
+			data: {
+				type: 'LineString',
+				coordinates: Object.values(routeStops)[0].map((stop) => {
+					return [stops[stop].lon, stops[stop].lat];
+				})
+			}
+		});
+
+		map.addLayer({
+			id: 'routeline',
+			type: 'line',
+			source: 'routeline',
+			paint: {
+				'line-color': 'rgb(229,139,139)',
+				'line-width': 5
+			}
+		});
+
+		map.addSource('stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: Object.values(stops).map((stop) => {
+					return {
+						type: 'Feature',
+						geometry: {
+							type: 'Point',
+							coordinates: [stop.lon, stop.lat]
+						},
+						properties: {
+							id: stop.id,
+							osm_name: stop.osm_name
+						}
+					};
+				})
+			}
+		});
+
+		map.addLayer({
+			id: 'stops',
+			type: 'circle',
+			source: 'stops',
+			paint: {
+				'circle-color': 'rgb(50, 150, 220)',
+				//  change size depending on zoom level
+				'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 14, 4, 16, 8, 18, 12, 20, 16],
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
+			}
+		});
+
+		map.addSource('matchline', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+	}
+
+  function swapStops(stop1,stop2){
+    let index = Object.values(routeStops)[0].indexOf(stop1.id)
+    Object.values(routeStops)[0][index] = stop2.id
+    // update layer source
+    map.getSource('routeline').setData({
+      type: 'LineString',
+      coordinates: Object.values(routeStops)[0].map((stop) => {
+        return [stops[stop].lon, stops[stop].lat];
+      })
+    })
+
+  }
+
+	function addEvents() {
+		const canvas = map.getCanvasContainer();
+
+		map.on('mouseenter', 'stops', () => {
+			canvas.style.cursor = 'pointer';
+		});
+		map.on('mouseleave', 'stops', () => {
+			canvas.style.cursor = '';
+		});
+
+		let initDragStop = null;
+		let hoveredStop = null;
+		map.on('click', 'stops', (e) => {
+			let stop = stops[e.features[0].properties.id];
+      // check is stop is in our route
+      console.log(routeStops)
+      if (Object.values(routeStops)[0].indexOf(stop.id) == -1) {
+        return;
+      }
+
+			initDragStop = stops[e.features[0].properties.id];
+
+			map.addLayer({
+				id: 'matchline',
+				type: 'line',
+				source: 'matchline',
+				paint: {
+					//green
+					'line-color': '#2BD4BD',
+					'line-width': 5
+				}
+			});
+			$selectedStop = stop;
+
+			map.on('mousemove', onMove);
+			map.once('mouseup', onUp);
+		});
+
+		function onMove(e) {
+			const coords = e.lngLat;
+
+			// Set a UI indicator for dragging.
+			canvas.style.cursor = 'grabbing';
+
+			if (hoveredStop) {
+				map.getSource('matchline').setData({
+					type: 'LineString',
+					coordinates: [
+						[initDragStop.lon, initDragStop.lat],
+						[hoveredStop.lon, hoveredStop.lat]
+					]
+				});
+			} else {
+				map.getSource('matchline').setData({
+					type: 'LineString',
+					coordinates: [
+						[initDragStop.lon, initDragStop.lat],
+						[coords.lng, coords.lat]
+					]
+				});
+			}
 		}
-	}
 
-	function exportStopsPrompt() {
-		prompt('Lista de paragens', JSON.stringify($stopList));
-	}
+		function onUp(e) {
+			canvas.style.cursor = '';
+			map.removeLayer('matchline');
 
-	function saveSubrouteStops() {
-		fetch(`${apiServer}/v1/routes/${route.id}/stops/subroutes/${$selectedSubrouteId}`, {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
-			body: JSON.stringify({
-				from: {
-					stops: $selectedSubrouteStops
+			if (hoveredStop) {
+				console.log('Matched', hoveredStop);
+				console.log('with', initDragStop);
+
+
+        swapStops(initDragStop, hoveredStop);
+				// connectStops(draggedGtfsStop, hoveredStop);
+			} else {
+				console.log('Unmatched');
+			}
+
+			initDragStop = null;
+
+			// Unbind mouse/touch events
+			map.off('mousemove', onMove);
+			map.off('touchmove', onMove);
+		}
+
+		map.on('mousedown', 'gtfs', (e) => {
+			// Prevent the default map drag behavior.
+			e.preventDefault();
+
+			canvas.style.cursor = 'grab';
+
+			initDragStop = gtfs_stops[e.features[0].properties.id];
+
+			map.addLayer(
+				{
+					id: 'matchline',
+					type: 'line',
+					source: 'matchline',
+					paint: {
+						'line-color': 'grey',
+						'line-width': 4
+					}
 				},
-				to: {
-					stops: $stopList
-				}
-			})
-		})
-			.then((resp) => {
-				if (resp.ok) {
-					routeStops[$selectedSubrouteId] = $stopList;
-					changes = false;
-					invalidate('app:subroute-stops');
-				} else {
-					alert("The server didn't like this data");
-				}
-			})
-			.catch((e) => {
-				console.log(e);
-				alert('Error saving');
-			});
-	}
+				'gtfs'
+			);
 
-	function moveUp(i) {
-		const aux = $stopList[i - 1];
-		diffList;
-		$stopList[i - 1] = $stopList[i];
-		$stopList[i] = aux;
-		$stopList = $stopList;
-		diffList = diffList;
-		changes = true;
-		closeModal(i);
-	}
+			map.on('mousemove', onMove);
+			map.once('mouseup', onUp);
+		});
 
-	function moveDown(i) {
-		const aux = $stopList[i + 1];
-		$stopList[i + 1] = $stopList[i];
-		$stopList[i] = aux;
-		$stopList = $stopList;
-		changes = true;
-		closeModal(i);
-	}
+		map.on('touchstart', 'gtfs', (e) => {
+			if (e.points.length !== 1) return;
 
-	function addStop() {
-		if ($selectedStop === undefined) {
-			alert('Select a stop first...');
-			return;
-		}
+			// Prevent the default map drag behavior.
+			e.preventDefault();
 
-		$stopList = [$selectedStop.id];
-		diffList = [0];
-	}
+			initDragStop = gtfs_stops[e.features[0].properties.id];
 
-	function addBefore(index) {
-		if ($selectedStop === undefined) {
-			alert('Select a stop first...');
-			return;
-		}
+			map.addLayer(
+				{
+					id: 'matchline',
+					type: 'line',
+					source: 'matchline',
+					paint: {
+						'line-color': 'grey',
+						'line-width': 4
+					}
+				},
+				'gtfs'
+			);
 
-		$stopList.splice(index, 0, $selectedStop.id);
-		$stopList = $stopList;
-		changes = true;
-		closeModal(index);
-	}
+			map.on('touchmove', onMove);
+			map.once('touchend', onUp);
+		});
 
-	function importStops() {
-		let origin = selectedRouteStops[importFromSubrouteId];
-		$stopList = [...origin.stops];
-		changes = true;
-	}
-
-	function addAfter(index) {
-		if ($selectedStop === undefined) {
-			alert('Select a stop first...');
-			return;
-		}
-
-		$stopList.splice(index + 1, 0, $selectedStop.id);
-		$stopList = $stopList;
-		changes = true;
-		closeModal(index);
-	}
-
-	function replaceStop(i) {
-		if ($selectedStop === undefined) {
-			alert('Select another stop first...');
-			return;
-		}
-
-		if ($stopList.includes($selectedStop.id)) {
-			if (!confirm('Route already has this stop. Are you totally sure?')) {
-				return;
-			}
-		}
-
-		if (
-			confirm(`Do you want to replace ${stopName(stops[$stopList[i]])}
-        with ${stopName($selectedStop)}?`)
-		) {
-			$stopList[i] = $selectedStop.id;
-			$stopList = $stopList;
-			changes = true;
-			closeModal(i);
-		}
-		closeModal(i);
-	}
-
-	function globalReplaceStop(i) {
-		if ($selectedStop === undefined) {
-			alert('Select another stop first...');
-			return;
-		}
-
-		if ($stopList.includes($selectedStop.id)) {
-			if (!confirm('Route already has this stop. Are you totally sure?')) {
-				return;
-			}
-		}
-
-		if (
-			confirm(`Do you want to replace ${stopName(stops[$stopList[i]])}
-        with ${stopName($selectedStop)}?`)
-		) {
-			fetch(`${apiServer}/v1/actions/migrate_stop/${$stopList[i]}/${$selectedStop.id}`, {
-				method: 'POST',
-				headers: {
-					authorization: `Bearer ${$token}`,
-					'Content-Type': 'application/json'
-				}
-			}).then((resp) => {
-				if (resp.ok) {
-					routeStops[$selectedSubrouteId] = $stopList;
-					$stopList[i] = $selectedStop.id;
-					$stopList = $stopList;
-				} else {
-					alert('An error happened');
-				}
-			});
-
-			closeModal(i);
-		}
-		closeModal(i);
-	}
-
-	function removeStop(i) {
-		if (confirm(`Do you want to remove ${stopName(stops[$stopList[i]])} from this route?`)) {
-			$stopList.splice(i, 1);
-			$stopList = $stopList;
-			changes = true;
-			closeModal(i);
-		}
-	}
-
-	function stopName(stop) {
-		return stop.official_name || stop.name;
-	}
-
-	function closeModal(index) {
-		let modalCheckbox = document.getElementById(`index-${index}-modal`);
-		if (modalCheckbox) {
-			modalCheckbox.checked = false;
-		}
+		map.on('mouseenter', 'stops', (e) => {
+			hoveredStop = stops[e.features[0].properties.id];
+		});
+		map.on('mouseleave', 'stops', (e) => {
+			hoveredStop = null;
+		});
 	}
 
 	onMount(() => {
-		mapLayers = {
-			stops: L.layerGroup(),
-			subrouteDrawing: L.layerGroup()
-		};
-
-		map = L.map('map', {
-			contextmenu: true,
-			minZoom: 10,
+		const coords = Object.values(routeStops)[0].map((s) => [stops[s].lon, stops[s].lat]);
+		const bounds = coords.reduce((bounds, coord) => {
+			return bounds.extend(coord);
+		}, new LngLatBounds(coords[0], coords[0]));
+		map = new Maplibre({
+			container: 'map',
+			style: 'https://tiles.intermodal.pt/styles/positron/style.json',
+			center: bounds.getCenter(),
+			minZoom: 8,
 			maxZoom: 20,
-			zoomControl: false,
-			closePopupOnClick: false,
-			maxBounds: new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0)),
-			maxBoundsViscosity: 1.0
-		}).setView([38.71856, -9.1372], 10);
-
-		let osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '© OpenStreetMap e contribuidores'
-		}).addTo(map);
-
-		mapLayers.stops = L.markerClusterGroup({
-			// spiderfyOnMaxZoom: false,
-			showCoverageOnHover: false,
-			disableClusteringAtZoom: 16
+			maxBounds: [
+				[-10.0, 38.3],
+				[-8.0, 39.35]
+			]
 		});
-		Object.values(stops).forEach((node) => {
-			if (node.lat != null && node.lon != null) {
-				let marker = createStopMarker(node);
-				mapLayers.stops.addLayer(marker);
+		map.fitBounds(bounds, { padding: 50 });
+
+		map.addControl(new NavigationControl(), 'top-right');
+
+		map.on('load', function () {
+			addSourcesAndLayers();
+			addEvents();
+
+			mapLoaded = true;
+			if (!loading) {
+				refreshStops();
 			}
 		});
-
-		map.addLayer(mapLayers.stops);
-		redrawCurrentSubroute();
 	});
 
-	if (browser) {
-		document.addEventListener('keypress', (e) => {
-			if (e.key === '+') {
-				addAfter($stopList.length - 1);
-			}
-		});
-	}
+	onDestroy(() => {
+		map.remove();
+	});
 </script>
 
-<svelte:head>
-	<title>Intermodal - Paragens</title>
-	<meta name="description" content="Paragens" />
-</svelte:head>
-
-{#if route.subroutes?.length === 0}
-	<div class="alert alert-error shadow-lg">
-		<div>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current flex-shrink-0 h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-				/>
-			</svg>
-			<span>Adicione primeiro subrotas a esta rota</span>
+<div id="map" class="h-full relative">
+	<div
+		class="absolute left-0 z-10 flex flex-col justify-center h-full transition duration-750"
+		class:-translate-x-[300px]={!$selectedGtfsStop}
+	>
+		<div
+			class="w-[300px] bg-orange-900 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-r-xl border-r-2 border-orange-700"
+			style="grid-template-rows: auto 1fr;"
+		>
+			<div class="flex gap-1 justify-between p-1">
+				<span class="text-base-100 font-bold self-center">{$selectedGtfsStop?.stop_name}</span>
+				<button
+					class="btn btn-circle btn-xs btn-error self-start"
+					on:click={() => ($selectedGtfsStop = null)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/></svg
+					>
+				</button>
+			</div>
+			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col lg:rounded-br-xl">
+				<div class="flex gap-2">
+					<span class="font-bold">GTFS ID:</span>
+					<button
+						class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+						on:click={() => {
+							if ($selectedGtfsStop) {
+								flyToGtfsStop($selectedGtfsStop);
+							}
+						}}
+					>
+						{$selectedGtfsStop?.stop_id}
+					</button>
+				</div>
+				<div class="flex flex-col">
+					<h1 class="text-sm font-semibold self-center">Rotas</h1>
+					<ul class="flex flex-col gap-3">
+						{#each $selectedGtfsStopRoutes as route}
+							<li class="flex flex-col">
+								<span class="badge badge-secondary badge-outline">{route.id}</span>
+								<ul class="ml-4 flex flex-col gap-2">
+									{#each route.trips as trip}
+										<li class="flex flex-col">
+											<div class="flex">
+												<button
+													class="btn btn-outline btn-xs !rounded-r-0 grow"
+													on:click={() => {
+														flyToTrip(trip);
+														$previewedTrip = trip;
+													}}>{trip.id}</button
+												>
+												<button
+													class="btn btn-outline btn-xs !rounded-l-0"
+													class:btn-primary={trip === $previewedTrip}
+													on:click={() => {
+														$previewedTrip = trip === $previewedTrip ? null : trip;
+													}}>Ver</button
+												>
+											</div>
+											<span>Destino: <span class="font-bold">{trip.headsign}</span></span>
+										</li>
+									{/each}
+								</ul>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			</div>
 		</div>
 	</div>
-{/if}
-
-<div class="flex flex-col flex-1 p-2 gap-2">
-	<div class="z-[1001] grid grid-cols-1 justify-items-stretch w-full">
-		<div>
-			<span class="font-bold">{route.code}</span>
-			<select class="select select-bordered select-sm" bind:value={$selectedSubrouteId}>
-				{#each route.subroutes as subroute}
-					<option value={subroute.id}>{subroute.flag.substring(0, 60)}</option>
-				{/each}
-			</select>
-			<span class="badge">{$selectedSubrouteId}</span>
-			<span class="badge">{subroutes[$selectedSubrouteId].flag}</span>
-			<span class="badge badge-primary">
-				Selected stop:
-				{#if $selectedStop}
-					{stopName($selectedStop)} ({$selectedStop.id})
-				{:else}
-					None
-				{/if}
-			</span>
-		</div>
-	</div>
-	<div id="grid-container" class="w-full">
-		<div id="map" />
-		<div id="list" class="max-h-fit overflow-y-scroll">
-			{#if $stopList.length === 0}
-				<div class="flex flex-col items-center">
-					<h2>This subroute has no stops.</h2>
-					<input
-						type="button"
-						value="Add stop"
-						class="btn btn-primary"
-						disabled={!$selectedStop}
-						on:mouseup={addStop}
-					/>
-					<br />
-					<div>
-						{#if importableSubroutesIds?.length > 0}
-							Import from:<br />
-							<select class="select select-bordered select-sm" bind:value={importFromSubrouteId}>
-								{#each importableSubroutesIds as subrouteId}
-									<option value={subrouteId}>
-										{selectedRoute.subroutes?.find((subroute) => {
-											return subroute.id === subrouteId;
-										}).flag}
-									</option>
-								{/each}
-							</select>
-							<input
-								class="btn btn-primary"
-								type="button"
-								value="Import"
-								on:mouseup={importStops}
-								disabled={!importFromSubrouteId}
-							/>
-						{/if}
+	<div
+		class="absolute right-0 z-10 flex flex-col justify-center h-full transition duration-750"
+		class:translate-x-[300px]={!$selectedStop}
+	>
+		<div
+			class="w-[300px] bg-blue-950 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-l-xl border-l-2 border-blue-700"
+			style="grid-template-rows: auto 1fr;"
+		>
+			<div class="flex gap-1 justify-between p-1">
+				<span class="text-base-100 font-bold self-center">{$selectedStop?.osm_name}</span>
+				<button
+					class="btn btn-circle btn-xs btn-error self-start"
+					on:click={() => ($selectedStop = null)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/></svg
+					>
+				</button>
+			</div>
+			<div
+				class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col gap-1 lg:rounded-bl-xl"
+			>
+				<div class="flex gap-2">
+					<span class="font-bold">IML ID:</span>
+					<div
+						class="btn btn-xs text-blue-200 bg-blue-600 border-blue-600"
+						on:click={() => {
+							flyToStop($selectedStop);
+						}}
+					>
+						{$selectedStop?.id}
 					</div>
 				</div>
-			{/if}
-
-			{#each $stopList as stop, index}
-				<div class="flex justify-between">
-					<a class="btn btn-xs btn-ghost" on:click={() => goTo(stop)}>
-						({stop})
-						{stopName(stops[stop])}
-					</a>
-					{#if $decodedToken?.permissions?.is_admin}
-						<div class="flex flex-row gap-1">
-							<label for={`index-${index}-modal`} class="btn btn-xs modal-button">...</label>
-							<input type="checkbox" id={`index-${index}-modal`} class="modal-toggle" />
-							<label for={`index-${index}-modal`} class="modal cursor-pointer">
-								<label class="modal-box relative max-w-2xl" for="">
-									<span class="text-lg">
-										O que fazer a {stopName(stops[stop])}?
-									</span>
-									<ul class="menu bg-base-100 w-full rounded-box">
-										{#if $selectedStop}
-											<li>
-												<a on:mouseup={() => addBefore(index)}>
-													🡹⁺ Inserir <b>{stopName($selectedStop)}</b>
-													antes
-												</a>
-											</li>
-											<li>
-												<a on:mouseup={() => addAfter(index)}>
-													🡻⁺ Inserir <b>{stopName($selectedStop)}</b>
-													depois
-												</a>
-											</li>
-											<li>
-												<a on:mouseup={() => replaceStop(index)}>
-													⮰ Substituir por
-													<b>{stopName($selectedStop)}</b>
-												</a>
-											</li>
-											<li>
-												<a on:mouseup={() => globalReplaceStop(index)}>
-													⮰ Substituir globalmente por
-													<b>{stopName($selectedStop)}</b>
-												</a>
-											</li>
-										{/if}
-										{#if index > 0}
-											<li>
-												<a on:mouseup={() => moveUp(index)}> 🡹 Mover para cima </a>
-											</li>
-										{/if}
-										{#if index !== $stopList.length - 1}
-											<li>
-												<a on:mouseup={() => moveDown(index)}> 🡻 Mover para baixo </a>
-											</li>
-										{/if}
-										<li><a on:mouseup={() => removeStop(index)}>❌ Remover</a></li>
-									</ul>
-								</label>
-							</label>
-						</div>
-					{/if}
+				<div class="flex gap-2">
+					<span class="font-bold">Coord:</span>
+					<div class="flex">
+						<input
+							class="btn btn-primary btn-xs rounded-r-none"
+							type="button"
+							value={$selectedStop?.lat.toFixed(6)}
+							on:click={() => {
+								navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+							}}
+						/>
+						<input
+							class="btn btn-primary btn-xs rounded-l-none"
+							type="button"
+							value={$selectedStop?.lon.toFixed(6)}
+							on:click={() => {
+								navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
+							}}
+						/>
+					</div>
+					<input
+						class="btn btn-secondary btn-xs"
+						type="button"
+						value="Copiar"
+						on:click={() => {
+							navigator.clipboard.writeText(
+								$selectedStop?.lat.toFixed(6) + '\t' + $selectedStop?.lon.toFixed(6)
+							);
+						}}
+					/>
 				</div>
-				<hr />
-			{/each}
-		</div>
-		<div id="actions" class="flex justify-end gap-2">
-			{#if $decodedToken?.permissions?.is_admin}
-				<input
-					class="btn btn-sm btn-secondary"
-					type="button"
-					value="Exportar"
-					on:click={exportStopsPrompt}
-				/>
-				<input
-					class="btn btn-sm btn-secondary"
-					type="button"
-					value="Importar"
-					on:click={importStopsPrompt}
-				/>
-				<input
-					class="btn btn-sm btn-primary"
-					type="button"
-					value="Guardar"
-					disabled={!changes}
-					on:click={saveSubrouteStops}
-				/>
-			{/if}
+				{#if $selectedStop?.tml_id}
+					<div class="flex gap-1">
+						<h1 class="text-xs font-bold">Ligada a</h1>
+						{#if $selectedStop.gtfsStop}
+							<button
+								class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+								on:click={() => {
+									$selectedGtfsStop = $selectedStop.gtfsStop;
+									flyToGtfsStop($selectedStop.gtfsStop);
+								}}>{$selectedStop?.tml_id}</button
+							>
+						{:else}
+							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+								>⚠️{$selectedStop?.tml_id}</button
+							>
+							<button class="btn btn-xs btn-error">Apagar erro</button>
+						{/if}
+					</div>
+				{/if}
+				<h1 class="text-sm self-center font-semibold">Rotas</h1>
+				<ul class="flex flex-col gap-3">
+					{#each $selectedStopRoutes || [] as route}
+						<li class="flex flex-nowrap gap-1">
+							<span class="badge badge-secondary badge-outline">{route.code}</span>
+							<span class="font-bold">{route.name}</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		</div>
 	</div>
+	{#if $decodedToken?.permissions?.is_admin}
+		<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">
+			<div class="flex justify-center gap-4 lg:w-[50%] mb-4">
+				<button
+					class="btn btn-primary"
+					class:hidden={!(
+						$selectedStop &&
+						$selectedGtfsStop &&
+						(!$hasMutualLink || !credibleSources.includes($selectedStop?.tml_id_source)) &&
+						!($selectedStop.gtfsStop === $selectedGtfsStop && $selectedStop?.tml_id_source === 'h1')
+					)}
+					on:click={() => {
+						connectStops($selectedStop, $selectedGtfsStop);
+					}}>Ligar paragens</button
+				>
+				<!-- <button class="btn btn-warning">Adicionar alerta</button>
+				<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button> -->
+			</div>
+		</div>
+	{/if}
 </div>
-
-<style>
-	@import 'leaflet/dist/leaflet.css';
-	@import 'leaflet.markercluster/dist/MarkerCluster.css';
-
-	#map {
-		border-top-left-radius: 12px;
-		border-bottom-left-radius: 12px;
-		cursor: crosshair !important;
-		grid-area: map;
-	}
-
-	#list {
-		grid-area: list;
-	}
-
-	#actions {
-		grid-area: actions;
-	}
-
-	#grid-container {
-		display: grid;
-		grid-template-areas:
-			'map list'
-			'actions actions';
-		grid-template-columns: 1fr auto;
-		grid-template-rows: minmax(500px, 85vh) auto;
-	}
-</style>
