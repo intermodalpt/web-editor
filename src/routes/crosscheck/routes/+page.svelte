@@ -6,7 +6,7 @@
 	import Select from 'svelte-select';
 	import polyline from '@mapbox/polyline';
 	import { progressiveSequenceAlignment, longestCommonSubsequence } from '$lib/utils.js';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, osrmServer } from '$lib/settings.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -305,7 +305,7 @@
 				subroutePaths.map((path) => {
 					const pointString = path.map((pair) => pair.join(',')).join(';');
 					return fetch(
-						`http://localhost:15000/route/v1/driving/${pointString}?overview=full&alternatives=false&steps=false&geometries=polyline6`
+						`${osrmServer}/route/v1/driving/${pointString}?overview=full&alternatives=false&steps=false&geometries=polyline6`
 					)
 						.then((res) => res.json())
 						.then((res) => {
@@ -317,7 +317,7 @@
 				tripPaths.map((path) => {
 					const pointString = path.map((pair) => pair.join(',')).join(';');
 					return fetch(
-						`http://localhost:15000/route/v1/driving/${pointString}?overview=full&alternatives=false&steps=false&geometries=polyline6`
+						`${osrmServer}/route/v1/driving/${pointString}?overview=full&alternatives=false&steps=false&geometries=polyline6`
 					)
 						.then((res) => res.json())
 						.then((res) => {
