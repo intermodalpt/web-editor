@@ -50,7 +50,7 @@
 				</div>
 				<h2 class="card-title">Contribuições por decidir</h2>
 				<ul>
-					{#each undecidedContributions as contribution}
+					{#each undecidedContributions as contribution (contribution.id)}
 						<ContributionPrompt
 							{contribution}
 							{stops}
