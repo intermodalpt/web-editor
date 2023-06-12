@@ -94,13 +94,66 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			});
 	});
 
+	const stopSearchInput = writable(null);
+	let searchResults = [];
+
+	stopSearchInput.subscribe((input) => {
+		if (!input || input.length < 3) {
+			searchResults = [];
+			return;
+		}
+
+		let lowerInput = input.toLowerCase();
+
+		const stop_results = Object.values(stops)
+			.filter((stop) => {
+				return (
+					(stop.tml_id && stop.tml_id.includes(input)) ||
+					(stop.id && ('' + stop.id).includes(input)) ||
+					(stop.name && stop.name.toLowerCase().includes(lowerInput)) ||
+					(stop.official_name && stop.official_name.toLowerCase().includes(lowerInput))
+				);
+			})
+			.map((stop) => {
+				return {
+					id: stop.id,
+					tml_id: stop.tml_id,
+					type: 'iml',
+					name: stop.name || stop.official_name || stop.osm_name,
+					lat: stop.lat,
+					lon: stop.lon
+				};
+			});
+
+		const gtfs_results = Object.values(gtfs_stops)
+			.filter((stop) => {
+				return (
+					(stop.stop_id && stop.stop_id.includes(input)) ||
+					(stop.stop_name && stop.stop_name.toLowerCase().includes(lowerInput))
+				);
+			})
+			.map((stop) => {
+				return {
+					id: stop.id,
+					tml_id: stop.stop_id,
+					type: 'gtfs',
+					name: stop.stop_name,
+					lat: stop.lat,
+					lon: stop.lon
+				};
+			});
+
+		searchResults = stop_results.concat(gtfs_results).sort((a, b) => {
+			return a.name.localeCompare(b.name);
+		});
+	});
+
 	const previewedTrip = writable(null);
 
 	selectedGtfsStop.subscribe((gtfsStop) => {
 		previewedTrip.set(null);
 		if (!map) return;
 
-		console.log('padding', { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 });
 		map.easeTo({
 			padding: { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 },
 			duration: 750
@@ -111,7 +164,6 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	selectedStop.subscribe((stop) => {
 		if (!map) return;
 
-		console.log('padding', { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 });
 		map.easeTo({
 			padding: { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 },
 			duration: 750
@@ -324,10 +376,6 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	}
 
 	function connectStops(stop, gtfsStop) {
-		console.log('connecting stops');
-		console.log(stop);
-		console.log(gtfsStop);
-
 		if (stop.gtfsStop && stop.gtfsStop != gtfsStop) {
 			// GTFS changed
 			if (
@@ -960,6 +1008,40 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				</ul>
 			</div>
 		</div>
+	</div>
+
+	<div
+		class="absolute top-1 right-[300px] z-10 flex flex-col w-96 transition duration-750 bg-white shadow-sm rounded-md"
+	>
+		<span class="text-xs mx-2">Pesquisa:</span>
+		<input
+			type="text"
+			class="input input-md input-bordered justify-stretch my-1 mx-2"
+			bind:value={$stopSearchInput}
+		/>
+		<ul class="menu flex-nowrap bg-base-100 max-h-96 overflow-y-scroll">
+			{#each searchResults as result}
+				<li
+					on:click={() => {
+						flyToStop(result);
+					}}
+				>
+					<span>
+						<div class="flex gap-1">
+							{#if result.type === 'iml'}
+								<span class="px-2 mr-1 bg-blue-600 rounded-full" />
+							{:else}
+								<span class="px-2 mr-1 bg-orange-600 rounded-full" />
+							{/if}
+							<div class="flex flex-col">
+								<span class="text-xs">({result.id}/{result.tml_id})</span>
+								<span class="font-semibold">{result.name}</span>
+							</div>
+						</div>
+					</span>
+				</li>
+			{/each}
+		</ul>
 	</div>
 	{#if $decodedToken?.permissions?.is_admin}
 		<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">

@@ -18,6 +18,36 @@
 	import VisualizationSettings from './VisualizationSettings.svelte';
 	import { liveQuery } from 'dexie';
 
+	class SearchControl {
+		onAdd(map) {
+			this._map = map;
+			this._container = document.createElement('div');
+			this._container.className =
+				'maplibregl-ctrl maplibregl-ctrl-group mapboxgl-ctrl mapboxgl-ctrl-group';
+
+			// Create a child button
+			this._button = document.createElement('button');
+			// this._button.className = 'maplibregl-ctrl-icon mapboxgl-ctrl-icon mapboxgl-ctrl-search';
+			this._button.textContent = '🔍';
+			this._container.appendChild(this._button);
+
+			// Seach for the element "stop-search-modal" inside the map
+			this._modal = this._map.getContainer().querySelector('#stop-search-modal');
+
+			// When the button is clicked, show the modal
+			this._button.addEventListener('click', () => {
+				this._modal.checked = true;
+			});
+
+			return this._container;
+		}
+
+		onRemove() {
+			this._container.parentNode.removeChild(this._container);
+			this._map = undefined;
+		}
+	}
+
 	let picsPerStop = {};
 	let map;
 
@@ -91,6 +121,63 @@
 	});
 
 	let selectedStop = writable(null);
+
+	const stopSearchInput = writable(null);
+
+	const stopSearchResults = derived(
+		[stopSearchInput, patchedStops],
+		([$stopSearchInput, $patchedStops]) => {
+			if (!$stopSearchInput) return [];
+
+			if ($stopSearchInput.length < 3) return [];
+
+			if (!$patchedStops) return [];
+
+			// Not a terribly efficient search engine
+			// Waiting for a proper endpoint
+
+			let lowerInput = $stopSearchInput.toLowerCase();
+
+			const results = Object.values($patchedStops).filter((stop) => {
+				return (
+					(stop.tml_id && stop.tml_id.includes($stopSearchInput)) ||
+					(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
+					(stop.name && stop.name.toLowerCase().includes(lowerInput)) ||
+					(stop.official_name && stop.official_name.toLowerCase().includes(lowerInput))
+				);
+			});
+
+			return results
+				.map((result) => {
+					let id_score = 0;
+					if (result.tml_id && result.tml_id.includes($stopSearchInput)) {
+						result.tml_id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
+					}
+
+					if (('' + stop.id).includes($stopSearchInput)) {
+						'' + stop.id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
+					}
+
+					let name_score = 0;
+
+					if (result.name && result.name.toLowerCase().includes(lowerInput)) {
+						name_score = Math.max(name_score, result.name.toLowerCase() == lowerInput ? 100 : 50);
+					}
+
+					if (result.official_name && result.official_name.toLowerCase().includes(lowerInput)) {
+						name_score = Math.max(
+							name_score,
+							result.official_name.toLowerCase() == lowerInput ? 100 : 50
+						);
+					}
+
+					const score = id_score + name_score;
+					return [score, result];
+				})
+				.sort((a, b) => a[0] - b[0])
+				.map(([, result]) => result);
+		}
+	);
 
 	let showVisualizationSettings = false;
 	let stopFilters = [];
@@ -764,6 +851,15 @@
 		tmpIssues = tmpIssues;
 	}
 
+	function flyToStop(stop) {
+		document.getElementById('stop-search-modal').checked = false;
+
+		map.flyTo({
+			center: [stop.lon, stop.lat],
+			zoom: 18
+		});
+	}
+
 	function addSourcesAndLayers() {
 		map.addSource('stops', {
 			type: 'geojson',
@@ -853,6 +949,7 @@
 		});
 
 		map.addControl(new NavigationControl());
+		map.addControl(new SearchControl());
 
 		map.addControl(
 			new GeolocateControl({
@@ -953,6 +1050,41 @@
 						value="Fechar"
 					/>
 				</div>
+			</div>
+		</div>
+	</div>
+	<div class="absolute">
+		<input type="checkbox" id="stop-search-modal" class="modal-toggle" />
+		<div class="modal z-[11]">
+			<div class="modal-box relative z-[11] max-w-5xl">
+				<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label
+				>
+				<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
+				<input
+					type="text"
+					class="input input-primary input-bordered w-full"
+					placeholder="id ou nome"
+					bind:value={$stopSearchInput}
+				/>
+				{#if $stopSearchResults}
+					<div class="flex flex-col gap-1 overflow-y-scroll">
+						{#each $stopSearchResults as result}
+							<div
+								class="card card-compact w-full bg-base-100 shadow-md cursor-pointer"
+								on:click={() => {
+									flyToStop(result);
+								}}
+							>
+								<div class="card-body">
+									<h2 class="card-title text-md">
+										({result.id}) {result.name || result.official_name}
+									</h2>
+									<h3 class="text-md">{result.tml_id}</h3>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
