@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { token } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
+	import { wipeCachedData, loadMissing } from '$lib/db';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 
 	export let stops;
@@ -24,10 +25,11 @@
 					Authorization: `Bearer ${$token}`
 				}
 			}
-		).then((r) => {
+		).then(async (r) => {
 			if (r.error) {
 				alert(r.error);
 			} else {
+				await wipeCachedData();
 				dispatch('accept', { contribution_id: contribution_id });
 			}
 		});
