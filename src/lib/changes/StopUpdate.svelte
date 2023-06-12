@@ -128,11 +128,13 @@
 	<a
 		class="btn btn-xs btn-info"
 		rel="noreferrer"
+		target="_blank"
 		href={`https://www.openstreetmap.org/node/${change.original.external_id}`}>OSM</a
 	>
 	<a
 		class="btn btn-xs btn-info"
 		rel="noreferrer"
+		target="_blank"
 		href={`https://www.google.com/maps/@${change.original.lat},${change.original.lon},20.00z`}
 		>GMaps</a
 	>
