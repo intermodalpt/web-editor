@@ -4,6 +4,7 @@
 	export let data = [];
 	export let removesItems = false;
 	export let itemsMap = {};
+	export let onHover = () => {};
 
 	let ghost;
 	let grabbed;
@@ -85,14 +86,14 @@
 	<div
 		bind:this={ghost}
 		id="ghost"
-		class={'item bg-base-100 flex flex-row justify-between w-full border-[1px] rounded-lg p-2 select-none pointer-events-none ' +
+		class={'item bg-base-200 flex flex-row justify-between w-full border-[1px] rounded-lg px-2 py-1 select-none pointer-events-none ' +
 			(grabbed ? 'haunting' : '')}
 		style={'top: ' + (mouseY + offsetY - layerY) + 'px'}
 	>
 		<p />
 	</div>
 	<div
-		class="cursor-grab flex flex-col gap-2"
+		class="cursor-grab flex flex-col gap-1"
 		on:mousemove={function (ev) {
 			ev.stopPropagation();
 			drag(ev.clientY);
@@ -116,11 +117,12 @@
 				id={grabbed && (datum.id ? datum.id : JSON.stringify(datum)) == grabbed.dataset.id
 					? 'grabbed'
 					: ''}
-				class="item flex flex-row justify-between w-full border-[1px] rounded-lg p-2 select-none group"
+				class="item flex flex-row justify-between w-full border-[1px] rounded-lg px-2 py-1 select-none group transition-colors"
+				class:hover:bg-base-200={!grabbed}
 				class:opacity-0={grabbed &&
 					(datum.id ? datum.id : JSON.stringify(datum)) == grabbed.dataset.id}
 				data-index={i}
-				data-id={datum.id ? datum.id : JSON.stringify(datum)}
+				data-id={datum.id || JSON.stringify(datum)}
 				data-grabY="0"
 				on:mousedown={function (ev) {
 					grab(ev.clientY, this);
@@ -130,7 +132,14 @@
 				}}
 				on:mouseenter={function (ev) {
 					ev.stopPropagation();
+					if (!grabbed) {
+						onHover(datum, ev);
+					}
 					dragEnter(ev, ev.target);
+				}}
+				on:mouseleave={function (ev) {
+					ev.stopPropagation();
+					onHover(null, ev);
 				}}
 				on:touchmove={function (ev) {
 					ev.stopPropagation();
@@ -151,7 +160,9 @@
 
 					<div class="content">
 						<slot />
-						<p class="text-base-content">({(""+item.id).padStart(5,0)}) {item.official_name || item.name || item.osm_name}</p>
+						<p class="text-base-content">
+							({('' + item.id).padStart(5, 0)}) {item.official_name || item.name || item.osm_name}
+						</p>
 					</div>
 				</div>
 

@@ -12,12 +12,14 @@
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
 	let stops = data.stops;
-	let routeStops = data.routeStops;
-	let routes = data.routes;
+	let routes = data.routeStops;
+	let allRoutes = data.routes;
 	let route = data.route;
-	let routeIds = Object.values(routeStops)[0];
+	let selectedRouteId = route.subroutes[0].id;
+	$: routeIds = routes[selectedRouteId];
 	$: routeStops = routeIds.map((stop) => stops[stop]);
 	$: routeIds && updateRouteLine();
+	console.log(route);
 	let dragMode = 'move';
 	let map;
 
@@ -86,7 +88,8 @@
 					properties: {
 						id: stop.id,
 						osm_name: stop.osm_name
-					}
+					},
+					id: stop.id
 				}))
 			}
 		});
@@ -96,9 +99,33 @@
 			type: 'circle',
 			source: 'stops',
 			paint: {
-				'circle-color': 'rgb(50, 150, 220)',
+				// change color depending on hover state
+				'circle-color': [
+					'case',
+					['boolean', ['feature-state', 'hover'], false],
+					'rgb(255, 0, 0)',
+					'rgb(50, 150, 220)'
+				],
 				//  change size depending on zoom level
 				'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 14, 4, 16, 8, 18, 12, 20, 16],
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
+			}
+		});
+		map.addSource('selectedStop', {
+			type: 'geojson',
+			data: {
+				type: 'Point',
+				coordinates: []
+			}
+		});
+		map.addLayer({
+			id: 'selectedStop',
+			type: 'circle',
+			source: 'selectedStop',
+			paint: {
+				'circle-color': 'rgb(255, 0, 0)',
+				'circle-radius': 10,
 				'circle-stroke-width': 1,
 				'circle-stroke-color': '#fff'
 			}
@@ -165,14 +192,17 @@
 
 			if (hoveredStop) {
 				let index = routeIds.indexOf(initDragStop.id);
-				routeIds.splice(
-					index + (dragMode === 'add' && index != 0 ? 1 : 0),
-					dragMode === 'add' ? 0 : 1,
-					hoveredStop.id
-				);
+				let hoverIndex = routeIds.indexOf(hoveredStop.id);
+				if (Math.abs(index - hoverIndex) !== 1 || dragMode === 'add') {
+					routeIds.splice(
+						index + (dragMode === 'add' && index != 0 ? 1 : 0),
+						dragMode === 'add' ? 0 : 1,
+						hoveredStop.id
+					);
+				} else if (initDragStop.id !== hoveredStop.id) {
+					routeIds.splice(index, 1);
+				}
 				routeIds = routeIds;
-			} else {
-				console.log('Unmatched');
 			}
 			updateRouteLine();
 
@@ -256,6 +286,7 @@
 
 		map.on('mouseenter', 'stops', (e) => {
 			hoveredStop = stops[e.features[0].properties.id];
+			console.log(e.features[0]);
 		});
 		map.on('mouseleave', 'stops', (e) => {
 			hoveredStop = null;
@@ -273,7 +304,7 @@
 		}, new LngLatBounds(coords[0], coords[0]));
 		map = new Maplibre({
 			container: 'map',
-			style: 'https://tiles.intermodal.pt/styles/positron/style.json',
+			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
 			center: bounds.getCenter(),
 			minZoom: 8,
 			maxZoom: 20,
@@ -297,6 +328,38 @@
 	onDestroy(() => {
 		map.remove();
 	});
+
+	let prevStop = null;
+	function highlightStop(stopId, event) {
+		map.setFeatureState(
+			{
+				source: 'stops',
+				id: stopId
+			},
+			{ hover: true }
+		);
+		if (prevStop !== null && prevStop !== stopId) {
+			map.setFeatureState(
+				{
+					source: 'stops',
+					id: prevStop
+				},
+				{ hover: false }
+			);
+		}
+		console.log(
+			stopId,
+			map.getSource('stops')._data.features.filter((s) => s.properties.id === stopId)
+		);
+		prevStop = stopId;
+
+		if (stopId !== null) {
+			map.flyTo({
+				center: stops[stopId],
+				zoom: 15
+			});
+		}
+	}
 </script>
 
 <div id="map" class="h-full relative">
@@ -319,8 +382,50 @@
 		</div>
 	</div>
 	<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-2 transition w-[40em]">
-		<div class="bg-base-100 h-full rounded-xl shadow-lg p-4 overflow-y-scroll">
-			<DraggableList bind:data={routeIds} itemsMap={stops} removesItems={true} />
+		<div class="bg-base-100 h-full rounded-xl shadow-lg flex flex-col">
+			<div class="flex flex-col px-4 pt-4 gap-2">
+				<div class="flex flex-row w-full gap-2 items-center">
+					<div
+						class="h-8 w-12 rounded-xl flex items-center justify-center font-bold"
+						style:background-color={route.badge_bg}
+						style:color={route.badge_text}
+					>
+						{route.code}
+					</div>
+					<div
+						class="border border-opacity-20 border-base-content rounded-lg w-full flex-1 flex items-center pl-3 text-sm cursor-default"
+					>
+						{route.name}
+					</div>
+				</div>
+				<div class="flex flex-row w-full gap-2">
+					<div
+						class="h-8 w-12 rounded-xl flex items-center justify-center font-bold bg-primary text-primary-content"
+					>
+						{selectedRouteId}
+					</div>
+					<select
+						bind:value={selectedRouteId}
+						class="select select-bordered select-sm w-full flex-1 !font-normal"
+					>
+						{#each route.subroutes as rt}
+							<option value={rt.id}>{rt.flag}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+			<div class="divider px-6 my-2" />
+			<div class="overflow-y-scroll p-4 pt-0">
+				<!-- By rerendering there is no weird shuffle animation of the list -->
+				{#key selectedRouteId}
+					<DraggableList
+						bind:data={routeIds}
+						itemsMap={stops}
+						onHover={highlightStop}
+						removesItems={true}
+					/>
+				{/key}
+			</div>
 		</div>
 	</div>
 </div>
