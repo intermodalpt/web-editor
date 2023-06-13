@@ -6,6 +6,7 @@
 	import * as turf from '@turf/turf';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
+	import DraggableList from '../../../../lib/stops/DraggableList.svelte';
 	export let data = null;
 
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
@@ -15,7 +16,8 @@
 	let routes = data.routes;
 	let route = data.route;
 	let routeIds = Object.values(routeStops)[0];
-	$: routeStops = Object.values(routeStops)[0].map((stop) => stops[stop]);
+	$: routeStops = routeIds.map((stop) => stops[stop]);
+	$: routeIds && updateRouteLine();
 	let dragMode = 'move';
 	let map;
 
@@ -103,6 +105,16 @@
 		});
 	}
 
+	function updateRouteLine() {
+		if (!map || !map.getSource('routeline')) return;
+		map.getSource('routeline').setData({
+			type: 'LineString',
+			coordinates: routeIds.map((stop) => {
+				return [stops[stop].lon, stops[stop].lat];
+			})
+		});
+	}
+
 	function addEvents() {
 		const canvas = map.getCanvasContainer();
 
@@ -147,14 +159,6 @@
 				coordinates: rt
 			});
 		}
-		function updateRouteLine() {
-			map.getSource('routeline').setData({
-				type: 'LineString',
-				coordinates: routeIds.map((stop) => {
-					return [stops[stop].lon, stops[stop].lat];
-				})
-			});
-		}
 
 		function onUp(e) {
 			canvas.style.cursor = '';
@@ -166,6 +170,7 @@
 					dragMode === 'add' ? 0 : 1,
 					hoveredStop.id
 				);
+				routeIds = routeIds;
 			} else {
 				console.log('Unmatched');
 			}
@@ -183,6 +188,7 @@
 
 			if (hoveredStop) {
 				routeIds.splice(routeIds.indexOf(initDragStop.id) + 1, 0, hoveredStop.id);
+				routeIds = routeIds;
 			} else {
 				console.log('Unmatched');
 			}
@@ -312,18 +318,9 @@
 			Mover
 		</div>
 	</div>
-	<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-4 transition w-[40em]">
-		<div class="bg-base-100 h-full rounded-lg shadow-lg p-4 flex flex-col">
-			{#each routeStops as stop}
-				<div class="flex items-center justify-between">
-					<div class="text-sm">
-						({('' + stop.id).padStart(5, '0')}) {stop.official_name || stop.name || stop.osm_name}
-					</div>
-          <div class="flex">
-            <div class="btn btn-xs btn-ghost">X</div>
-          </div>
-				</div>
-			{/each}
+	<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-2 transition w-[40em]">
+		<div class="bg-base-100 h-full rounded-xl shadow-lg p-4 overflow-y-scroll">
+			<DraggableList bind:data={routeIds} itemsMap={stops} removesItems={true} />
 		</div>
 	</div>
 </div>
