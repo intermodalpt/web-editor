@@ -5,6 +5,7 @@
 	export let removesItems = false;
 	export let itemsMap = {};
 	export let onHover = () => {};
+	export let onClick = () => {};
 
 	let ghost;
 	let grabbed;
@@ -126,6 +127,9 @@
 				data-grabY="0"
 				on:mousedown={function (ev) {
 					grab(ev.clientY, this);
+				}}
+				on:click={function (ev) {
+					onClick(datum, ev);
 				}}
 				on:touchstart={function (ev) {
 					grab(ev.touches[0].clientY, this);

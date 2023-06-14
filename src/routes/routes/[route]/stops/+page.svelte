@@ -235,6 +235,13 @@
 			e.preventDefault();
 			e.originalEvent.preventDefault();
 			if (!routeIds.includes(e.features[0].properties.id)) return;
+			if (e.originalEvent.button === 2) {
+				routeIds.splice(routeIds.indexOf(e.features[0].properties.id), 1);
+				routeIds = routeIds;
+				updateRouteLine();
+				return;
+			}
+			if (e.originalEvent.button !== 0) return;
 
 			canvas.style.cursor = 'grab';
 
@@ -267,7 +274,7 @@
 				}
 			}
 
-			console.log('Clicked on segment with index:', closestIndex);
+			// console.log('Clicked on segment with index:', closestIndex);
 			initDragStop = stops[routeIds[closestIndex]];
 
 			map.on('mousemove', onMoveLine);
@@ -286,7 +293,7 @@
 
 		map.on('mouseenter', 'stops', (e) => {
 			hoveredStop = stops[e.features[0].properties.id];
-			console.log(e.features[0]);
+			// console.log(e.features[0]);
 		});
 		map.on('mouseleave', 'stops', (e) => {
 			hoveredStop = null;
@@ -294,6 +301,21 @@
 		});
 		map.on('mouseleave', 'routeline', (e) => {
 			canvas.style.cursor = '';
+		});
+		prevView = [map.getCenter().lng, map.getCenter().lat, map.getZoom()];
+		map.on('moveend', (e) => {
+			if (e.originalEvent) {
+				let center = map.getCenter();
+				let zoom = map.getZoom();
+				prevView = [center.lng, center.lat, zoom];
+			}
+		});
+		map.on('zoomend', (e) => {
+			if (e.originalEvent) {
+				let center = map.getCenter();
+				let zoom = map.getZoom();
+				prevView = [center.lng, center.lat, zoom];
+			}
 		});
 	}
 
@@ -330,7 +352,9 @@
 	});
 
 	let prevStop = null;
-	function highlightStop(stopId, event) {
+	// [lat,lon,zoom]||null
+	let prevView = null;
+	function highlightStop(stopId, _) {
 		map.setFeatureState(
 			{
 				source: 'stops',
@@ -338,7 +362,7 @@
 			},
 			{ hover: true }
 		);
-		if (prevStop !== null && prevStop !== stopId) {
+		if (prevStop !== null) {
 			map.setFeatureState(
 				{
 					source: 'stops',
@@ -347,10 +371,13 @@
 				{ hover: false }
 			);
 		}
-		console.log(
-			stopId,
-			map.getSource('stops')._data.features.filter((s) => s.properties.id === stopId)
-		);
+		if (stopId === null && prevView !== null) {
+			map.flyTo({
+				center: prevView.slice(0, 2),
+				zoom: prevView[2]
+			});
+		}
+		// log currently displayed coordinates on the map and zoom level
 		prevStop = stopId;
 
 		if (stopId !== null) {
@@ -360,25 +387,73 @@
 			});
 		}
 	}
+	function clickStop(stopId, _) {
+		let stop = stops[stopId];
+		prevView = [stop.lon, stop.lat, 15];
+	}
+	let toasting = false;
+	let toastMsg = '';
+	function toast(message) {
+		toasting = true;
+		toastMsg = message;
+		setTimeout(() => {
+			toasting = false;
+		}, 3000);
+	}
+	document.addEventListener('paste', (event) => {
+		let data = event.clipboardData.getData('text');
+		try {
+			data = JSON.parse(data);
+			if (Array.isArray(data) && data.every((d) => typeof d === 'number')) {
+				routeIds = data;
+			}
+		} catch (e) {
+			toast('Clipboard data are not stops');
+			console.log(e);
+		}
+	});
 </script>
 
+{#if toasting}
+	<div class="toast z-50">
+		<div class="alert alert-info">
+			<span>{toastMsg}</span>
+		</div>
+	</div>
+{/if}
 <div id="map" class="h-full relative">
 	<div
-		class="absolute lg:left-4 lg:bottom-4 bottom-2 left-2 z-10 tabs tabs-boxed flex-col items-stretch"
+		class="absolute lg:left-4 lg:bottom-4 bottom-2 left-2 z-10 bg-base-100 rounded-xl p-1 flex flex-col gap-1"
 	>
-		<div
-			class="tab transition-colors"
-			class:tab-active={dragMode === 'add'}
-			on:mousedown={() => (dragMode = 'add')}
+		<button
+			class="btn btn-sm normal-case"
+			on:click={() => {
+				toast('Just CTRL+V with the stop list in your clipboard');
+			}}>Import</button
 		>
-			Adicionar
-		</div>
-		<div
-			class="tab transition-colors"
-			class:tab-active={dragMode === 'move'}
-			on:mousedown={() => (dragMode = 'move')}
+		<button
+			class="btn btn-sm normal-case"
+			on:mousedown={() => {
+				navigator.clipboard.writeText(JSON.stringify(routeIds));
+				toast('Route stop IDs copied to the clipboard');
+			}}>Export</button
 		>
-			Mover
+		<div class="divider my-0 h-2 px-2" />
+		<div class="tabs tabs-boxed flex-col items-stretch">
+			<div
+				class="tab transition-colors"
+				class:tab-active={dragMode === 'add'}
+				on:mousedown={() => (dragMode = 'add')}
+			>
+				Adicionar
+			</div>
+			<div
+				class="tab transition-colors"
+				class:tab-active={dragMode === 'move'}
+				on:mousedown={() => (dragMode = 'move')}
+			>
+				Mover
+			</div>
 		</div>
 	</div>
 	<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-2 transition w-[40em]">
@@ -393,7 +468,7 @@
 						{route.code}
 					</div>
 					<div
-						class="border border-opacity-20 border-base-content rounded-lg w-full flex-1 flex items-center pl-3 text-sm cursor-default"
+						class="border border-opacity-20 border-base-content rounded-lg w-full flex-1 flex items-center min-h-8 pl-3 text-sm cursor-default"
 					>
 						{route.name}
 					</div>
@@ -415,13 +490,14 @@
 				</div>
 			</div>
 			<div class="divider px-6 my-2" />
-			<div class="overflow-y-scroll p-4 pt-0">
+			<div class="p-4 pt-0 scrollbar">
 				<!-- By rerendering there is no weird shuffle animation of the list -->
 				{#key selectedRouteId}
 					<DraggableList
 						bind:data={routeIds}
 						itemsMap={stops}
 						onHover={highlightStop}
+						onClick={clickStop}
 						removesItems={true}
 					/>
 				{/key}
@@ -429,3 +505,12 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+	.scrollbar {
+		overflow-y: scroll;
+	}
+</style>
