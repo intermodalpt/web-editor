@@ -32,7 +32,7 @@
 		"@mapbox/polyline": "^1.2.0",
 		"@sveltejs/adapter-node": "1.2.3",
 		"@turf/turf": "^6.5.0",
-		"daisyui": "^2.51.5",
+		"daisyui": "^3.0.23",
 		"dexie": "^4.0.1-alpha.11",
 		"leaflet": "^1.8.0",
 		"leaflet-contextmenu": "1.4.0",
