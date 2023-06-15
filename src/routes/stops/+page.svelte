@@ -1023,21 +1023,21 @@
 	<div class="absolute top-2 left-2 z-10">
 		<input
 			type="button"
-			class="btn btn-sm btn-secondary btn-outline bg-white shadow-lg"
+			class="btn btn-sm shadow-lg"
 			value="Visualização"
 			on:click={() => (showVisualizationSettings = true)}
 			on:keypress={() => (showVisualizationSettings = true)}
 		/>
 	</div>
 	<div
-		class="absolute top-0 z-[11] flex justify-center w-full transition duration-750"
-		class:-translate-y-[110px]={!showVisualizationSettings}
+		class="absolute lg:left-3 lg:top-3 left-0 top-0 z-[11] flex justify-center h-96 lg:w-72 w-full transition"
+		style:display={showVisualizationSettings ? 'block' : 'none'}
 	>
 		<div
-			class="h-[110px] w-full bg-zinc-500 grid grid-cols-1 lg:w-[95%] lg:rounded-b-xl lg:shadow-xl border-b-2 border-neutral"
-			style="grid-template-rows: 1fr auto;"
+			class="h-full w-full bg-base-100 lg:rounded-xl shadow-md grid grid-cols-1 p-2 gap-2"
+			style:grid-template-rows="minmax(0, 1fr)"
 		>
-			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100">
+			<div class="w-full">
 				<VisualizationSettings
 					bind:filters={stopFilters}
 					bind:visualization={stopVisualization}
@@ -1045,16 +1045,14 @@
 					on:visualization_change={loadStops}
 				/>
 			</div>
-			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
-				<div class="flex gap-2 flex-grow justify-end">
-					<input
-						type="button"
-						class="btn btn-error btn-xs"
-						on:click={() => (showVisualizationSettings = false)}
-						on:keypress={() => (showVisualizationSettings = false)}
-						value="Fechar"
-					/>
-				</div>
+			<div class="flex justify-end">
+				<input
+					type="button"
+					class="btn btn-error btn-xs"
+					on:click={() => (showVisualizationSettings = false)}
+					on:keypress={() => (showVisualizationSettings = false)}
+					value="Fechar"
+				/>
 			</div>
 		</div>
 	</div>
@@ -1098,38 +1096,38 @@
 		class:translate-y-[350px]={!$selectedStop}
 	>
 		<div
-			class="h-[350px] w-full bg-zinc-500 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl lg:shadow-xl border-t-2 border-neutral"
+			class="h-[350px] w-full bg-base-100 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl shadow-md"
 			style="grid-template-rows: auto 1fr;"
 		>
-			<div class="flex gap-1 justify-between flex-wrap-reverse p-1">
-				<div class="btn-group btn-group-horizontal">
+			<div class="flex gap-1 justify-between flex-wrap-reverse p-2">
+				<div class="btn-group btn-group-horizontal tabs tabs-boxed">
 					<span
-						class="btn btn-xs"
-						class:btn-active={currentSubform === subforms.info}
+						class="tab tab-sm"
+						class:tab-active={currentSubform === subforms.info}
 						on:click={() => (currentSubform = subforms.info)}
 						on:keypress={() => (currentSubform = subforms.info)}>Info</span
 					>
 					<span
-						class="btn btn-xs"
-						class:btn-active={currentSubform === subforms.pics}
+						class="tab tab-sm"
+						class:tab-active={currentSubform === subforms.pics}
 						on:click={() => (currentSubform = subforms.pics)}
 						on:keypress={() => (currentSubform = subforms.pics)}>Fotos</span
 					>
 					<span
-						class="btn btn-xs"
-						class:btn-active={currentSubform === subforms.service}
+						class="tab tab-sm"
+						class:tab-active={currentSubform === subforms.service}
 						on:click={() => (currentSubform = subforms.service)}
 						on:keypress={() => (currentSubform = subforms.service)}>Serviço</span
 					>
 					<span
-						class="btn btn-xs"
-						class:btn-active={currentSubform === subforms.infra}
+						class="tab tab-sm"
+						class:tab-active={currentSubform === subforms.infra}
 						on:click={() => (currentSubform = subforms.infra)}
 						on:keypress={() => (currentSubform = subforms.infra)}>Infra</span
 					>
 					<span
-						class="btn btn-xs"
-						class:btn-active={currentSubform === subforms.extra}
+						class="tab tab-sm"
+						class:tab-active={currentSubform === subforms.extra}
 						on:click={() => (currentSubform = subforms.extra)}
 						on:keypress={() => (currentSubform = subforms.extra)}>Extra</span
 					>
@@ -1165,17 +1163,17 @@
 					/>
 				</div>
 			</div>
-			<div class="w-full overflow-y-scroll p-2 bg-base-100">
+			<div class="w-full overflow-y-auto p-2 pt-0 bg-base-100">
 				<div
 					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
 					class:hidden={currentSubform != subforms.info}
 				>
-					<div class="flex flex-col gap-1">
-						<span class="font-light text-lg">#{$selectedStop?.id}</span>
-						<div class="flex gap-2">
-							<div class="flex">
+					<div class="flex flex-col gap-1 items-start">
+						<div class="flex gap-2 items-center">
+							<span class=" text-lg">#{$selectedStop?.id}</span>
+							<div class="join">
 								<input
-									class="btn btn-neutral btn-outline btn-xs rounded-r-none"
+									class="join-item p-1 btn btn-xs"
 									type="button"
 									value={$selectedStop?.lat.toFixed(6)}
 									on:click={() => {
@@ -1186,7 +1184,7 @@
 									}}
 								/>
 								<input
-									class="btn btn-neutral btn-outline btn-xs rounded-l-none -ml-[1px]"
+									class="join-item p-1 btn btn-xs"
 									type="button"
 									value={$selectedStop?.lon.toFixed(6)}
 									on:click={() => {
@@ -1196,40 +1194,38 @@
 										navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
 									}}
 								/>
+								<input
+									class="btn btn-info btn-xs join-item"
+									type="button"
+									value="Copiar"
+									on:click={() => {
+										navigator.clipboard.writeText(
+											$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
+										);
+									}}
+									on:keypress={() => {
+										navigator.clipboard.writeText(
+											$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
+										);
+									}}
+								/>
 							</div>
-							<input
-								class="btn btn-secondary btn-xs"
-								type="button"
-								value="Copiar"
-								on:click={() => {
-									navigator.clipboard.writeText(
-										$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
-									);
-								}}
-								on:keypress={() => {
-									navigator.clipboard.writeText(
-										$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
-									);
-								}}
-							/>
 						</div>
 						<span>OpenStreetMap</span>
 						<a
-							class="link link-neutral ml-2 text-base"
+							class="link link-neutral ml-2 text-base border rounded-lg p-2"
 							href="https://www.openstreetmap.org/node/{$selectedStop?.external_id}"
 							>{$selectedStop?.osm_name}</a
 						>
 						<span>Completude</span>
-						<div class="flex flex-col gap-2 ml-2 text-base">
+						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
 							<div>
 								Serviço:
-								<span class="bg-slate-200 rounded-full"
-									>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span
-								>
+								<span>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span>
 							</div>
 							<div>
 								Atributos:
-								<span class="bg-slate-200 rounded-full"
+								<span
 									>{($hasSidewalk === null ? 0 : 1) +
 										($hasSidewalkedPath === null ? 0 : 1) +
 										($hasShelter === null ? 0 : 1) +
@@ -1261,7 +1257,7 @@
 						<div class="flex items-baseline">
 							<span class="label">Autenticidade</span>
 							<select
-								class="select select-primary max-w-xs select-xs"
+								class="select select-bordered max-w-xs select-xs"
 								bind:value={verificationLevel}
 								disabled={!$decodedToken?.permissions.is_admin}
 							>
@@ -1396,8 +1392,8 @@
 				</div>
 				<div class="w-full hidden" class:hidden={currentSubform != subforms.service}>
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
-						<div class="rounded-lg border-base-300 border-l-2 border-r-2">
-							<div class="flex gap-2 items-baseline">
+						<div class="rounded-lg border p-2">
+							<div class="flex gap-2 items-center">
 								<span class="text-base">Postaletes</span>
 								<a
 									class="btn btn-circle btn-ghost btn-xs text-info"
@@ -1418,21 +1414,21 @@
 										/>
 									</svg>
 								</a>
-								<div class="btn-group items-center">
+								<div class="join items-center">
 									<button
-										class="btn btn-xs px-4"
+										class="btn btn-xs px-4 join-item"
 										class:btn-active={hasFlags === true}
 										on:click={() => (hasFlags = true)}
 										on:keypress={() => (hasFlags = true)}>Sim</button
 									>
 									<button
-										class="btn btn-xs px-6"
+										class="btn btn-xs px-6 join-item"
 										class:btn-active={hasFlags === null}
 										on:click={() => (hasFlags = null)}
 										on:keypress={() => (hasFlags = null)}>?</button
 									>
 									<button
-										class="btn btn-xs px-4"
+										class="btn btn-xs px-4 join-item"
 										class:btn-active={hasFlags === false}
 										on:click={() => (hasFlags = false)}
 										on:keypress={() => (hasFlags = false)}>Não</button
@@ -1513,8 +1509,8 @@
 								</div>
 							{/if}
 						</div>
-						<div class="rounded-lg border-base-300 border-l-2 border-r-2">
-							<div class="flex gap-2 items-baseline">
+						<div class="border rounded-lg p-2">
+							<div class="flex gap-2 items-center">
 								<span class="text-base">Horários</span>
 								<a
 									class="btn btn-circle btn-ghost btn-xs text-info"
@@ -1620,9 +1616,9 @@
 								</table>
 							{/if}
 						</div>
-						<div class="grow">
-							<span class="label-text">Verificação</span>
-							<div class="flex">
+						<div class="grow border rounded-lg p-2">
+							<div class="flex gap-2">
+								<div class="label-text">Verificação</div>
 								<input
 									type="date"
 									class="input input-xs input-bordered"
@@ -1700,7 +1696,7 @@
 						/>
 
 						<select
-							class="select select-primary max-w-xs select-xs"
+							class="select select-bordered max-w-xs select-xs"
 							bind:value={advertisementQty}
 							disabled={!$decodedToken}
 						>
@@ -1740,7 +1736,7 @@
 						/>
 						<span>Iluminação</span><br />
 						<select
-							class="select select-primary max-w-xs select-xs"
+							class="select select-bordered max-w-xs select-xs"
 							bind:value={illuminationPosition}
 							disabled={!$decodedToken}
 						>
@@ -1750,7 +1746,7 @@
 							<option value={20}>Iluminação Própria</option>
 						</select>
 						<select
-							class="select select-primary max-w-xs select-xs"
+							class="select select-bordered max-w-xs select-xs"
 							bind:value={illuminationStrength}
 							disabled={!$decodedToken}
 						>
@@ -1812,7 +1808,7 @@
 					<div class="flex flex-col gap-1">
 						<span>Parque automóvel</span>
 						<select
-							class="select select-primary max-w-xs select-xs"
+							class="select select-bordered max-w-xs select-xs"
 							bind:value={parkingVisibilityImpairment}
 							disabled={!$decodedToken}
 						>
@@ -1823,7 +1819,7 @@
 							<option value={6}>Muito limitante à visibilidade</option>
 						</select>
 						<select
-							class="select select-primary max-w-xs select-xs"
+							class="select select-bordered max-w-xs select-xs"
 							bind:value={parkingLocalAccessImpairment}
 							disabled={!$decodedToken}
 						>
@@ -1834,7 +1830,7 @@
 							<option value={6}>Muita intreferência à paragem</option>
 						</select>
 						<select
-							class="select select-primary max-w-xs select-xs"
+							class="select select-bordered max-w-xs select-xs"
 							bind:value={parkingAreaAccessImpairment}
 							disabled={!$decodedToken}
 						>
@@ -1847,7 +1843,7 @@
 					</div>
 					<div>
 						<span class="label-text">Verificação</span>
-						<div class="flex">
+						<div class="flex gap-1">
 							<input
 								type="date"
 								class="input input-xs input-bordered"
@@ -1883,9 +1879,9 @@
 				<div class="flex gap-2 flex-wrap" class:hidden={currentSubform != subforms.extra}>
 					<div class="form-control max-w-xs grow basis-64">
 						<span class="text-sm">Defeitos</span>
-						<div class="flex flex-col gap-2">
+						<div class="flex flex-col items-start flex-wrap gap-1">
 							{#each tmpIssues as issue}
-								<div class="badge badge-outline badge-lg">
+								<div class="border rounded-xl p-1">
 									{tmpIssueLabels[issue]}
 									<div
 										class="btn btn-error btn-circle btn-xs"
@@ -1926,8 +1922,8 @@
 					</div>
 					<div class="form-control max-w-xs grow basis-64">
 						<span class="text-sm">Etiquetas</span>
-						<div class="flex flex-col gap-2">
-							<div class="flex w-full">
+						<div class="flex flex-col gap-2 items-start">
+							<div class="flex w-full gap-1">
 								<input
 									id="tag-text"
 									type="text"
@@ -1944,18 +1940,20 @@
 									disabled={!$decodedToken}
 								/>
 							</div>
-							{#each tags as tag}
-								<div class="badge badge-outline badge-lg">
-									{tag}
-									<div
-										class="btn btn-error btn-circle btn-xs"
-										on:click={() => removeTag(tag)}
-										on:keypress={() => removeTag(tag)}
-									>
-										✕
-									</div>
-								</div>
-							{/each}
+							<div class="flex flex-row flex-wrap gap-1">
+								{#each tags as tag}
+									<span class="border rounded-xl p-1">
+										{tag}
+										<span
+											class="btn btn-error btn-circle btn-xs"
+											on:click={() => removeTag(tag)}
+											on:keypress={() => removeTag(tag)}
+										>
+											✕
+										</span>
+									</span>
+								{/each}
+							</div>
 						</div>
 					</div>
 					<div class="form-control grow basis-96">
