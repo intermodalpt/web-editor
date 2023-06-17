@@ -35,24 +35,33 @@ async function updateCacheTimestamp(tableName) {
     await db.settings.put({ key: timestampKey(tableName), value: now });
 }
 
+async function invalidateCacheTimestamp(tableName) {
+    await db.settings.delete(timestampKey(tableName));
+}
+
 export async function fetchStops(ifMissing = true) {
     console.log('loadingStops');
     if (!browser) {
         return;
     }
 
-    let cacheInvalidated = await isCacheInvalidated('stops');
+    let cacheInvalidated = true;
+    if (!ifMissing) {
+        await invalidateCacheTimestamp('stops');
+    } else {
+        cacheInvalidated = await isCacheInvalidated('stops');
+    }
 
-    console.log('Cache invalidated', cacheInvalidated);
+    console.log('Stop cache invalidated', cacheInvalidated);
 
     if (!cacheInvalidated) {
         const count = await db.stops.count();
-        console.log(count);
         if (count > 0 && ifMissing) {
             return;
         }
     }
 
+    console.log('fetching stops');
     const response = await fetch(`${apiServer}/v1/tml/stops`);
     const stops = await response.json();
     await db.stops.clear();
@@ -67,7 +76,12 @@ export async function fetchRoutes(ifMissing = true) {
         return;
     }
 
-    let cacheInvalidated = await isCacheInvalidated('routes');
+    let cacheInvalidated = true;
+    if (!ifMissing) {
+        await invalidateCacheTimestamp('routes');
+    } else {
+        cacheInvalidated = await isCacheInvalidated('routes');
+    }
 
     if (!cacheInvalidated) {
         const count = await db.routes.count();
@@ -78,7 +92,6 @@ export async function fetchRoutes(ifMissing = true) {
 
     const response = await fetch(`${apiServer}/v1/routes`);
     const routes = await response.json();
-    console.log(routes);
     await db.routes.clear();
     await db.routes.bulkPut(routes);
     updateCacheTimestamp('routes');
@@ -90,7 +103,12 @@ export async function fetchCalendars(ifMissing = true) {
         return;
     }
 
-    let cacheInvalidated = await isCacheInvalidated('calendars');
+    let cacheInvalidated = true;
+    if (!ifMissing) {
+        await invalidateCacheTimestamp('calendars');
+    } else {
+        cacheInvalidated = await isCacheInvalidated('calendars');
+    }
 
     if (!cacheInvalidated) {
         const count = await db.calendars.count();

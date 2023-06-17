@@ -511,6 +511,11 @@
 					method: 'PATCH',
 					headers: headers,
 					body: JSON.stringify(newStop)
+				}).then((r) => {
+					fetchStops(true).then(() => {
+						console.log('Stop database updated');
+					});
+					return r;
 				});
 			} else {
 				let comment = null;
