@@ -4,54 +4,102 @@
 	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
+	import { liveQuery } from 'dexie';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
-	import DraggableList from '../../../../lib/stops/DraggableList.svelte';
+	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
+	import DraggableList from '$lib/stops/DraggableList.svelte';
+
 	export let data = null;
 
-	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
-
-	let stops = data.stops;
-	let routes = data.routeStops;
-	let allRoutes = data.routes;
-	let route = data.route;
-	let selectedRouteId = route.subroutes[0].id;
-	$: routeIds = routes[selectedRouteId];
-	$: routeStops = routeIds.map((stop) => stops[stop]);
-	$: routeIds && updateRouteLine();
-	console.log(route);
-	let dragMode = 'move';
 	let map;
+	let mapElem;
+	let dragMode = 'move';
 
 	let mapLoaded = false;
 
-	const selectedStop = writable(null);
-	const selectedGtfsStop = writable(null);
+	const stops = liveQuery(() => getStops());
+	const routes = liveQuery(() => getRoutes());
 
-	const previewedTrip = writable(null);
+	async function loadData() {
+		await Promise.all([fetchStops(), fetchRoutes()]);
+	}
 
-	selectedGtfsStop.subscribe((gtfsStop) => {
-		previewedTrip.set(null);
-		if (!map) return;
-
-		console.log('padding', { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 });
-		map.easeTo({
-			padding: { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 },
-			duration: 300
-		});
-		return;
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
 	});
 
-	selectedStop.subscribe((stop) => {
-		if (!map) return;
+	const routeId = data.routeId;
 
-		console.log('padding', { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 });
-		map.easeTo({
-			padding: { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 },
-			duration: 300
-		});
-		return;
+	// Was routes
+	let routeStops = data.routeStops;
+
+	const route = derived(routes, ($routes) => {
+		if (!$routes) return;
+		return $routes[routeId];
 	});
+
+	const selectedSubrouteId = writable(null);
+
+	const subrouteStopIds = writable([]);
+
+	const subrouteStops = derived([stops, subrouteStopIds], ([$stops, $subrouteStopIds]) => {
+		return $subrouteStopIds?.map((stop) => $stops[stop]);
+	});
+
+	stops.subscribe(() => {
+		if (mapLoaded) {
+			drawStops();
+		}
+	});
+
+	routes.subscribe(($routes) => {
+		$selectedSubrouteId = $routes[routeId].subroutes[0].id;
+
+		if ($selectedSubrouteId && routeStops) {
+			$subrouteStopIds = routeStops[$selectedSubrouteId];
+		}
+	});
+
+	subrouteStopIds.subscribe(($subrouteStopIds) => {
+		if ($subrouteStopIds) {
+			updateRouteLine();
+		}
+	});
+
+	subrouteStops.subscribe(($subrouteStops) => {
+		if ($subrouteStops && map) {
+			console.log('centering map 1');
+			console.log($subrouteStops);
+			centerMap();
+		}
+	});
+
+	selectedSubrouteId.subscribe(($selectedSubrouteId) => {
+		if ($selectedSubrouteId && routeStops) {
+			$subrouteStopIds = routeStops[$selectedSubrouteId];
+		}
+	});
+
+	function drawStops() {
+		console.log('drawing stops');
+		map.getSource('stops').setData({
+			type: 'FeatureCollection',
+			features: Object.values($stops).map((stop) => ({
+				type: 'Feature',
+				geometry: {
+					type: 'Point',
+					coordinates: [stop.lon, stop.lat]
+				},
+				properties: {
+					id: stop.id,
+					osm_name: stop.osm_name
+				},
+				id: stop.id
+			}))
+		});
+	}
 
 	function addSourcesAndLayers() {
 		map.addSource('routeline', {
@@ -60,7 +108,7 @@
 				type: 'Feature',
 				geometry: {
 					type: 'LineString',
-					coordinates: routeIds.map((stopNum) => [stops[stopNum].lon, stops[stopNum].lat])
+					coordinates: $subrouteStopIds.map((stopNum) => [$stops[stopNum].lon, $stops[stopNum].lat])
 				}
 			}
 		});
@@ -79,18 +127,7 @@
 			type: 'geojson',
 			data: {
 				type: 'FeatureCollection',
-				features: Object.values(stops).map((stop) => ({
-					type: 'Feature',
-					geometry: {
-						type: 'Point',
-						coordinates: [stop.lon, stop.lat]
-					},
-					properties: {
-						id: stop.id,
-						osm_name: stop.osm_name
-					},
-					id: stop.id
-				}))
+				features: []
 			}
 		});
 
@@ -133,11 +170,12 @@
 	}
 
 	function updateRouteLine() {
-		if (!map || !map.getSource('routeline')) return;
+		if (!map || !map.getSource('routeline') || !$subrouteStopIds) return;
+
 		map.getSource('routeline').setData({
 			type: 'LineString',
-			coordinates: routeIds.map((stop) => {
-				return [stops[stop].lon, stops[stop].lat];
+			coordinates: $subrouteStopIds.map((stop) => {
+				return [$stops[stop].lon, $stops[stop].lat];
 			})
 		});
 	}
@@ -154,9 +192,9 @@
 			// Set a UI indicator for dragging.
 			canvas.style.cursor = 'grabbing';
 			// insert a coordinate in the current location in the route
-			let rt = routeIds.map((stop) => [stops[stop].lon, stops[stop].lat]);
+			let rt = $subrouteStopIds.map((stop) => [$stops[stop].lon, $stops[stop].lat]);
 
-			let index = routeIds.indexOf(initDragStop.id);
+			let index = $subrouteStopIds.indexOf(initDragStop.id);
 			rt.splice(
 				index + (dragMode === 'add' && index != 0 ? 1 : 0),
 				dragMode === 'add' ? 0 : 1,
@@ -168,15 +206,16 @@
 				coordinates: rt
 			});
 		}
+
 		function onMoveLine(e) {
 			const coords = e.lngLat;
 
 			canvas.style.cursor = 'grabbing';
 
-			let rt = routeIds.map((stop) => [stops[stop].lon, stops[stop].lat]);
+			let rt = $subrouteStopIds.map((stop) => [$stops[stop].lon, $stops[stop].lat]);
 
 			rt.splice(
-				routeIds.indexOf(initDragStop.id) + 1,
+				$subrouteStopIds.indexOf(initDragStop.id) + 1,
 				0,
 				hoveredStop ? [hoveredStop.lon, hoveredStop.lat] : [coords.lng, coords.lat]
 			);
@@ -191,18 +230,17 @@
 			canvas.style.cursor = '';
 
 			if (hoveredStop) {
-				let index = routeIds.indexOf(initDragStop.id);
-				let hoverIndex = routeIds.indexOf(hoveredStop.id);
+				let index = $subrouteStopIds.indexOf(initDragStop.id);
+				let hoverIndex = $subrouteStopIds.indexOf(hoveredStop.id);
 				if (Math.abs(index - hoverIndex) !== 1 || dragMode === 'add') {
-					routeIds.splice(
+					$subrouteStopIds.splice(
 						index + (dragMode === 'add' && index != 0 ? 1 : 0),
 						dragMode === 'add' ? 0 : 1,
 						hoveredStop.id
 					);
 				} else if (initDragStop.id !== hoveredStop.id) {
-					routeIds.splice(index, 1);
+					$subrouteStopIds.splice(index, 1);
 				}
-				routeIds = routeIds;
 			}
 			updateRouteLine();
 
@@ -217,8 +255,7 @@
 			canvas.style.cursor = '';
 
 			if (hoveredStop) {
-				routeIds.splice(routeIds.indexOf(initDragStop.id) + 1, 0, hoveredStop.id);
-				routeIds = routeIds;
+				$subrouteStopIds.splice($subrouteStopIds.indexOf(initDragStop.id) + 1, 0, hoveredStop.id);
 			} else {
 				console.log('Unmatched');
 			}
@@ -234,10 +271,9 @@
 		function mouseDownStop(e) {
 			e.preventDefault();
 			e.originalEvent.preventDefault();
-			if (!routeIds.includes(e.features[0].properties.id)) return;
+			if (!$subrouteStopIds.includes(e.features[0].properties.id)) return;
 			if (e.originalEvent.button === 2) {
-				routeIds.splice(routeIds.indexOf(e.features[0].properties.id), 1);
-				routeIds = routeIds;
+				$subrouteStopIds.splice($subrouteStopIds.indexOf(e.features[0].properties.id), 1);
 				updateRouteLine();
 				return;
 			}
@@ -245,7 +281,7 @@
 
 			canvas.style.cursor = 'grab';
 
-			initDragStop = stops[e.features[0].properties.id];
+			initDragStop = $stops[e.features[0].properties.id];
 
 			map.on('mousemove', onMove);
 			map.once('mouseup', onUp);
@@ -257,7 +293,7 @@
 
 			canvas.style.cursor = 'grab';
 
-			var lineStringCoordinates = routeIds.map((stop) => [stops[stop].lon, stops[stop].lat]);
+			var lineStringCoordinates = $subrouteStops.map((stop) => [stop.lon, stop.lat]);
 			var closestIndex = -1;
 			var closestDistance = Infinity;
 
@@ -275,7 +311,7 @@
 			}
 
 			// console.log('Clicked on segment with index:', closestIndex);
-			initDragStop = stops[routeIds[closestIndex]];
+			initDragStop = $stops[$subrouteStopIds[closestIndex]];
 
 			map.on('mousemove', onMoveLine);
 			map.once('mouseup', onUpLine);
@@ -284,20 +320,16 @@
 		map.on('touchstart', 'stops', mouseDownStop);
 		map.on('mousedown', 'routeline', mouseDownLine);
 
-		map.on('mouseenter', 'stops', () => {
-			canvas.style.cursor = 'pointer';
-		});
-		map.on('mouseenter', 'routeline', () => {
-			canvas.style.cursor = 'pointer';
-		});
-
 		map.on('mouseenter', 'stops', (e) => {
-			hoveredStop = stops[e.features[0].properties.id];
-			// console.log(e.features[0]);
+			canvas.style.cursor = 'pointer';
+			hoveredStop = $stops[e.features[0].properties.id];
 		});
 		map.on('mouseleave', 'stops', (e) => {
 			hoveredStop = null;
 			canvas.style.cursor = '';
+		});
+		map.on('mouseenter', 'routeline', () => {
+			canvas.style.cursor = 'pointer';
 		});
 		map.on('mouseleave', 'routeline', (e) => {
 			canvas.style.cursor = '';
@@ -319,42 +351,12 @@
 		});
 	}
 
-	onMount(() => {
-		const coords = routeIds.map((s) => [stops[s].lon, stops[s].lat]);
-		const bounds = coords.reduce((bounds, coord) => {
-			return bounds.extend(coord);
-		}, new LngLatBounds(coords[0], coords[0]));
-		map = new Maplibre({
-			container: 'map',
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
-			center: bounds.getCenter(),
-			minZoom: 8,
-			maxZoom: 20,
-			maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]
-		});
-		map.fitBounds(bounds, { padding: 50 });
-
-		map.addControl(new NavigationControl(), 'top-right');
-
-		map.on('load', () => {
-			addSourcesAndLayers();
-			addEvents();
-
-			mapLoaded = true;
-		});
-	});
-
-	onDestroy(() => {
-		map.remove();
-	});
-
 	let prevStop = null;
 	// [lat,lon,zoom]||null
 	let prevView = null;
+
 	function highlightStop(stopId, _) {
+		if (!mapLoaded) return;
 		map.setFeatureState(
 			{
 				source: 'stops',
@@ -382,17 +384,20 @@
 
 		if (stopId !== null) {
 			map.flyTo({
-				center: stops[stopId],
+				center: $stops[stopId],
 				zoom: 15
 			});
 		}
 	}
+
 	function clickStop(stopId, _) {
-		let stop = stops[stopId];
+		let stop = $stops[stopId];
 		prevView = [stop.lon, stop.lat, 15];
 	}
+
 	let toasting = false;
 	let toastMsg = '';
+
 	function toast(message) {
 		toasting = true;
 		toastMsg = message;
@@ -400,17 +405,72 @@
 			toasting = false;
 		}, 3000);
 	}
+
 	document.addEventListener('paste', (event) => {
 		let data = event.clipboardData.getData('text');
 		try {
 			data = JSON.parse(data);
 			if (Array.isArray(data) && data.every((d) => typeof d === 'number')) {
-				routeIds = data;
+				$subrouteStopIds = data;
 			}
 		} catch (e) {
-			toast('Clipboard data are not stops');
+			toast('Clipboard does not contain a stop array');
 			console.log(e);
 		}
+	});
+
+	function centerMap() {
+		const coords = $subrouteStops.map((s) => [s.lon, s.lat]);
+		if (coords.length === 0) return;
+
+		if (coords.length === 1) {
+			map.setCenter(coords[0]);
+			map.setZoom(16);
+			return;
+		}
+
+		const bounds = coords.reduce((bounds, coord) => {
+			return bounds.extend(coord);
+		}, new LngLatBounds(coords[0], coords[0]));
+
+		map.fitBounds(bounds, { padding: 50 });
+	}
+
+	onMount(() => {
+		map = new Maplibre({
+			container: mapElem,
+			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			// center: bounds.getCenter(),
+			minZoom: 8,
+			maxZoom: 20,
+			maxBounds: [
+				[-10.0, 38.3],
+				[-8.0, 39.35]
+			]
+		});
+
+		if ($subrouteStops) {
+			console.log('centering map 2');
+			console.log($subrouteStops);
+			centerMap();
+		}
+
+		map.addControl(new NavigationControl(), 'top-right');
+
+		map.on('load', () => {
+			addSourcesAndLayers();
+			addEvents();
+
+			if ($stops) {
+				drawStops();
+			}
+
+			mapLoaded = true;
+		});
+	});
+
+	onDestroy(() => {
+		map.remove();
 	});
 </script>
 
@@ -421,7 +481,7 @@
 		</div>
 	</div>
 {/if}
-<div id="map" class="h-full relative">
+<div bind:this={mapElem} class="h-full relative">
 	<div
 		class="absolute lg:left-4 lg:bottom-4 bottom-2 left-2 z-10 bg-base-100 rounded-xl p-1 flex flex-col gap-1"
 	>
@@ -434,7 +494,7 @@
 		<button
 			class="btn btn-sm normal-case"
 			on:mousedown={() => {
-				navigator.clipboard.writeText(JSON.stringify(routeIds));
+				navigator.clipboard.writeText(JSON.stringify($subrouteStopIds));
 				toast('Route stop IDs copied to the clipboard');
 			}}>Export</button
 		>
@@ -462,40 +522,42 @@
 				<div class="flex flex-row w-full gap-2 items-center">
 					<div
 						class="h-8 w-12 rounded-xl flex items-center justify-center font-bold"
-						style:background-color={route.badge_bg}
-						style:color={route.badge_text}
+						style:background-color={$route?.badge_bg}
+						style:color={$route?.badge_text}
 					>
-						{route.code}
+						{$route?.code}
 					</div>
 					<div
-						class="border border-opacity-20 border-base-content rounded-lg w-full flex-1 flex items-center min-h-8 pl-3 text-sm cursor-default"
+						class="font-bold w-full flex-1 flex items-center min-h-8 pl-3 text-sm cursor-default"
 					>
-						{route.name}
+						{$route?.name}
 					</div>
 				</div>
 				<div class="flex flex-row w-full gap-2">
 					<div
 						class="h-8 w-12 rounded-xl flex items-center justify-center font-bold bg-primary text-primary-content"
 					>
-						{selectedRouteId}
+						{$selectedSubrouteId}
 					</div>
 					<select
-						bind:value={selectedRouteId}
-						class="select select-bordered select-sm w-full flex-1 !font-normal"
+						bind:value={$selectedSubrouteId}
+						class="select select-bordered border-neutral border-opacity-20 select-sm w-full flex-1 !font-normal"
 					>
-						{#each route.subroutes as rt}
-							<option value={rt.id}>{rt.flag}</option>
-						{/each}
+						{#if $route}
+							{#each $route.subroutes as subroute}
+								<option value={subroute.id}>{subroute.flag}</option>
+							{/each}
+						{/if}
 					</select>
 				</div>
 			</div>
 			<div class="divider px-6 my-2" />
 			<div class="p-4 pt-0 scrollbar">
 				<!-- By rerendering there is no weird shuffle animation of the list -->
-				{#key selectedRouteId}
+				{#key $selectedSubrouteId}
 					<DraggableList
-						bind:data={routeIds}
-						itemsMap={stops}
+						bind:data={$subrouteStopIds}
+						itemsMap={$stops}
 						onHover={highlightStop}
 						onClick={clickStop}
 						removesItems={true}
