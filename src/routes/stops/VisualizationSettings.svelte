@@ -156,45 +156,43 @@
 	}
 </script>
 
-<div class="flex items-center gap-2">
-	<h2 class="text-lg">Visualização</h2>
-	<select
-		class="select select-primary select-xs"
-		bind:value={visualization}
-		on:change={() => {
-			dispatch('visualization_change');
-		}}
-	>
-		<option value="attrs_log">Log Atributos</option>
-		<option selected value="attrs_weighted">Atributos ponderados</option>
-		<option value="attrs">Atributos linear</option>
-		<!-- <option value="attrs_weighted_log">Log Atributos ponderados</option> -->
-		<option value="refs">Identificação</option>
-		<option value="pics">Fotografada</option>
-	</select>
-</div>
-<div class="flex items-center gap-2">
-	<h2 class="text-lg">Filtros</h2>
-	<div class="max-w-full text-sm breadcrumbs">
-		<ul>
-			{#each filters as filter, i}
-				<li>
-					<div class="badge badge-outline">
-						{filter.type}{#if filter.type === 'attr'}: {filter.attr}{/if}
-						<span
-							class="btn btn-circle btn-error btn-xs"
-							on:click={() => {
-								filters.splice(i, 1);
-								filters = filters;
-								dispatch('filter_change');
-							}}>X</span
-						>
-					</div>
-				</li>
-			{/each}
-		</ul>
+<div class="flex flex-col h-full">
+	<div class="flex items-center gap-2">
+		<select
+			class="select select-bordered select-sm w-full"
+			bind:value={visualization}
+			on:change={() => {
+				dispatch('visualization_change');
+			}}
+		>
+			<option value="attrs_log">Log Atributos</option>
+			<option selected value="attrs_weighted">Atributos ponderados</option>
+			<option value="attrs">Atributos linear</option>
+			<!-- <option value="attrs_weighted_log">Log Atributos ponderados</option> -->
+			<option value="refs">Identificação</option>
+			<option value="pics">Fotografada</option>
+		</select>
 	</div>
-	<label for="new-filter-modal" class="btn btn-xs btn-success">+</label>
+	<div class="divider my-0 p-2" />
+	<div class="flex flex-col gap-2 rounded-lg flex-1 h-full overflow-y-auto">
+		<h2 class="text-lg bg-base-200 font-bold rounded-lg p-1">Filtros</h2>
+		<div class="max-w-full text-sm flex gap-1 flex-col">
+			{#each filters as filter, i}
+				<div class="w-full border rounded-lg p-1 pl-2 flex justify-between items-center">
+					{filter.type}{#if filter.type === 'attr'}: {filter.attr}{/if}
+					<span
+						class="btn btn-square btn-error btn-xs"
+						on:click={() => {
+							filters.splice(i, 1);
+							filters = filters;
+							dispatch('filter_change');
+						}}>X</span
+					>
+				</div>
+			{/each}
+		</div>
+		<label for="new-filter-modal" class="btn btn-xs btn-success">+</label>
+	</div>
 </div>
 
 <input type="checkbox" id="new-filter-modal" class="modal-toggle" />

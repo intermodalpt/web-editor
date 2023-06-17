@@ -7,7 +7,7 @@
 	export let infoUrl = null;
 </script>
 
-<div>
+<div class="flex items-center gap-1">
 	<BooleanToggle bind:state compact={true} {disabled} />
 	{#if label}
 		<span class="label-text">{label}</span>
