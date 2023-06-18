@@ -10,12 +10,15 @@
 	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
 
-	export let data = null;
+	export let data;
+
+	let isAdmin = $decodedToken?.permissions?.is_admin || false;
 
 	let map;
 	let mapElem;
 	let dragMode = 'move';
 
+	let changes = false;
 	let mapLoaded = false;
 
 	const stops = liveQuery(() => getStops());
@@ -32,7 +35,6 @@
 
 	const routeId = data.routeId;
 
-	// Was routes
 	let routeStops = data.routeStops;
 
 	const route = derived(routes, ($routes) => {
@@ -55,7 +57,7 @@
 	});
 
 	routes.subscribe(($routes) => {
-		$selectedSubrouteId = $routes[routeId].subroutes[0].id;
+		$selectedSubrouteId = $routes[routeId]?.subroutes[0]?.id;
 
 		if ($selectedSubrouteId && routeStops) {
 			$subrouteStopIds = routeStops[$selectedSubrouteId];
@@ -65,13 +67,21 @@
 	subrouteStopIds.subscribe(($subrouteStopIds) => {
 		if ($subrouteStopIds) {
 			updateRouteLine();
+
+			let initialStops = routeStops[$selectedSubrouteId] || [];
+			let currentStops = $subrouteStopIds;
+
+			changes = !(
+				initialStops.length == currentStops.length &&
+				initialStops.every(function (element, index) {
+					return element === currentStops[index];
+				})
+			);
 		}
 	});
 
 	subrouteStops.subscribe(($subrouteStops) => {
 		if ($subrouteStops && map) {
-			console.log('centering map 1');
-			console.log($subrouteStops);
 			centerMap();
 		}
 	});
@@ -83,7 +93,6 @@
 	});
 
 	function drawStops() {
-		console.log('drawing stops');
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
 			features: Object.values($stops).map((stop) => ({
@@ -436,11 +445,44 @@
 		map.fitBounds(bounds, { padding: 50 });
 	}
 
+	function saveStops() {
+		let originalStops = routeStops[$selectedSubrouteId];
+		let newStops = $subrouteStopIds;
+
+		fetch(`${apiServer}/v1/routes/${route.id}/stops/subroutes/${$selectedSubrouteId}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${$token}`
+			},
+			body: JSON.stringify({
+				from: {
+					stops: originalStops
+				},
+				to: {
+					stops: newStops
+				}
+			})
+		})
+			.then((resp) => {
+				if (resp.ok) {
+					routeStops[$selectedSubrouteId] = [...newStops];
+					changes = false;
+					toast('Stops saved');
+				} else {
+					toast("The server didn't like this data");
+				}
+			})
+			.catch((e) => {
+				console.log(e);
+				toast('Error saving stops');
+			});
+	}
+
 	onMount(() => {
 		map = new Maplibre({
 			container: mapElem,
 			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
-			// center: bounds.getCenter(),
 			minZoom: 8,
 			maxZoom: 20,
 			maxBounds: [
@@ -450,12 +492,11 @@
 		});
 
 		if ($subrouteStops) {
-			console.log('centering map 2');
-			console.log($subrouteStops);
 			centerMap();
 		}
 
-		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new NavigationControl(), 'top-left');
+		map.setPadding({ right: 450 });
 
 		map.on('load', () => {
 			addSourcesAndLayers();
@@ -552,7 +593,7 @@
 				</div>
 			</div>
 			<div class="divider px-6 my-2" />
-			<div class="p-4 pt-0 scrollbar">
+			<div class="px-4 scrollbar">
 				<!-- By rerendering there is no weird shuffle animation of the list -->
 				{#key $selectedSubrouteId}
 					<DraggableList
@@ -563,6 +604,16 @@
 						removesItems={true}
 					/>
 				{/key}
+			</div>
+			<div class="divider px-6 m-2" />
+			<div class="flex">
+				<input
+					disabled={!changes || !isAdmin}
+					type="button"
+					value="Guardar"
+					class="btn btn-md btn-primary flex-1"
+					on:click={saveStops}
+				/>
 			</div>
 		</div>
 	</div>
