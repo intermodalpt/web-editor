@@ -2,7 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
-	import { decodedToken, token } from '$lib/stores.js';
+	import { decodedToken, token,toast } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import {
@@ -106,7 +106,7 @@
 				}
 			})
 			.catch((e) => {
-				alert('Failed to load stops');
+				toast('Failed to load stops', 'error');
 				console.log(e);
 			})
 			.then(async () => {
@@ -420,25 +420,25 @@
 	function saveStopMeta() {
 		if (hasFlags) {
 			if (flagsData.length === 0) {
-				alert('Nenhum postalete inserido');
+				toast('Nenhum postalete inserido', 'error')
 				return;
 			}
 
 			// Check if there are flags without ids
 			if (flagsData.some((flag) => flag.id === null)) {
-				alert('Campo id em falta no postalete');
+				toast('Campo id em falta no postalete', 'error')
 				return;
 			}
 		}
 		if (hasSchedules) {
 			if (hasSchedules.length === 0) {
-				alert('Nenhum horário inserido');
+				toast('Nenhum horário inserido', 'error')
 				return;
 			}
 
 			// Check if there are schedules with null types
 			if (schedulesData.some((schedule) => schedule.type === null)) {
-				alert('Campo origem em falta no horário');
+				toast('Campo origem em falta no horário', 'error')
 				return;
 			}
 		}
@@ -551,7 +551,7 @@
 						} else {
 							r.json().then((id) => {
 								if (id === -1) {
-									alert('Erro a atualizar:\nO servidor não reconheceu as alterações');
+									toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error')
 								} else {
 									applyChanges();
 								}
@@ -560,10 +560,10 @@
 					} else {
 						r.text()
 							.then((error) => {
-								alert(`Erro a atualizar:\n${error}`);
+								toast(`Erro a atualizar:\n${error}`, 'error');
 							})
 							.catch(() => {
-								alert('Erro a atualizar');
+								toast('Erro a atualizar', 'error')
 							});
 					}
 				})
@@ -572,6 +572,7 @@
 				});
 		} else {
 			console.log('Não foram feitas alterações na paragem');
+			toast('Não foram feitas alterações na paragem')
 			$selectedStop = null;
 		}
 	}
@@ -989,10 +990,10 @@
 
 <div id="map" class="h-full relative">
 	{#if loading}
-		<div style="background-color: #33336699" class="z-[2000] absolute inset-0" />
+		<div style="background-color: #33336699" class="z-[2000] absolute inset-0 backdrop-blur-sm" />
 		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
 			<div
-				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl border-2 border-warning max-h-full"
+				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl max-h-full"
 			>
 				<span class="text-xl">A carregar</span>
 				<span
@@ -1075,6 +1076,9 @@
 							<div
 								class="card card-compact w-full bg-base-100 shadow-md cursor-pointer"
 								on:click={() => {
+									flyToStop(result);
+								}}
+								on:keypress={() => {
 									flyToStop(result);
 								}}
 							>
@@ -1372,6 +1376,10 @@
 										/>
 									</a>
 								{/each}
+							{:else}
+								<div class="flex flex-col items-center justify-center w-full h-40">
+									<span class="text-gray-500">Sem fotos</span>
+								</div>
 							{/if}
 						</div>
 						<div class="flex justify-end">

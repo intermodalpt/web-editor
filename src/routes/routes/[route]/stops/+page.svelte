@@ -5,7 +5,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
-	import { decodedToken, token } from '$lib/stores.js';
+	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
 	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
@@ -418,18 +418,6 @@
 		let stop = $stops[stopId];
 		prevView = [stop.lon, stop.lat, 15];
 	}
-
-	let toasting = false;
-	let toastMsg = '';
-
-	function toast(message) {
-		toasting = true;
-		toastMsg = message;
-		setTimeout(() => {
-			toasting = false;
-		}, 3000);
-	}
-
 	document.addEventListener('paste', (event) => {
 		let data = event.clipboardData.getData('text');
 		try {
@@ -530,13 +518,6 @@
 	});
 </script>
 
-{#if toasting}
-	<div class="toast z-50">
-		<div class="alert alert-info">
-			<span>{toastMsg}</span>
-		</div>
-	</div>
-{/if}
 <div bind:this={mapElem} class="h-full relative">
 	<div
 		class="absolute lg:left-4 lg:bottom-4 bottom-2 left-2 z-10 bg-base-100 rounded-xl p-1 flex flex-col gap-1"
