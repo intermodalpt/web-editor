@@ -4,16 +4,18 @@ import { browser } from '$app/environment';
 
 export const db = new Dexie('intermodal');
 
-db.version(2).stores({
+db.version(3).stores({
     stops: '&id',
     routes: '&id',
     calendars: '&id',
+    parishes: '&id',
     settings: 'key',
 });
 
 export let stopsLoaded = false;
 export let routesLoaded = false;
 export let calendarsLoaded = false;
+export let parishesLoaded = false;
 
 function timestampKey(tableName) {
     return `${tableName}_updated`;
@@ -40,7 +42,6 @@ async function invalidateCacheTimestamp(tableName) {
 }
 
 export async function fetchStops(ifMissing = true) {
-    console.log('loadingStops');
     if (!browser) {
         return;
     }
@@ -125,28 +126,55 @@ export async function fetchCalendars(ifMissing = true) {
     calendarsLoaded = true;
 }
 
+export async function fetchParishes(ifMissing = true) {
+    if (!browser) {
+        return;
+    }
+
+    let cacheInvalidated = true;
+    if (!ifMissing) {
+        await invalidateCacheTimestamp('parishes');
+    } else {
+        cacheInvalidated = await isCacheInvalidated('parishes');
+    }
+
+    if (!cacheInvalidated) {
+        const count = await db.parishes.count();
+        if (count > 0 && ifMissing) {
+            return;
+        }
+    }
+
+    const response = await fetch(`${apiServer}/v1/parishes`);
+    const parishes = await response.json();
+    await db.parishes.clear();
+    await db.parishes.bulkPut(parishes);
+    updateCacheTimestamp('parishes');
+    parishesLoaded = true;
+}
+
 export async function getStops() {
-    return new Promise(async (resolve, reject) => {
-        const stops = await db.stops.toArray();
-        const stopsObject = Object.fromEntries(stops.map((s) => [s.id, s]));
-        resolve(stopsObject);
-    });
+    const stops = await db.stops.toArray();
+    const stopsObject = Object.fromEntries(stops.map((s) => [s.id, s]));
+    return stopsObject;
 }
 
 export async function getRoutes() {
-    return new Promise(async (resolve, reject) => {
-        const routes = await db.routes.toArray();
-        const routesObject = Object.fromEntries(routes.map((r) => [r.id, r]));
-        resolve(routesObject);
-    });
+    const routes = await db.routes.toArray();
+    const routesObject = Object.fromEntries(routes.map((r) => [r.id, r]));
+    return routesObject
 }
 
 export async function getCalendars() {
-    return new Promise(async (resolve, reject) => {
-        const calendars = await db.calendars.toArray();
-        const calendarsObject = Object.fromEntries(calendars.map((c) => [c.id, c]));
-        resolve(calendarsObject);
-    });
+    const calendars = await db.calendars.toArray();
+    const calendarsObject = Object.fromEntries(calendars.map((c) => [c.id, c]));
+    return calendarsObject
+}
+
+export async function getParishes() {
+    const parishes = await db.parishes.toArray();
+    const parishesObject = Object.fromEntries(parishes.map((c) => [c.id, c]));
+    return parishesObject;
 }
 
 
@@ -165,6 +193,10 @@ export async function loadMissing() {
         missing.push(fetchCalendars());
     }
 
+    if (!parishesLoaded) {
+        missing.push(fetchParishes());
+    }
+
     await Promise.all(missing);
 }
 
@@ -172,10 +204,12 @@ export async function wipeCachedData() {
     await Promise.all([
         db.stops.clear(),
         db.routes.clear(),
-        db.calendars.clear()
+        db.calendars.clear(),
+        db.parishes.clear()
     ]).then(() => {
         stopsLoaded = false;
         routesLoaded = false;
         calendarsLoaded = false;
+        parishesLoaded = false;
     });
 }
