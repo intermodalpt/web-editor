@@ -165,7 +165,9 @@
 					<div class="content">
 						<slot />
 						<p class="text-base-content">
-							({('' + item.id).padStart(5, 0)}) {item.official_name || item.name || item.osm_name}
+							({('' + item?.id).padStart(5, 0)}) {item?.official_name ||
+								item?.name ||
+								item?.osm_name}
 						</p>
 					</div>
 				</div>

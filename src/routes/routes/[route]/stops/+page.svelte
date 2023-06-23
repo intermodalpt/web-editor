@@ -47,7 +47,14 @@
 	const subrouteStopIds = writable([]);
 
 	const subrouteStops = derived([stops, subrouteStopIds], ([$stops, $subrouteStopIds]) => {
-		return $subrouteStopIds?.map((stop) => $stops[stop]);
+		if (!$stops || !$subrouteStopIds) return;
+		const srStops = $subrouteStopIds?.map((stop) => $stops[stop]);
+		const len = srStops.length;
+		const validSrStops = srStops.filter((stop) => stop);
+		if (len != validSrStops.length) {
+			alert('Some of the stops were not recognized');
+		}
+		return validSrStops;
 	});
 
 	stops.subscribe(() => {
@@ -61,6 +68,10 @@
 
 		if ($selectedSubrouteId && routeStops) {
 			$subrouteStopIds = routeStops[$selectedSubrouteId];
+			if (!$subrouteStopIds) {
+				alert('No stops found for this subroute (might be a bug)');
+				$subrouteStopIds = [];
+			}
 		}
 	});
 
@@ -89,6 +100,10 @@
 	selectedSubrouteId.subscribe(($selectedSubrouteId) => {
 		if ($selectedSubrouteId && routeStops) {
 			$subrouteStopIds = routeStops[$selectedSubrouteId];
+			if (!$subrouteStopIds) {
+				alert('No stops found for this subroute (might be a bug)');
+				$subrouteStopIds = [];
+			}
 		}
 	});
 
