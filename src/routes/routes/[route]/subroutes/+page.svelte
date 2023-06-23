@@ -1,7 +1,7 @@
 <script>
 	import { invalidate } from '$app/navigation';
 	import { apiServer } from '$lib/settings.js';
-	import { token, operators } from '$lib/stores.js';
+	import { token, operators, toast } from '$lib/stores.js';
 	import { decodedToken } from '$lib/stores.js';
 
 	/** @type {import('./$types').PageData} */
@@ -29,6 +29,7 @@
 			if (!subroute.changed && subroute.id) {
 				continue;
 			}
+			console.log(subroute)
 			if (subroute.id) {
 				fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
 					method: 'PATCH',
@@ -43,6 +44,7 @@
 					})
 				}).then((res) => {
 					if (res.ok) {
+						toast(`Variante ${subroute.flag} alterada com sucesso`, 'success')
 						subroute.changed = false;
 						savedCount += 1;
 					} else {
@@ -112,14 +114,16 @@
 			}).then((res) => {
 				if (res.ok) {
 					routeChanged = false;
+					toast('Carreira alterada com sucesso', 'success')
 				} else {
 					res
 						.text()
 						.then((error) => {
 							alert(`Erro a atualizar:\n${error}`);
+							toast(`Erro a atualizar:\n${error}`, 'error')
 						})
 						.catch(() => {
-							alert('Erro a atualizar');
+							toast('Erro a atualizar', 'error')
 						});
 				}
 			});
@@ -207,7 +211,7 @@
 	}
 </script>
 
-<div class="card self-center bg-base-100 shadow-md w-full max-w-[900px]">
+<div class="card self-center bg-base-100 shadow-md w-full max-w-[900px] mt-2">
 	<div class="card-body">
 		<h2 class="card-title">Detalhes de {route.name}</h2>
 		<div>

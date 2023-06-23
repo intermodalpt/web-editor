@@ -143,3 +143,23 @@ export async function loadCalendars(fetch) {
 	calendars.set(calendarsData);
 	return calendarsData;
 }
+
+
+export const toasts = writable([]);
+
+export const toast = (message, type = 'info', duration = 5000) => {
+	let newToast = {
+		message,
+		type,
+		duration,
+		id: Math.random().toString(36).substr(2, 9)
+	};
+	toasts.update((toasts) => {
+		return [...toasts, newToast];
+	});
+	setTimeout(() => {
+		toasts.update((toasts) => {
+			return toasts.filter((toast) => toast.id !== newToast.id);
+		});
+	}, duration);
+}
