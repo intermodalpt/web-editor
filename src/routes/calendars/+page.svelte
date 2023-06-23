@@ -6,9 +6,6 @@
 	import { liveQuery } from 'dexie';
 	import { fetchCalendars, getCalendars, loadMissing } from '$lib/db';
 
-	/** @type {import('./$types').PageData} */
-	export let data;
-
 	const calendars = liveQuery(() => getCalendars());
 
 	async function loadData() {
@@ -151,7 +148,7 @@
 	<meta name="description" content="Calendários" />
 </svelte:head>
 
-<div class="flex flex-col self-center gap-4">
+<div class="flex flex-col self-center gap-4 p-2">
 	<div class="card bg-base-100 shadow-md">
 		<div class="card-body">
 			<h2 class="card-title">Calendários existentes</h2>

@@ -4,9 +4,6 @@
 	import { fetchRoutes, getRoutes, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
 
-	/** @type {import('./$types').PageData} */
-	export let data;
-
 	const routes = liveQuery(() => getRoutes());
 	const filter = writable('');
 
@@ -42,24 +39,20 @@
 	});
 </script>
 
-<div class="form-control self-end">
-	<div class="input-group">
-		<span>Filtro:</span>
-		<input type="text" class="input input-border" bind:value={$filter} />
+<div class="form-control self-center p-2">
+	<div class="join border">
+		<input type="text" class="input input-border join-item" bind:value={$filter} />
+		<input type="button" class="btn join-item" value="Filtrar"/>
 	</div>
 </div>
 
 <div class="card card-compact max-w-5xl bg-base-100 shadow-md self-center">
-	<div class="card-body overflow-x">
-		<table class="table table-compact">
+	<div class="card-body">
+		<table class="table table-compact table-pin-rows">
 			{#each Object.entries(operators) as [operator_id, operator]}
 				<thead>
 					<tr>
 						<th class="text-center" colspan="3">{operator.name}</th>
-					</tr>
-					<tr>
-						<th>Código</th>
-						<th>Nome</th>
 					</tr>
 				</thead>
 				<tbody>
