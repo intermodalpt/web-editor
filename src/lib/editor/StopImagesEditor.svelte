@@ -96,7 +96,8 @@
 		const quality = pic.tagged || pic.metaCompleteness?.quality;
 		const stops = pic.stops != null && pic.stops.length > 0;
 
-		pic.metaCompleteness.total = !(POSITION_REQUIRED && !position) && visibility && quality && stops;
+		pic.metaCompleteness.total =
+			!(POSITION_REQUIRED && !position) && visibility && quality && stops;
 		// Trigger hasModifiedPictues update
 		$newPictures = $newPictures;
 	}
@@ -355,6 +356,7 @@
 					<MapLocationPicker
 						lat={tmpLat}
 						lon={tmpLon}
+						stops={$stops}
 						on:change={(e) => {
 							tmpLat = e.detail.lat;
 							tmpLon = e.detail.lon;
