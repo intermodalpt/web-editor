@@ -1979,6 +1979,7 @@
 	</div>
 	{#if uploadingPics}
 		<StopImagesEditor
+			stops={$stops}
 			stop={selectedStop}
 			{stopPictures}
 			{newPictures}

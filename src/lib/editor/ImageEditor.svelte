@@ -3,19 +3,19 @@
 	import { apiServer } from '$lib/settings.js';
 	import { picStopRels, stopPicRels, stops, token } from '$lib/stores.js';
 	import MapLocationPicker from '$lib/editor/MapLocationPicker.svelte';
+	import { writable } from 'svelte/store';
 
 	export let image;
 
 	const dispatch = createEventDispatcher();
 
-	let stopInput;
 	let location = {
 		lat: $image.lat,
 		lon: $image.lon
 	};
 
 	let tags = [];
-	let stopIds = [];
+	let stopIds = writable([]);
 	let isSensitive = $image.sensitivity;
 	let isPublic = image.public;
 	let notes = $image.notes;
@@ -36,7 +36,9 @@
 		location.lon = img.lon;
 
 		let stopRels = $picStopRels[img.id];
-		stopIds = stopRels === undefined ? [] : stopRels;
+		if (stopRels != undefined) {
+			$stopIds = stopRels;
+		}
 	});
 
 	function addTag() {
@@ -59,15 +61,15 @@
 		let entryValue = parseInt(stopInput.value);
 
 		if (!isNaN(entryValue)) {
-			stopIds.push(entryValue);
-			stopIds = stopIds;
+			$stopIds.push(entryValue);
+			$stopIds = $stopIds;
 		}
 		stopInput.value = '';
 	}
 
 	function removeStop(stopId) {
-		stopIds.splice(stopIds.indexOf(stopId), 1);
-		stopIds = stopIds;
+		$stopIds.splice($stopIds.indexOf(stopId), 1);
+		$stopIds = $stopIds;
 	}
 
 	function adjustQualityLabel() {
@@ -113,7 +115,7 @@
 
 	function save() {
 		if (
-			stopIds.length === 0 &&
+			$stopIds.length === 0 &&
 			!confirm('Picture with 0 stops tagged. Do you really want to save it this way?')
 		) {
 			return;
@@ -123,7 +125,7 @@
 			lat: $image.lat,
 			lon: $image.lon,
 			tags: tags,
-			stops: stopIds,
+			stops: $stopIds,
 			sensitive: isSensitive,
 			public: isPublic,
 			notes: notes,
@@ -157,7 +159,7 @@
 
 				let oldStopIds = $picStopRels[$image.id];
 				if (oldStopIds) {
-					let removedStopIds = oldStopIds.filter((x) => !stopIds.includes(x));
+					let removedStopIds = oldStopIds.filter((x) => !$stopIds.includes(x));
 					removedStopIds.forEach((stopId) => {
 						const picIds = $stopPicRels[stopId];
 						if (picIds.indexOf($image.id)) {
@@ -166,7 +168,7 @@
 					});
 				}
 
-				stopIds.forEach((stopId) => {
+				$stopIds.forEach((stopId) => {
 					const picIds = $stopPicRels[stopId];
 					if (picIds.indexOf($image.id)) {
 						picIds.push($image.id);
@@ -212,6 +214,8 @@
 				lat={$image.lat}
 				lon={$image.lon}
 				stops={$stops}
+				canSelectStops={true}
+				selectedStopIds={stopIds}
 				on:change={(e) => {
 					location.lat = e.detail.lat;
 					location.lon = e.detail.lon;
@@ -270,7 +274,7 @@
 					<span class="label-text">Stops</span>
 				</label>
 				<div>
-					{#each stopIds as stopId}
+					{#each $stopIds as stopId}
 						<div class="badge badge-outline badge-lg">
 							{stopId} - {$stops[stopId].short_name ||
 								$stops[stopId].name ||
@@ -280,19 +284,11 @@
 							</div>
 						</div>
 					{/each}
-					<input
-						type="number"
-						disabled
-						class="input input-bordered"
-						id="stop-id"
-						placeholder="Select on map"
-						bind:this={stopInput}
-					/>
 					<!-- <select id="stop-pos" class="select select-bordered">
 						<option>Foreground</option>
 						<option>Background</option>
 					</select> -->
-					<input class="btn" type="button" value="Add" on:click={addStop} />
+					<!-- <input class="btn" type="button" value="Add" on:click={addStop} /> -->
 				</div>
 			</div>
 		</div>
@@ -330,9 +326,9 @@
 		</div>
 	</div>
 	<div class="modal-action">
-		<button class="btn btn-error" on:click={deleteImage}>Delete</button>
+		<button class="btn btn-error" on:click={deleteImage}>Apagar</button>
 		<span class="grow" />
-		<button class="btn" on:click={close}>Close without saving</button>
-		<button class="btn btn-primary" on:click={save}>Save</button>
+		<button class="btn" on:click={close}>Fechar sem guardar</button>
+		<button class="btn btn-primary" on:click={save}>Guardar</button>
 	</div>
 </div>
