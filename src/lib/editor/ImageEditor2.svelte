@@ -1,0 +1,302 @@
+<script>
+	import { createEventDispatcher, tick } from 'svelte';
+	import { writable } from 'svelte/store';
+	import { token, decodedToken } from '$lib/stores.js';
+	import { isDeepEqual } from '$lib/utils.js';
+	import MapLocationPicker from '$lib/editor/MapLocationPicker.svelte';
+
+	export let selectedImage;
+	export let stops;
+
+	const dispatch = createEventDispatcher();
+
+	const editable =
+		$selectedImage.uploader === $decodedToken?.permissions?.uid ||
+		$decodedToken?.permissions?.is_admin;
+
+	let qualityLabelElem;
+	let locationPicker;
+
+	// Provisory state
+	let lon;
+	let lat;
+	let stopIds = writable([]);
+	let isSensitive;
+	let isPublic;
+	let quality;
+	let notes;
+	$: trimmedNotes = notes?.trim() === '' ? null : notes;
+
+	$: stopsChanged = !isDeepEqual($stopIds, $selectedImage.stops);
+	$: posChanged = lon !== $selectedImage.lon || lat !== $selectedImage.lat;
+	$: notesChanged = trimmedNotes !== $selectedImage.notes;
+	$: sensitiveChanged = isSensitive !== $selectedImage.sensitive;
+	$: publicChanged = isPublic !== $selectedImage.public;
+	$: qualityChanged = quality !== $selectedImage.quality;
+	$: changed =
+		stopsChanged ||
+		posChanged ||
+		notesChanged ||
+		sensitiveChanged ||
+		publicChanged ||
+		qualityChanged;
+
+	$: dispatch('change', { fromOriginal: changed });
+
+	selectedImage.subscribe(async (img) => {
+		if (img == null) {
+			return;
+		} else {
+			lon = img.lon;
+			lat = img.lat;
+			notes = img.notes;
+			$stopIds = [...img.stops];
+			isPublic = img.public;
+			isSensitive = img.sensitive;
+			quality = img.quality;
+			changed = false;
+			await tick();
+			adjustQualityLabel();
+			locationPicker?.setMarkerPosition(lon, lat);
+		}
+	});
+
+	function adjustQualityLabel() {
+		let label = qualityLabelElem;
+		if (!label) return;
+
+		switch (quality) {
+			case 0:
+				label.textContent = '0 - Sem informação';
+				break;
+			case 10:
+				label.textContent = '1 - Desfocada';
+				break;
+			case 20:
+				label.textContent = '2 - De dentro de um veiculo (visível na imagem)';
+				break;
+			case 30:
+				label.textContent = '3 - De dentro de um veiculo (reflexos ou filto no vidro)';
+				break;
+			case 40:
+				label.textContent = '4 - Mal direccionada';
+				break;
+			case 50:
+				label.textContent = '5 - Noturna';
+				break;
+			case 60:
+				label.textContent = '6 - Excesso ou falta de brilho';
+				break;
+			case 70:
+				label.textContent = '7 - Paragem não é sujeito principal';
+				break;
+			case 80:
+				label.textContent = '8 - Pessoas, veículos ou lixo';
+				break;
+			case 90:
+				label.textContent = '9 - Imperfeições menores (seria possivel fazer melhor?)';
+				break;
+			case 100:
+				label.textContent = '10 - Absolutamente nada de assinalável';
+				break;
+			default:
+				label.textContent = '?';
+		}
+	}
+
+	function removeStop(stopId) {
+		$stopIds.splice($stopIds.indexOf(stopId), 1);
+		$stopIds = $stopIds;
+	}
+
+	async function saveChanges() {
+		const savedPic = {
+			lat: lat,
+			lon: lon,
+			stops: [...$stopIds],
+			public: isPublic,
+			sensitive: isSensitive,
+			quality: quality,
+			notes: trimmedNotes,
+			tags: $selectedImage.tags,
+			tagged: true
+		};
+
+		fetch(`${apiServer}/v1/stop_pics/${$selectedImage.id}`, {
+			method: 'PATCH',
+			body: JSON.stringify(savedPic),
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${$token}`
+			}
+		})
+			.catch((e) => alert('Falha a guardar.'))
+			.then(() => {
+				$selectedImage.tagged = true;
+				$selectedImage.lon = savedPic.lon;
+				$selectedImage.lat = savedPic.lat;
+				$selectedImage.stops = savedPic.stops;
+				$selectedImage.public = savedPic.public;
+				$selectedImage.sensitive = savedPic.sensitive;
+				$selectedImage.quality = savedPic.quality;
+				$selectedImage.notes = savedPic.notes;
+
+				dispatch('save');
+			});
+	}
+
+	function deleteImage() {
+		if (confirm('Tem certeza que quer apagar esta imagem?')) {
+			fetch(`${apiServer}/v1/stop_pics/${$selectedImage.id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					authorization: `Bearer ${$token}`
+				}
+			})
+				.catch(() => alert('Failed to delete the image'))
+				.then(() => {
+					dispatch('delete', { id: $selectedImage.id });
+				});
+		}
+	}
+</script>
+
+<div class="flex flex-col overflow-y-auto">
+	<div class="relative w-fit self-center">
+		<img src={$selectedImage.url_medium} class="rounded-lg w-full max-h-[100em]" />
+		<a
+			target="_blank"
+			href={$selectedImage.url_full}
+			class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
+			>Ver completa</a
+		>
+		<span
+			class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
+			on:click={deleteImage}>Apagar</span
+		>
+	</div>
+	<h2 class="text-xl font-bold py-2">
+		Localização e paragens
+		{#if !lat || !lon}
+			<span class="bg-warning text-warning-content rounded-full p-1 text-center text-lg"
+				>Incompleto</span
+			>
+		{/if}
+	</h2>
+	Onde se encontrava quando tirou esta fotografia?
+	<MapLocationPicker
+		bind:this={locationPicker}
+		{lat}
+		{lon}
+		{stops}
+		selectedStopIds={stopIds}
+		canSelectStops={editable}
+		on:change={(e) => {
+			lat = e.detail.lat;
+			lon = e.detail.lon;
+		}}
+	/>
+	<div class="form-control">
+		<label class="label">
+			<span class="label-text">Paragens</span>
+		</label>
+		{#if $stopIds.length === 0}
+			<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
+		{/if}
+		<div class="flex flex-col">
+			{#each $stopIds as stopId}
+				<div class="badge badge-outline badge-lg">
+					{stopId} - {stops[stopId]?.short_name ||
+						stops[stopId]?.name ||
+						stops[stopId]?.official_name}
+					{stops[stopId] ? '' : '(⚠️)'}
+					{#if editable}
+						<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>✕</div>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	</div>
+	<h2 class="text-xl font-bold py-2">Classificação</h2>
+	<div class="flex gap-3 items-baseline flex-wrap">
+		<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
+			{#if isSensitive}Sensivel{:else}Não sensivel{/if}
+			<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
+		</label>
+		<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
+			{#if isPublic}Pública{:else}Privada{/if}
+			<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
+		</label>
+	</div>
+	<span class="text-lg">
+		A imagem
+		{#if isSensitive}
+			<span class="text-error font-bold">deve de ser censurada</span>
+		{:else}
+			<span class="text-success font-bold">não infinge a privacidade</span>
+		{/if}
+		e
+		{#if isPublic}
+			<span class="text-success font-bold">tem</span>
+		{:else}
+			<span class="text-error font-bold">não tem</span>
+		{/if}
+		interesse público.
+	</span>
+	<div class="form-control">
+		<label class="label flex-wrap">
+			<span class="label-text">Qualidade da imagem</span>
+			<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
+		</label>
+		<input
+			type="range"
+			min="0"
+			max="100"
+			class="range range-sm"
+			step="10"
+			disabled={!editable}
+			bind:value={quality}
+			on:change={adjustQualityLabel}
+		/>
+		<div class="w-full flex justify-between text-xs px-2">
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+			<span>|</span>
+		</div>
+	</div>
+	<span class="text-xs">
+		As qualidades acima descritas são sugestões e não critérios.<br />
+		Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma pontuação
+		de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
+		e veículos na via pública, cosméticamente agradavel...
+	</span>
+	<div class="form-control">
+		<label class="label">
+			<span class="label-text">Notas</span>
+		</label>
+		<textarea
+			class="textarea textarea-bordered h-12"
+			placeholder="Exemplo: Atrás da paragem encontra-se um gambuzino."
+			disabled={!editable}
+			bind:value={notes}
+		/>
+	</div>
+
+	{#if editable && (!$selectedImage.tagged || changed)}
+		<input
+			type="button"
+			class="btn btn-primary w-full my-4"
+			value="Guardar"
+			on:mouseup={saveChanges}
+		/>
+	{/if}
+</div>

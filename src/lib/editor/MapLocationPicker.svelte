@@ -1,12 +1,15 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
-	import L from 'leaflet?client';
-	import 'leaflet.markercluster?client';
-	import { stops } from '$lib/stores.js';
-	import { icons, dotIcon } from '$lib/assets.js';
+	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
+	import { Map, Marker } from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { writable } from 'svelte/store';
 
+	let mapElem;
 	export let lat;
 	export let lon;
+	export let stops = {};
+	export let canSelectStops = false;
+	export let selectedStopIds = writable([]);
 
 	let map;
 	let marker = null;
@@ -15,77 +18,73 @@
 		lon: lon
 	};
 
+	let mapLoaded = false;
+
 	const dispatch = createEventDispatcher();
 
+	selectedStopIds.subscribe(() => {
+		if (!mapLoaded) return;
+
+		drawSelectedStops();
+	});
+
+	export function setMarkerPosition(lon, lat) {
+		if (!mapLoaded) return;
+
+		location.lon = lon;
+		location.lat = lat;
+
+		if (marker) {
+			marker.setLngLat([lon, lat]);
+		} else {
+			marker = new Marker({ draggable: true }).setLngLat([lon, lat]).setDraggable(true).addTo(map);
+			marker.on('dragend', markerMoved);
+		}
+	}
+
+	const drawStops = () => {
+		map.getSource('stops').setData({
+			type: 'FeatureCollection',
+			features: Object.values(stops).map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {
+						id: stop.id
+					}
+				};
+			})
+		});
+	};
+
+	const drawSelectedStops = () => {
+		const source = map.getSource('selected-stops');
+		source.setData({
+			type: 'FeatureCollection',
+			features: $selectedStopIds
+				.filter((id) => stops[id])
+				.map((id) => {
+					const stop = stops[id];
+					return {
+						type: 'Feature',
+						geometry: {
+							type: 'Point',
+							coordinates: [stop.lon, stop.lat]
+						}
+					};
+				})
+		});
+	};
+
 	let markerMoved = (e) => {
-		let targetLoc = e.target.getLatLng();
+		let targetLoc = e.target.getLngLat();
 		location.lon = targetLoc.lng;
 		location.lat = targetLoc.lat;
 		dispatchChange();
 	};
-
-	function createMap(container) {
-		let m = L.map(container);
-
-		const lastPos = JSON.parse(sessionStorage.getItem('lastPos'));
-
-		if (lat && lon) {
-			m.setView([lat, lon], 16);
-		} else if (lastPos) {
-			m.setView([lastPos[0], lastPos[1]], lastPos[2]);
-		} else {
-			m.setView([38.71856, -9.1372], 10);
-		}
-
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '© OpenStreetMap contributors'
-		}).addTo(m);
-
-		m.maxBounds = new L.LatLngBounds(new L.LatLng(38.3, -10.0), new L.LatLng(39.35, -8.0));
-		m.maxBoundsViscosity = 1.0;
-		m.minZoom = 10;
-
-		if (location.lat) {
-			marker = L.marker([location.lat, location.lon], { draggable: true, icon: dotIcon });
-			marker.addTo(m);
-			marker.on('moveend', markerMoved);
-		}
-
-		m.on('click', function (e) {
-			if (marker) {
-				marker.removeFrom(map);
-			}
-			marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true, icon: dotIcon });
-			location.lon = e.latlng.lng;
-			location.lat = e.latlng.lat;
-			dispatchChange();
-			marker.addTo(map);
-			marker.on('moveend', markerMoved);
-		});
-
-		m.on('moveend', (e) => {
-			sessionStorage.setItem(
-				'lastPos',
-				JSON.stringify([e.target.getCenter().lat, e.target.getCenter().lng, e.target.getZoom()])
-			);
-		});
-
-		let stopsLayer = L.markerClusterGroup({
-			showCoverageOnHover: false,
-			disableClusteringAtZoom: 16
-		});
-
-		Object.values($stops).forEach((stop) => {
-			let marker = L.marker([stop.lat, stop.lon], { icon: icons['osm'] });
-			marker.bindTooltip(`${stop.id} - ${stop.official_name || stop.name || stop.short_name}`);
-			stopsLayer.addLayer(marker);
-		});
-
-		m.addLayer(stopsLayer);
-
-		return m;
-	}
 
 	function dispatchChange() {
 		dispatch('change', {
@@ -94,33 +93,159 @@
 		});
 	}
 
-	function mapAction(container) {
-		map = createMap(container);
-
-		return {
-			destroy: () => {
-				map.remove();
-				map = null;
-			}
-		};
+	function dispatchSelect() {
+		dispatch('stop-selection-change', {
+			selectedStopIds: $selectedStopIds
+		});
 	}
 
-	// function updateMarkerPosition() {
-	// 	if (marker) {
-	// 		marker.removeFrom(map);
-	// 	}
-	// 	marker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true });
-	// 	location.lon = e.latlng.lng;
-	// 	location.lat = e.latlng.lat;
-	// 	dispatchChange();
-	// 	marker.addTo(map);
-	// 	marker.on('moveend', markerMoved);
-	// }
+	function addSourcesAndLayers() {
+		map.addSource('stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+		map.addLayer({
+			id: 'stops',
+			type: 'circle',
+			source: 'stops',
+			paint: {
+				'circle-color': '#7799ff',
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 2],
+						[16, 3],
+						[17, 15],
+						[18, 20]
+					]
+				},
+				'circle-opacity': 0.6,
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#ffffff'
+			}
+		});
+
+		map.addSource('selected-stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+		map.addLayer({
+			id: 'selected-stops',
+			type: 'circle',
+			source: 'selected-stops',
+			paint: {
+				'circle-color': '#ff7799',
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 2],
+						[16, 3],
+						[17, 15],
+						[18, 20]
+					]
+				},
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#ffffff'
+			}
+		});
+	}
+
+	onMount(() => {
+		const lastPos = JSON.parse(sessionStorage.getItem('lastPos'));
+
+		map = new Map({
+			container: mapElem,
+			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			center: [-9.0, 38.605],
+			zoom: 11,
+			minZoom: 8,
+			maxZoom: 20,
+			maxBounds: [
+				[-10.0, 38.3],
+				[-8.0, 39.35]
+			]
+		});
+
+		if (lat && lon) {
+			map.setCenter([lon, lat]);
+			map.setZoom(16);
+		} else if (lastPos) {
+			map.setCenter([lastPos[0], lastPos[1]]);
+			map.setZoom(lastPos[2]);
+		} else {
+			map.setCenter([-9.1372, 38.71856]);
+			map.setZoom(10);
+		}
+
+		if (location.lon && location.lat) {
+			marker = new Marker().setLngLat([location.lon, location.lat]).setDraggable(true).addTo(map);
+			marker.on('dragend', markerMoved);
+		}
+
+		map.on('click', function (e) {
+			if (canSelectStops) {
+				const selectedFeatures = map.queryRenderedFeatures(e.point, {
+					layers: ['stops']
+				});
+				if (selectedFeatures.length == 1) {
+					const id = selectedFeatures[0].properties.id;
+					if ($selectedStopIds.includes(id)) {
+						$selectedStopIds = $selectedStopIds.filter((stopId) => stopId !== id);
+					} else {
+						$selectedStopIds.push(id);
+						$selectedStopIds = $selectedStopIds;
+					}
+					drawSelectedStops();
+					dispatchSelect();
+					return;
+				} else if (selectedFeatures.length >= 2) {
+					alert('More than one stop selected at once. Try again');
+				}
+			}
+
+			location.lat = e.lngLat.lat;
+			location.lon = e.lngLat.lng;
+
+			console.log('Map click');
+
+			if (marker) {
+				marker.setLngLat(e.lngLat).addTo(map);
+			} else {
+				marker = new Marker({ draggable: true }).setLngLat(e.lngLat).setDraggable(true).addTo(map);
+				marker.on('dragend', markerMoved);
+			}
+
+			dispatchChange();
+		});
+
+		map.on('load', function () {
+			addSourcesAndLayers();
+			mapLoaded = true;
+
+			drawStops();
+
+			if ($selectedStopIds?.length) {
+				drawSelectedStops();
+			}
+		});
+
+		map.on('moveend', (e) => {
+			sessionStorage.setItem(
+				'lastPos',
+				JSON.stringify([e.target.getCenter().lng, e.target.getCenter().lat, e.target.getZoom()])
+			);
+		});
+	});
+
+	onDestroy(() => {
+		map.remove();
+	});
 </script>
 
-<div class="rounded-lg grow-1 max-w-96 h-80 w-full cursor-crosshair" use:mapAction />
-
-<style>
-	@import 'leaflet/dist/leaflet.css';
-	@import 'leaflet.markercluster/dist/MarkerCluster.css';
-</style>
+<div class="rounded-lg grow-1 max-w-96 h-96 w-full cursor-crosshair" bind:this={mapElem} />
