@@ -15,6 +15,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import BooleanFormAttr from '$lib/editor/BooleanFormAttr.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
+	import PicDialog from '$lib/editor/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
 	import { liveQuery } from 'dexie';
 
@@ -183,7 +184,7 @@
 	let stopFilters = [];
 	let stopVisualization = 'attrs_log';
 
-	let previewedPic = undefined;
+	let previewedPic;
 
 	let id = null;
 	let name = null;
@@ -1367,14 +1368,15 @@
 						<div class="flex flex-wrap gap-1">
 							{#if $stopPictures !== undefined && $stopPictures.length > 0}
 								{#each $stopPictures as picture}
-									<a target="_blank" rel="noreferrer" href={picture.url_full}>
-										<img
-											src={picture.url_medium}
-											rel="noreferrer"
-											alt="Fotografia da paragem"
-											class="rounded-box transition-all hover:scale-150 h-40"
-										/>
-									</a>
+									<img
+										src={picture.url_medium}
+										rel="noreferrer"
+										alt="Fotografia da paragem"
+										class="rounded-box transition-all hover:scale-150 h-40"
+										on:click={() => {
+											previewedPic = picture;
+										}}
+									/>
 								{/each}
 							{:else}
 								<div class="flex flex-col items-center justify-center w-full h-40">
@@ -1993,21 +1995,34 @@
 {#if previewedPic}
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
 	<div class="modal">
-		<div class="modal-box w-11/12 max-w-5xl">
-			<a target="_blank" rel="noreferrer" href={previewedPic.url_full}>
-				<img src={previewedPic.url_medium} alt="Fotografia da paragem" class="rounded-box w-full" />
-			</a>
-			<div class="modal-action">
-				<label
-					for="pic-preview"
-					class="btn"
-					on:click={() => {
-						previewedPic = undefined;
-					}}
-					on:keypress={() => {
-						previewedPic = undefined;
-					}}>Close</label
-				>
+		<div class="modal-box w-11/12 max-w-[100em]">
+			<label
+				for="pic-preview"
+				class="btn btn-sm btn-circle btn-error absolute right-2 top-2"
+				on:click={() => {
+					previewedPic = undefined;
+				}}
+				on:keypress={() => {
+					previewedPic = undefined;
+				}}>✕</label
+			>
+			<div />
+			<PicDialog picture={previewedPic} />
+			<div class="flex modal-actions justify-between">
+				<button class="btn">
+					<!-- Font Awesome Free 6.4.0 https://fontawesome.com/license/free (Free License). -->
+					<svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512">
+						<path
+							d="M344 0H488c13.3 0 24 10.7 24 24V168c0 9.7-5.8 18.5-14.8 22.2s-19.3
+							1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6
+							0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512H24c-13.3
+							0-24-10.7-24-24V344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4
+							24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2
+							26.2s-12.5 14.8-22.2 14.8z"
+						/>
+					</svg>
+				</button>
+				<input type="button" class="btn btn-secondary" value="Editar" />
 			</div>
 		</div>
 	</div>
