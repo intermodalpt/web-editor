@@ -69,4 +69,7 @@
 			</div>
 		</div>
 	</div>
+	<div class="flex justify-end">
+		<a class="link link-primary" href="/stats">Estatisticas</a>
+	</div>
 </div>
