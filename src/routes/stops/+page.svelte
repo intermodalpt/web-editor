@@ -14,6 +14,8 @@
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import BooleanFormAttr from '$lib/editor/BooleanFormAttr.svelte';
+	import AuthenticityIndicator from '$lib/editor/AuthenticityIndicator.svelte';
+	import AuthenticitySelectors from '$lib/editor/AuthenticitySelectors.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 	import PicDialog from '$lib/editor/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
@@ -1138,19 +1140,8 @@
 					>
 				</div>
 				<div class="flex gap-2 flex-grow justify-end">
-					<select
-						class="select select-primary max-w-xs select-xs hidden lg:block"
-						bind:value={verificationLevel}
-						disabled={!$decodedToken?.permissions.is_admin}
-					>
-						<!-- The binary mask -->
-						<option value={0}>Não verificado</option>
-						<option value={8}>Infra muito provável</option>
-						<option value={48}>Serviço verificado</option>
-						<option value={12}>Infraestrutura verificada</option>
-						<option value={84}>Errado</option>
-						<option value={252}>Tudo verificado</option>
-					</select>
+					<AuthenticityIndicator bind:value={verificationLevel}/>
+					<span class="w-2"/>
 					<input
 						type="button"
 						class="btn btn-success btn-xs"
@@ -1259,21 +1250,9 @@
 								>
 							</div>
 						</div>
-						<div class="flex items-baseline">
-							<span class="label">Autenticidade</span>
-							<select
-								class="select select-bordered max-w-xs select-xs"
-								bind:value={verificationLevel}
-								disabled={!$decodedToken?.permissions.is_admin}
-							>
-								<!-- The binary mask -->
-								<option value={0}>Não verificado</option>
-								<option value={8}>Infra muito provável</option>
-								<option value={48}>Serviço verificado</option>
-								<option value={12}>Infraestrutura verificada</option>
-								<option value={84}>Errado</option>
-								<option value={252}>Tudo verificado</option>
-							</select>
+						<span>Autenticidade</span>
+						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
+							<AuthenticitySelectors bind:value={verificationLevel} disabled={!$decodedToken?.permissions.is_admin}/>
 						</div>
 					</div>
 					<div class="flex flex-col gap-1">
