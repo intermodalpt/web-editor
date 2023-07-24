@@ -13,14 +13,9 @@
 				class:tab-active={$page.url.pathname.startsWith('/stops')}>Paragens</a
 			>
 			<a
-				href="/routes"
+				href="/operators"
 				class="tab"
-				class:tab-active={$page.url.pathname.startsWith('/routes')}>Linhas</a
-			>
-			<a
-				href="/calendars"
-				class="tab"
-				class:tab-active={$page.url.pathname.startsWith('/calendars')}>Calendários</a
+				class:tab-active={$page.url.pathname.startsWith('/operators')}>Operadores</a
 			>
 			{#if $decodedToken}
 				<a
