@@ -3,7 +3,16 @@
 	import { writable, derived } from 'svelte/store';
 	import { token, decodedToken, operators } from '$lib/stores.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
-	import { fetchCalendars, fetchRoutes, getCalendars, getRoutes, loadMissing } from '$lib/db';
+	import { apiServer } from '$lib/settings.js';
+	import {
+		fetchCalendars,
+		fetchRoutes,
+		fetchStops,
+		getCalendars,
+		getRoutes,
+		getStops,
+		loadMissing
+	} from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
 	import polyline from '@mapbox/polyline';
@@ -26,8 +35,19 @@
 		'#4c4f69'
 	];
 
+	let issues = [];
+
 	async function loadData() {
-		await Promise.all([fetchRoutes(), fetchCalendars()]);
+		await Promise.all([
+			fetchRoutes(),
+			fetchCalendars(),
+			// fetchStops(),
+			fetch(`${apiServer}/v1/operators/${operatorId}/issues`)
+				.then((r) => r.json())
+				.then((r) => {
+					issues = r;
+				})
+		]);
 	}
 
 	loadData().then(async () => {
@@ -37,6 +57,7 @@
 
 	const calendars = liveQuery(() => getCalendars());
 	const routes = liveQuery(() => getRoutes());
+	const stops = liveQuery(() => getStops());
 
 	let mapElem;
 	let map;
@@ -233,7 +254,7 @@
 		</ul>
 	</div>
 
-	<div class="card self-center bg-base-100 shadow-md w-full">
+	<div class="card self-center bg-base-100 shadow-sm w-full">
 		<div class="card-body">
 			<h2 class="card-title text-3xl">{operator.name}<span class="text-sm">#{operatorId}</span></h2>
 		</div>
@@ -253,7 +274,7 @@
 		</div>
 	</div>
 
-	<div class="card grid grid-cols-1 xl:grid-cols-2 bg-base-100 shadow-md w-full">
+	<div class="card grid grid-cols-1 xl:grid-cols-2 bg-base-100 shadow-sm w-full">
 		<div id="route-pane">
 			{#if $selectedRoute}
 				<h2 class="card-title p-2 flex gap-1">
@@ -372,66 +393,133 @@
 		</div>
 	</div>
 
-	<div class="flex flex-col gap-4 max-w-[100em] w-full self-center">
-		<div class="card card-compact self-center bg-base-100 shadow-md w-full">
-			<div class="card-body">
-				<h2 class="card-title">Calendários</h2>
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-					{#each $operatorCalendars as calendar}
-						<div class="flex gap-2 p-2 rounded-lg border-[1px] shadow-sm">
-							<span class="text-3xl font-light w-10">{calendar.id}</span>
-							<div class="flex flex-col gap-1">
-								<span class="text-lg font-bold">{calendar.name}</span>
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
+		<div class="card-body">
+			<h2 class="card-title">Calendários</h2>
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				{#each $operatorCalendars as calendar}
+					<div class="flex gap-2 p-2 rounded-lg border-[1px] shadow-sm">
+						<span class="text-3xl font-light w-10">{calendar.id}</span>
+						<div class="flex flex-col gap-1">
+							<span class="text-lg font-bold">{calendar.name}</span>
+							<div class="flex gap-1">
+								{#each calendar.calendar.weekdays as weekday}
+									{#if weekday === 0}
+										<div class="badge badge-secondary">Seg.</div>
+									{:else if weekday === 1}
+										<div class="badge badge-secondary">Ter.</div>
+									{:else if weekday === 2}
+										<div class="badge badge-secondary">Qua.</div>
+									{:else if weekday === 3}
+										<div class="badge badge-secondary">Qui.</div>
+									{:else if weekday === 4}
+										<div class="badge badge-secondary">Sex.</div>
+									{:else if weekday === 5}
+										<div class="badge badge-secondary">Sáb.</div>
+									{:else if weekday === 6}
+										<div class="badge badge-secondary">Dom.</div>
+									{:else if weekday === 7}
+										<div class="badge badge-secondary">?</div>
+									{/if}
+								{/each}
+							</div>
+							{#if calendar.calendar.only_if.length > 0}
 								<div class="flex gap-1">
-									{#each calendar.calendar.weekdays as weekday}
-										{#if weekday === 0}
-											<div class="badge badge-secondary">Seg.</div>
-										{:else if weekday === 1}
-											<div class="badge badge-secondary">Ter.</div>
-										{:else if weekday === 2}
-											<div class="badge badge-secondary">Qua.</div>
-										{:else if weekday === 3}
-											<div class="badge badge-secondary">Qui.</div>
-										{:else if weekday === 4}
-											<div class="badge badge-secondary">Sex.</div>
-										{:else if weekday === 5}
-											<div class="badge badge-secondary">Sáb.</div>
-										{:else if weekday === 6}
-											<div class="badge badge-secondary">Dom.</div>
-										{:else if weekday === 7}
-											<div class="badge badge-secondary">?</div>
-										{/if}
+									<span>Só se:</span>
+									{#each calendar.calendar.only_if as condition}
+										<div class="badge badge-info">{condition.condition}</div>
 									{/each}
 								</div>
-								{#if calendar.calendar.only_if.length > 0}
-									<div class="flex gap-1">
-										<span>Só se:</span>
-										{#each calendar.calendar.only_if as condition}
-											<div class="badge badge-info">{condition.condition}</div>
-										{/each}
-									</div>
-								{/if}
-								{#if calendar.calendar.except_if.length > 0}
-									<div class="flex gap-1">
-										<span>Excepto se:</span>
-										{#each calendar.calendar.except_if as condition}
-											<div class="badge badge-error">{condition.condition}</div>
-										{/each}
-									</div>
-								{/if}
-								{#if calendar.calendar.also_if.length > 0}
-									<div class="flex gap-1">
-										<span>Também se:</span>
-										{#each calendar.calendar.also_if as condition}
-											<div class="badge badge-success">{condition.condition}</div>
-										{/each}
-									</div>
-								{/if}
-							</div>
+							{/if}
+							{#if calendar.calendar.except_if.length > 0}
+								<div class="flex gap-1">
+									<span>Excepto se:</span>
+									{#each calendar.calendar.except_if as condition}
+										<div class="badge badge-error">{condition.condition}</div>
+									{/each}
+								</div>
+							{/if}
+							{#if calendar.calendar.also_if.length > 0}
+								<div class="flex gap-1">
+									<span>Também se:</span>
+									{#each calendar.calendar.also_if as condition}
+										<div class="badge badge-success">{condition.condition}</div>
+									{/each}
+								</div>
+							{/if}
 						</div>
-					{/each}
-				</div>
+					</div>
+				{/each}
 			</div>
 		</div>
 	</div>
+
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
+		<div class="card-body">
+			<h2 class="card-title"><a href="/operators/{operator.tag}/issues">Problemas</a></h2>
+			<div class="grid p-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+				{#if issues.length == 0}
+					<span>Sem problemas anexos a este operador.</span>
+				{/if}
+				{#each issues as issue}
+					<div class="card card-compact self-center bg-base-100 shadow-md">
+						<div class="card-body">
+							<div class="flex gap-1">
+								<span>Afecto a</span>
+								<div class="flex">
+									{#each issue.operator_ids as id}
+										<span class="badge badge-secondary">{operators[id].name}</span>
+									{/each}
+								</div>
+							</div>
+							<h2 class="card-title">
+								<a href="/operators/{operator.tag}/issues/{issue.id}">{issue.title}</a>
+							</h2>
+							<div class="flex gap-2">
+								<span>Linhas</span>
+								{#if $routes}
+									{#each issue.route_ids as id}
+										<div class="flex">
+											<span
+												class="rounded-l-full px-1 font-bold"
+												style="color: {$routes[id].badge_text}; background-color: {$routes[id]
+													.badge_bg}"
+											>
+												{$routes[id].code}
+											</span>
+											<span class="badge rounded-r-full badge-outline">{$routes[id].name}</span>
+										</div>
+									{/each}
+								{:else}
+									<span>Linhas a carregar...</span>
+								{/if}
+							</div>
+							<div class="flex gap-2">
+								<span>Stops</span>
+								{#if $stops}
+									{#each issue.stop_ids as id}
+										<span class="badge badge-outline">{id} - {$stops[id]?.name}</span>
+									{/each}
+								{:else}
+									<span>Stops a carregar...</span>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+
+	{#if operatorId === 1}
+		<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
+			<div class="card-body">
+				<h2 class="card-title">Ferramentas</h2>
+				<div class="flex gap-4">
+					<a class="btn btn-primary" href={`/crosscheck`}>Emparelhamento paragens</a>
+					<a class="btn btn-primary" href={`/crosscheck/routes`}>Validação de rotas</a>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
