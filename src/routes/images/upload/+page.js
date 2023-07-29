@@ -6,5 +6,5 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
-	await loadToken(fetch);
+	const token = await loadToken(fetch);
 }
