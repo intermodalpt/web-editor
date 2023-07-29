@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { decodedToken, token,toast } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
@@ -946,7 +946,7 @@
 	onMount(() => {
 		map = new Map({
 			container: 'map',
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,

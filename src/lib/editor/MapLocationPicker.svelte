@@ -1,5 +1,6 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
+	import { tileStyle } from '$lib/settings.js';
 	import { Map, Marker } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { writable } from 'svelte/store';
@@ -161,7 +162,7 @@
 
 		map = new Map({
 			container: mapElem,
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,

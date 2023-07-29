@@ -2,7 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { token, operators } from '$lib/stores.js';
 	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { Map, Marker } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
@@ -90,7 +90,7 @@
 	onMount(() => {
 		pointPickerMap = new Map({
 			container: 'map',
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,
@@ -103,7 +103,7 @@
 
 		geojsonMap = new Map({
 			container: 'map2',
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,

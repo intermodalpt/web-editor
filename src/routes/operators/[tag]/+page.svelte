@@ -3,7 +3,8 @@
 	import { writable, derived } from 'svelte/store';
 	import { token, decodedToken, operators } from '$lib/stores.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings.js';
+	
 	import {
 		fetchCalendars,
 		fetchRoutes,
@@ -218,7 +219,7 @@
 	onMount(() => {
 		map = new Maplibre({
 			container: mapElem,
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			minZoom: 8,
 			maxZoom: 20,
 			maxBounds: [

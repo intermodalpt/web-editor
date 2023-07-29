@@ -2,9 +2,9 @@
 	import { Map, Marker } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { listDifferences, getNearestStops } from '$lib/utils.js';
-	import { onDestroy } from 'svelte';
+	import { tileStyle } from '$lib/settings.js';
+	import { onDestroy, tick } from 'svelte';
 	import { derived } from 'svelte/store';
-	import { tick } from 'svelte';
 	import FlagsWidget from '$lib/instructions/widgets/Flags.svelte';
 	import SchedulesWidget from '$lib/instructions/widgets/Schedules.svelte';
 	import AdvertisementQtySelector from '$lib/changes/selectors/AdvertisementQtySelector.svelte';
@@ -75,7 +75,7 @@
 	function loadMap() {
 		map = new Map({
 			container: mapElem,
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [change.original.lon, change.original.lat],
 			zoom: 17,
 			minZoom: 8,

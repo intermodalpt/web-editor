@@ -6,7 +6,7 @@
 	import Select from 'svelte-select';
 	import polyline from '@mapbox/polyline';
 	import { progressiveSequenceAlignment, longestCommonSubsequence } from '$lib/utils.js';
-	import { apiServer, osrmServer } from '$lib/settings.js';
+	import { apiServer, osrmServer, tileStyle } from '$lib/settings.js';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -496,7 +496,7 @@
 	onMount(() => {
 		map = new Maplibre({
 			container: 'map',
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,

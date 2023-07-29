@@ -6,7 +6,7 @@
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
 	import { decodedToken, token, toast } from '$lib/stores.js';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
 
@@ -485,7 +485,7 @@
 	onMount(() => {
 		map = new Maplibre({
 			container: mapElem,
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			minZoom: 8,
 			maxZoom: 20,
 			maxBounds: [

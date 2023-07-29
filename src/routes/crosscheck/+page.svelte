@@ -40,7 +40,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { decodedToken, token } from '$lib/stores.js';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings.js';
 
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
@@ -757,7 +757,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	onMount(() => {
 		map = new Maplibre({
 			container: 'map',
-			style: 'https://tiles.intermodal.pt/styles/positron/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.605],
 			zoom: 11,
 			minZoom: 8,

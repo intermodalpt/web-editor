@@ -5,7 +5,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { decodedToken, token } from '$lib/stores.js';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { fetchStops, fetchParishes, getStops, getParishes, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
 
@@ -383,7 +383,7 @@
 	onMount(() => {
 		map = new Maplibre({
 			container: 'map',
-			style: 'https://tiles2.intermodal.pt/styles/iml/style.json',
+			style: tileStyle,
 			center: [-9.0, 38.65],
 			zoom: 10,
 			minZoom: 8,
