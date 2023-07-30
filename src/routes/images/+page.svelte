@@ -1,11 +1,33 @@
 <script>
-	import { writable } from 'svelte/store';
-	import { Map, Marker } from 'maplibre-gl';
-	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { derived, writable } from 'svelte/store';
 	import ImageEditor from '$lib/editor/ImageEditor.svelte';
 	import ImageUploader from '$lib/images/ImageUploader.svelte';
+	import MapImageViewer from '$lib/images/MapImageViewer.svelte';
+	import StopPicsInfo from '$lib/images/StopPicsInfo.svelte';
+	import PicInfo from '$lib/images/PicInfo.svelte';
 	import { apiServer } from '$lib/settings.js';
 	import { token } from '$lib/stores.js';
+	import { fetchStops, getStops, loadMissing } from '$lib/db';
+	import { liveQuery } from 'dexie';
+
+	const basePictures = writable([]);
+	const stops = liveQuery(() => getStops());
+
+	async function loadData() {
+		await Promise.all([
+			fetchStops(),
+			fetch(`${apiServer}/v1/stop_pics/map`)
+				.then((r) => r.json())
+				.then((r) => {
+					$basePictures = r;
+				})
+		]);
+	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
 
 	const tabs = {
 		map: 0,
@@ -15,6 +37,13 @@
 	};
 
 	const tab = writable(tabs.map);
+
+	const selectedStop = writable(null);
+	const selectedPicId = writable(null);
+	const compactMap = derived([selectedStop, selectedPicId], ([$selectedStop, $selectedPicId]) => {
+		return $selectedStop || $selectedPicId;
+	});
+
 	class Gallery {
 		constructor(asc = true, pageSize = defaultPageSize) {
 			this.pageSize = pageSize;
@@ -50,6 +79,11 @@
 	let untaggedGallery = new Gallery(false);
 
 	tab.subscribe((value) => {
+		if (value !== tabs.map) {
+			$selectedStop = null;
+			$selectedPicId = null;
+		}
+
 		if (value === tabs.tagged) {
 			if (taggedGallery.pictures.length === 0) {
 				loadMoreTaggedStops();
@@ -137,6 +171,16 @@
 		$openImage = null;
 		untaggedStopPictures = untaggedStopPictures;
 	}
+
+	function selectPicHandler(e) {
+		$selectedStop = null;
+		$selectedPicId = e.detail.id;
+	}
+
+	function selectStopHandler(e) {
+		$selectedPicId = null;
+		$selectedStop = $stops[e.detail.id];
+	}
 </script>
 
 <svelte:head>
@@ -175,15 +219,26 @@
 			}}>Enviar</a
 		>
 	</div>
-	<div class="card bg-base-100 shadow-xl">
+	<div class="card bg-base-100 shadow-sm border-1" class:card-compact={$tab === tabs.map}>
 		{#if $tab === tabs.map}
 			<div class="card-body">
-
+				<MapImageViewer
+					pictures={basePictures}
+					{stops}
+					on:selectStop={selectStopHandler}
+					on:selectPic={selectPicHandler}
+					compact={compactMap}
+				/>
+				{#if $selectedPicId}
+					<PicInfo picId={selectedPicId} {stops} />
+				{/if}
+				{#if $selectedStop}
+					<StopPicsInfo {selectedStop} {stops} />
+				{/if}
 			</div>
 		{:else if $tab === tabs.tagged}
 			<div class="card-body">
 				<h2 class="card-title">Catalogadas</h2>
-
 				<div class="flex flex-col items-center">
 					{#if taggedGallery.pictures.length === 0}
 						<span class="text-lg">Ainda não foram catalogadas imagens</span>
@@ -209,7 +264,6 @@
 		{:else if $tab === tabs.untagged}
 			<div class="card-body">
 				<h2 class="card-title">Por Catalogar</h2>
-
 				<div class="flex flex-col items-center">
 					{#if untaggedGallery.pictures.length === 0}
 						<span class="text-lg">Não há imagens por catalogar</span>
