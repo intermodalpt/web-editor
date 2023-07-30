@@ -33,7 +33,8 @@
 		map: 0,
 		tagged: 1,
 		untagged: 2,
-		upload: 3
+		unpositioned: 3,
+		upload: 4
 	};
 
 	const tab = writable(tabs.map);
@@ -61,13 +62,19 @@
 				this.seenIds.add(pic.id);
 			});
 
-			this.pictures = this.pictures
-				.concat(newPictures)
-				.sort((a, b) =>
-					this.asc
-						? (a.capture_date || a.upload_date).localeCompare(b.capture_date || b.upload_date)
-						: (b.capture_date || b.upload_date).localeCompare(a.capture_date || a.upload_date)
-				);
+			let hasUploadDate = pictures[0]?.upload_date || this.pictures[0]?.upload_date;
+
+			if (hasUploadDate) {
+				this.pictures = this.pictures
+					.concat(newPictures)
+					.sort((a, b) =>
+						this.asc
+							? (a.capture_date || a.upload_date).localeCompare(b.capture_date || b.upload_date)
+							: (b.capture_date || b.upload_date).localeCompare(a.capture_date || a.upload_date)
+					);
+			} else {
+				this.pictures = this.pictures.concat(newPictures).sort((a, b) => (this.asc ? a.id - b.id : b.id - a.id));
+			}
 		}
 
 		get nextPage() {
@@ -77,6 +84,7 @@
 
 	let taggedGallery = new Gallery(false);
 	let untaggedGallery = new Gallery(false);
+	let unpositionedGallery = new Gallery(true);
 
 	tab.subscribe((value) => {
 		if (value !== tabs.map) {
@@ -162,6 +170,32 @@
 			});
 	}
 
+	function loadMoreUnpositionedStops() {
+		let pages = pagesToFetch(unpositionedGallery.nextPage);
+
+		Promise.all(
+			pages.map((page) => {
+				return fetch(`${apiServer}/v1/stop_pics/unpositioned?p=${page}`, {
+					headers: {
+						authorization: `Bearer ${$token}`
+					}
+				}).then((r) => r.json());
+			})
+		)
+			.then((pages) => {
+				let pictures = [];
+				pages.forEach((results) => {
+					pictures = pictures.concat(results);
+				});
+				unpositionedGallery.mergePictures(pictures);
+				unpositionedGallery = unpositionedGallery;
+			})
+			.catch((e) => {
+				console.error(e);
+				alert('Unable to load tagged pictures: ' + e.message);
+			});
+	}
+
 	function openPic(id) {
 		$openImage = untaggedStopPictures[id];
 	}
@@ -191,28 +225,35 @@
 <div class="self-center w-11/12 my-4">
 	<div class="tabs ml-4">
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md xl:tab-lg tab-lifted"
 			class:tab-active={$tab === tabs.map}
 			on:click={() => {
 				$tab = tabs.map;
 			}}>Mapa</a
 		>
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md xl:tab-lg tab-lifted"
 			class:tab-active={$tab === tabs.tagged}
 			on:click={() => {
 				$tab = tabs.tagged;
 			}}>Catalogadas</a
 		>
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md xl:tab-lg tab-lifted"
 			class:tab-active={$tab === tabs.untagged}
 			on:click={() => {
 				$tab = tabs.untagged;
 			}}>Por catalogar</a
 		>
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md xl:tab-lg tab-lifted"
+			class:tab-active={$tab === tabs.unpositioned}
+			on:click={() => {
+				$tab = tabs.unpositioned;
+			}}>Por posicionar</a
+		>
+		<a
+			class="tab tab-md xl:tab-lg tab-lifted"
 			class:tab-active={$tab === tabs.upload}
 			on:click={() => {
 				$tab = tabs.upload;
@@ -263,7 +304,7 @@
 			</div>
 		{:else if $tab === tabs.untagged}
 			<div class="card-body">
-				<h2 class="card-title">Por Catalogar</h2>
+				<h2 class="card-title">Por catalogar</h2>
 				<div class="flex flex-col items-center">
 					{#if untaggedGallery.pictures.length === 0}
 						<span class="text-lg">Não há imagens por catalogar</span>
@@ -282,6 +323,31 @@
 						{/each}
 					</div>
 					<div class="btn btn-secondary w-full" on:click={() => loadMoreUntaggedStops()}>
+						Listar mais
+					</div>
+				</div>
+			</div>
+		{:else if $tab === tabs.unpositioned}
+			<div class="card-body">
+				<h2 class="card-title">Por posicionar</h2>
+				<div class="flex flex-col items-center">
+					{#if unpositionedGallery.pictures.length === 0}
+						<span class="text-lg">Não há imagens por posicionar</span>
+					{/if}
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-8">
+						{#each unpositionedGallery.pictures as pic}
+							<div class="p-2 flex justify-center items-center cursor-pointer">
+								<img
+									src={pic.url_medium}
+									class="rounded-box transition-all hover:scale-105"
+									on:click={() => {
+										openPic(pic.id);
+									}}
+								/>
+							</div>
+						{/each}
+					</div>
+					<div class="btn btn-secondary w-full" on:click={() => loadMoreUnpositionedStops()}>
 						Listar mais
 					</div>
 				</div>
