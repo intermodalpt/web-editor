@@ -1,18 +1,34 @@
 <script>
 	import { createEventDispatcher, tick } from 'svelte';
-	import { writable } from 'svelte/store';
+	import { apiServer, movementTreshold } from '$lib/settings.js';
+	import { writable, derived } from 'svelte/store';
 	import { token, decodedToken } from '$lib/stores.js';
 	import { isDeepEqual } from '$lib/utils.js';
 	import MapLocationPicker from '$lib/editor/MapLocationPicker.svelte';
 
-	export let selectedImage;
+	export let imageId;
 	export let stops;
+
+	const image = derived(imageId, ($imageId, set) => {
+		if (!$imageId) {
+			set(null);
+			return;
+		}
+		fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
+			headers: {
+				Authorization: `Bearer ${$token}`
+			}
+		})
+			.then((r) => r.json())
+			.then((r) => {
+				set(r);
+			});
+	});
 
 	const dispatch = createEventDispatcher();
 
 	const editable =
-		$selectedImage.uploader === $decodedToken?.permissions?.uid ||
-		$decodedToken?.permissions?.is_admin;
+		$image?.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin;
 
 	let qualityLabelElem;
 	let locationPicker;
@@ -27,12 +43,12 @@
 	let notes;
 	$: trimmedNotes = notes?.trim() === '' ? null : notes;
 
-	$: stopsChanged = !isDeepEqual($stopIds, $selectedImage.stops);
-	$: posChanged = lon !== $selectedImage.lon || lat !== $selectedImage.lat;
-	$: notesChanged = trimmedNotes !== $selectedImage.notes;
-	$: sensitiveChanged = isSensitive !== $selectedImage.sensitive;
-	$: publicChanged = isPublic !== $selectedImage.public;
-	$: qualityChanged = quality !== $selectedImage.quality;
+	$: stopsChanged = !isDeepEqual($stopIds, $image?.stops || []);
+	$: posChanged = lon !== $image?.lon || lat !== $image?.lat;
+	$: notesChanged = trimmedNotes !== $image?.notes;
+	$: sensitiveChanged = isSensitive !== $image?.sensitive;
+	$: publicChanged = isPublic !== $image?.public;
+	$: qualityChanged = quality !== $image?.quality;
 	$: changed =
 		stopsChanged ||
 		posChanged ||
@@ -43,7 +59,7 @@
 
 	$: dispatch('change', { fromOriginal: changed });
 
-	selectedImage.subscribe(async (img) => {
+	image.subscribe(async (img) => {
 		if (img == null) {
 			return;
 		} else {
@@ -111,18 +127,30 @@
 
 	async function saveChanges() {
 		const savedPic = {
-			lat: lat,
-			lon: lon,
+			lat: $image.lat,
+			lon: $image.lon,
 			stops: [...$stopIds],
 			public: isPublic,
 			sensitive: isSensitive,
 			quality: quality,
 			notes: trimmedNotes,
-			tags: $selectedImage.tags,
+			tags: $image.tags,
 			tagged: true
 		};
 
-		fetch(`${apiServer}/v1/stop_pics/${$selectedImage.id}`, {
+		if (lat != null) {
+			if ($image.lat == null || Math.abs($image.lat - lat) > movementTreshold) {
+				savedPic.lat = location.lat;
+			}
+		}
+
+		if (lon != null) {
+			if ($image.lon == null || Math.abs($image.lon - lon) > movementTreshold) {
+				savedPic.lon = lon;
+			}
+		}
+
+		fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
 			method: 'PATCH',
 			body: JSON.stringify(savedPic),
 			headers: {
@@ -130,24 +158,24 @@
 				authorization: `Bearer ${$token}`
 			}
 		})
-			.catch((e) => alert('Falha a guardar.'))
+			.catch((e) => alert('Failed to save the stop meta. Error: ' + e.message))
 			.then(() => {
-				$selectedImage.tagged = true;
-				$selectedImage.lon = savedPic.lon;
-				$selectedImage.lat = savedPic.lat;
-				$selectedImage.stops = savedPic.stops;
-				$selectedImage.public = savedPic.public;
-				$selectedImage.sensitive = savedPic.sensitive;
-				$selectedImage.quality = savedPic.quality;
-				$selectedImage.notes = savedPic.notes;
+				$image.tagged = true;
+				$image.lon = savedPic.lon;
+				$image.lat = savedPic.lat;
+				$image.stops = savedPic.stops;
+				$image.public = savedPic.public;
+				$image.sensitive = savedPic.sensitive;
+				$image.quality = savedPic.quality;
+				$image.notes = savedPic.notes;
 
-				dispatch('save');
+				dispatch('save', { id: $imageId });
 			});
 	}
 
 	function deleteImage() {
 		if (confirm('Tem certeza que quer apagar esta imagem?')) {
-			fetch(`${apiServer}/v1/stop_pics/${$selectedImage.id}`, {
+			fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -156,147 +184,151 @@
 			})
 				.catch(() => alert('Failed to delete the image'))
 				.then(() => {
-					dispatch('delete', { id: $selectedImage.id });
+					dispatch('delete', { id: $imageId });
 				});
 		}
 	}
 </script>
 
 <div class="flex flex-col overflow-y-auto">
-	<div class="relative w-fit self-center">
-		<img src={$selectedImage.url_medium} class="rounded-lg w-full max-h-[100em]" />
-		<a
-			target="_blank"
-			href={$selectedImage.url_full}
-			class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
-			>Ver completa</a
-		>
-		<span
-			class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
-			on:click={deleteImage}>Apagar</span
-		>
-	</div>
-	<h2 class="text-xl font-bold py-2">
-		Localização e paragens
-		{#if !lat || !lon}
-			<span class="bg-warning text-warning-content rounded-full p-1 text-center text-lg"
-				>Incompleto</span
+	{#if $image}
+		<div class="relative w-fit self-center">
+			<img src={$image?.url_medium} class="rounded-lg w-full max-h-[100em]" />
+			<a
+				target="_blank"
+				href={$image.url_full}
+				class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
+				>Ver completa</a
 			>
-		{/if}
-	</h2>
-	Onde se encontrava quando tirou esta fotografia?
-	<MapLocationPicker
-		bind:this={locationPicker}
-		{lat}
-		{lon}
-		{stops}
-		selectedStopIds={stopIds}
-		canSelectStops={editable}
-		on:change={(e) => {
-			lat = e.detail.lat;
-			lon = e.detail.lon;
-		}}
-	/>
-	<div class="form-control">
-		<label class="label">
-			<span class="label-text">Paragens</span>
-		</label>
-		{#if $stopIds.length === 0}
-			<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
-		{/if}
-		<div class="flex flex-col">
-			{#each $stopIds as stopId}
-				<div class="badge badge-outline badge-lg">
-					{stopId} - {stops[stopId]?.short_name ||
-						stops[stopId]?.name ||
-						stops[stopId]?.official_name}
-					{stops[stopId] ? '' : '(⚠️)'}
-					{#if editable}
-						<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>✕</div>
-					{/if}
-				</div>
-			{/each}
+			<span
+				class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
+				on:click={deleteImage}>Apagar</span
+			>
 		</div>
-	</div>
-	<h2 class="text-xl font-bold py-2">Classificação</h2>
-	<div class="flex gap-3 items-baseline flex-wrap">
-		<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
-			{#if isSensitive}Sensivel{:else}Não sensivel{/if}
-			<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
-		</label>
-		<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
-			{#if isPublic}Pública{:else}Privada{/if}
-			<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
-		</label>
-	</div>
-	<span class="text-lg">
-		A imagem
-		{#if isSensitive}
-			<span class="text-error font-bold">deve de ser censurada</span>
-		{:else}
-			<span class="text-success font-bold">não infinge a privacidade</span>
-		{/if}
-		e
-		{#if isPublic}
-			<span class="text-success font-bold">tem</span>
-		{:else}
-			<span class="text-error font-bold">não tem</span>
-		{/if}
-		interesse público.
-	</span>
-	<div class="form-control">
-		<label class="label flex-wrap">
-			<span class="label-text">Qualidade da imagem</span>
-			<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
-		</label>
-		<input
-			type="range"
-			min="0"
-			max="100"
-			class="range range-sm"
-			step="10"
-			disabled={!editable}
-			bind:value={quality}
-			on:change={adjustQualityLabel}
+		<h2 class="text-xl font-bold py-2">
+			Localização e paragens
+			{#if !lat || !lon}
+				<span class="bg-warning text-warning-content rounded-full p-1 text-center text-lg"
+					>Incompleto</span
+				>
+			{/if}
+		</h2>
+		Onde se encontrava quando tirou esta fotografia?
+		<MapLocationPicker
+			bind:this={locationPicker}
+			{lat}
+			{lon}
+			{stops}
+			selectedStopIds={stopIds}
+			canSelectStops={editable}
+			on:change={(e) => {
+				lat = e.detail.lat;
+				lon = e.detail.lon;
+			}}
 		/>
-		<div class="w-full flex justify-between text-xs px-2">
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
-			<span>|</span>
+		<div class="form-control">
+			<label class="label">
+				<span class="label-text">Paragens</span>
+			</label>
+			{#if $stopIds.length === 0}
+				<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
+			{/if}
+			<div class="flex flex-col">
+				{#each $stopIds as stopId}
+					<div class="badge badge-outline badge-lg">
+						{stopId} - {stops[stopId]?.short_name ||
+							stops[stopId]?.name ||
+							stops[stopId]?.official_name}
+						{stops[stopId] ? '' : '(⚠️)'}
+						{#if editable}
+							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
+								✕
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
 		</div>
-	</div>
-	<span class="text-xs">
-		As qualidades acima descritas são sugestões e não critérios.<br />
-		Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma pontuação
-		de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
-		e veículos na via pública, cosméticamente agradavel...
-	</span>
-	<div class="form-control">
-		<label class="label">
-			<span class="label-text">Notas</span>
-		</label>
-		<textarea
-			class="textarea textarea-bordered h-12"
-			placeholder="Exemplo: Atrás da paragem encontra-se um gambuzino."
-			disabled={!editable}
-			bind:value={notes}
-		/>
-	</div>
+		<h2 class="text-xl font-bold py-2">Classificação</h2>
+		<div class="flex gap-3 items-baseline flex-wrap">
+			<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
+				{#if isSensitive}Sensivel{:else}Não sensivel{/if}
+				<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
+			</label>
+			<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
+				{#if isPublic}Pública{:else}Privada{/if}
+				<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
+			</label>
+		</div>
+		<span class="text-lg">
+			A imagem
+			{#if isSensitive}
+				<span class="text-error font-bold">deve de ser censurada</span>
+			{:else}
+				<span class="text-success font-bold">não infinge a privacidade</span>
+			{/if}
+			e
+			{#if isPublic}
+				<span class="text-success font-bold">tem</span>
+			{:else}
+				<span class="text-error font-bold">não tem</span>
+			{/if}
+			interesse público.
+		</span>
+		<div class="form-control">
+			<label class="label flex-wrap">
+				<span class="label-text">Qualidade da imagem</span>
+				<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
+			</label>
+			<input
+				type="range"
+				min="0"
+				max="100"
+				class="range range-sm"
+				step="10"
+				disabled={!editable}
+				bind:value={quality}
+				on:change={adjustQualityLabel}
+			/>
+			<div class="w-full flex justify-between text-xs px-2">
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+				<span>|</span>
+			</div>
+		</div>
+		<span class="text-xs">
+			As qualidades acima descritas são sugestões e não critérios.<br />
+			Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma pontuação
+			de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
+			e veículos na via pública, cosméticamente agradavel...
+		</span>
+		<div class="form-control">
+			<label class="label">
+				<span class="label-text">Notas</span>
+			</label>
+			<textarea
+				class="textarea textarea-bordered h-12"
+				placeholder="Exemplo: Atrás da paragem encontra-se um gambuzino."
+				disabled={!editable}
+				bind:value={notes}
+			/>
+		</div>
 
-	{#if editable && (!$selectedImage.tagged || changed)}
-		<input
-			type="button"
-			class="btn btn-primary w-full my-4"
-			value="Guardar"
-			on:mouseup={saveChanges}
-		/>
+		{#if editable && (!$image.tagged || changed)}
+			<input
+				type="button"
+				class="btn btn-primary w-full my-4"
+				value="Guardar"
+				on:mouseup={saveChanges}
+			/>
+		{/if}
 	{/if}
 </div>
