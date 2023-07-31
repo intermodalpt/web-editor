@@ -207,7 +207,7 @@
 	class="fixed top-0 bottom-0 left-0 right-0 overflow-y-scroll grid grid-cols-1 bg-base-100 modal modal-open modal-bottom xl:modal-middle"
 	style="grid-template-rows: 1fr auto;"
 >
-	<div class="modal-box xl:max-w-none">
+	<div class="modal-box xl:max-w-[80em]">
 		<div class="flex flex-col gap-1">
 			{#if $image}
 				<div class="flex lg:flex-row flex-col-reverse gap-1 items-center">

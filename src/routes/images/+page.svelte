@@ -236,7 +236,7 @@
 	<meta name="description" content="Catalogo de imagens" />
 </svelte:head>
 
-<div class="self-center w-11/12 my-4">
+<div class="self-center sm:w-11/12 my-4">
 	<div class="tabs ml-4">
 		<a
 			class="tab tab-md xl:tab-lg tab-lifted"
@@ -259,13 +259,15 @@
 				$tab = tabs.untagged;
 			}}>Por catalogar</a
 		>
-		<a
-			class="tab tab-md xl:tab-lg tab-lifted"
-			class:tab-active={$tab === tabs.unpositioned}
-			on:click={() => {
-				$tab = tabs.unpositioned;
-			}}>Por posicionar</a
-		>
+		{#if $token}
+			<a
+				class="tab tab-md xl:tab-lg tab-lifted"
+				class:tab-active={$tab === tabs.unpositioned}
+				on:click={() => {
+					$tab = tabs.unpositioned;
+				}}>Por posicionar</a
+			>
+		{/if}
 		<a
 			class="tab tab-md xl:tab-lg tab-lifted"
 			class:tab-active={$tab === tabs.upload}
@@ -274,7 +276,10 @@
 			}}>Enviar</a
 		>
 	</div>
-	<div class="card bg-base-100 shadow-sm border-1" class:card-compact={$tab === tabs.map}>
+	<div
+		class="card bg-base-100 shadow-sm border-1 card-compact card-normal"
+		class:!card-compact={$tab === tabs.map}
+	>
 		{#if $tab === tabs.map}
 			<div class="card-body">
 				<MapImageViewer
@@ -320,11 +325,11 @@
 					{#if taggedGallery.pictures.length === 0}
 						<span class="text-lg">Ainda não foram catalogadas imagens</span>
 					{/if}
-					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-8">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
 						{#each taggedGallery.pictures as pic}
 							<div class="p-2 flex justify-center items-center cursor-pointer">
 								<img
-									src={pic.url_thumb}
+									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
 									on:click={() => {
 										openPicEditor(pic.id);
@@ -345,11 +350,11 @@
 					{#if untaggedGallery.pictures.length === 0}
 						<span class="text-lg">Não há imagens por catalogar</span>
 					{/if}
-					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-8">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
 						{#each untaggedGallery.pictures as pic}
 							<div class="p-2 flex justify-center items-center cursor-pointer">
 								<img
-									src={pic.url_thumb}
+									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
 									on:click={() => {
 										openPicEditor(pic.id);
@@ -370,11 +375,11 @@
 					{#if unpositionedGallery.pictures.length === 0}
 						<span class="text-lg">Não há imagens por posicionar</span>
 					{/if}
-					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-8">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
 						{#each unpositionedGallery.pictures as pic}
 							<div class="p-2 flex justify-center items-center cursor-pointer">
 								<img
-									src={pic.url_thumb}
+									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-105"
 									on:click={() => {
 										openPicEditor(pic.id);
@@ -391,7 +396,11 @@
 		{:else if $tab === tabs.upload}
 			<div class="card-body">
 				<h2 class="card-title">Enviar imagens</h2>
-				<ImageUploader />
+				{#if $token}
+					<ImageUploader />
+				{:else}
+					<p class="text-lg">Precisa de estar autenticado para enviar imagens</p>
+				{/if}
 			</div>
 		{/if}
 	</div>

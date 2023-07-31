@@ -49,11 +49,12 @@
 					<span class="text-xs">/10</span>
 					<span class="text-lg">⭐</span>
 				</span>
-				<span
+				<button
 					class="btn btn-xs btn-primary"
+					disabled={!$token}
 					on:click={() => {
 						dispatch('edit-pic', { id: $data.id });
-					}}>Editar</span
+					}}>Editar</button
 				>
 			</span>
 			<div class="flex gap-2">
@@ -94,7 +95,7 @@
 								dispatch('select-stop', { id: stop?.id });
 							}}
 						>
-							{stop?.id}
+							{stop?.id}:
 							{stop?.short_name || stop?.name || stop?.official_name || stop?.osm_name}
 						</span>
 					{/each}
