@@ -1,36 +1,105 @@
 <script>
 	import { token } from '$lib/stores.js';
-	import { writable } from 'svelte/store';
+	import { writable, derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
-	import { getStops } from '$lib/db';
+	import { fetchStops, getStops, loadMissing } from '$lib/db';
+	import { liveQuery } from 'dexie';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 	import ContributionPrompt from '$lib/changes/ContributionPrompt.svelte';
 
-	/** @type {import('./$types').PageData} */
-	export let data;
+	const stops = liveQuery(() => getStops());
+
+	const userFilter = writable(null);
 
 	let keepVerification = false;
 
-	const stops = writable({});
+	let contributors = [];
 
-	getStops().then((res) => {
-		stops.set(res);
-	});
+	let undecidedLoaded = false;
+	let decidedLoaded = false;
+	let changelogLoaded = false;
+	let contributorsLoaded = false;
 
-	let undecidedContributions = [];
-	let changelogPage = 0;
+	const undecidedPage = writable(0);
+	const decidedPage = writable(0);
+	const changelogPage = writable(0);
 
-	loadUndecidedPage(0).then((res) => {
-		undecidedContributions = res;
-	});
+	const undecidedContributions = derived(
+		[undecidedPage, userFilter],
+		([$page, $userFilter], set) => {
+			undecidedLoaded = false;
+			const fetchParams = {
+				headers: {
+					authorization: `Bearer ${$token}`
+				}
+			};
 
-	async function loadUndecidedPage(page) {
-		return fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${page}`, {
+			return (
+				$userFilter
+					? fetch(
+							`${apiServer}/v1/contrib/contributions/undecided?p=${$page}&uid=${$userFilter}`,
+							fetchParams
+					  )
+					: fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${$page}`, fetchParams)
+			)
+				.then((res) => res.json())
+				.then((res) => {
+					set(res);
+					undecidedLoaded = true;
+				});
+		}
+	);
+
+	const decidedContributions = derived([decidedPage], ([$page], set) => {
+		const fetchParams = {
 			headers: {
 				authorization: `Bearer ${$token}`
 			}
-		}).then((res) => res.json());
+		};
+
+		fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, fetchParams)
+			.then((res) => res.json())
+			.then((res) => {
+				set(res);
+				decidedLoaded = true;
+			});
+	});
+
+	const changelog = derived([decidedPage], ([$page], set) => {
+		const fetchParams = {
+			headers: {
+				authorization: `Bearer ${$token}`
+			}
+		};
+		fetch(`${apiServer}/v1/contrib/changelog`, fetchParams)
+			.then((res) => res.json())
+			.then((res) => {
+				set(res);
+				changelogLoaded = true;
+			});
+	});
+
+	async function loadData() {
+		let fetchParams = {
+			headers: {
+				authorization: `Bearer ${$token}`
+			}
+		};
+		await Promise.all([
+			fetchStops(),
+			fetch(`${apiServer}/v1/contrib/contributions/undecided/contributors`, fetchParams)
+				.then((res) => res.json())
+				.then((res) => {
+					contributors = res;
+					contributorsLoaded = true;
+				})
+		]);
 	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
 </script>
 
 <svelte:head>
@@ -38,48 +107,65 @@
 	<meta name="description" content="Contribuições" />
 </svelte:head>
 
-<div class="flex flex-col gap-4 w-full max-w-5xl mt-4 self-center">
-	{#await data}
-		Loading
-	{:then data}
-		<div class="card bg-base-100 shadow-md">
-			<div class="card-body">
-				<div class="input-group">
-					<span>Manter verificação</span>
-					<input type="checkbox" bind:checked={keepVerification} />
+<div class="grid grid-cols-1 2xl:grid-cols-3 gap-4 w-full p-4 self-center min-h-0">
+	<div class="card bg-base-100 shadow-md self-start">
+		<div class="card-body">
+			<h2 class="card-title">Contribuições por decidir</h2>
+			{#if contributorsLoaded}
+				<div class="flex justify-between">
+					<div class="input-group">
+						<span>Manter verificação</span>
+						<input type="checkbox" bind:checked={keepVerification} />
+					</div>
+					<div class="input-group w-fit">
+						<span>Utilizador</span>
+						<select bind:value={$userFilter} class="input input-bordered">
+							{#each contributors as contributor}
+								<option value={contributor.id}>{contributor.username}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
-				<h2 class="card-title">Contribuições por decidir</h2>
+			{/if}
+			{#if $stops && undecidedLoaded}
 				<ul>
-					{#each undecidedContributions as contribution (contribution.id)}
+					{#each $undecidedContributions || [] as contribution (contribution.id)}
 						<ContributionPrompt
 							{contribution}
 							{stops}
 							{keepVerification}
 							on:accept={(e) => {
-								undecidedContributions = undecidedContributions.filter(
-									(c) => c.id !== e.detail.contribution_id
-								);
+								// undecidedContributions = undecidedContributions.filter(
+								// 	(c) => c.id !== e.detail.contribution_id
+								// );
 							}}
 							on:reject={(e) => {
-								undecidedContributions = undecidedContributions.filter(
-									(c) => c.id !== e.detail.contribution_id
-								);
+								// undecidedContributions = undecidedContributions.filter(
+								// 	(c) => c.id !== e.detail.contribution_id
+								// );
 							}}
 						/>
+						<hr />
 					{/each}
 				</ul>
-			</div>
+			{:else}
+				<div class="w-full flex justify-center">
+					<span class="loading loading-dots loading-lg" />
+				</div>
+			{/if}
 		</div>
-		<div class="card bg-base-100 shadow-md">
-			<div class="card-body">
-				<h2 class="card-title">Contribuições decididas</h2>
+	</div>
+	<div class="card bg-base-100 shadow-md self-start">
+		<div class="card-body">
+			<h2 class="card-title">Contribuições decididas</h2>
+			{#if $stops && decidedLoaded}
 				<ul>
-					{#each data.decided as contribution}
+					{#each $decidedContributions || [] as contribution}
 						<li>
 							<h2 class="card-title text-lg">
 								{contribution.evaluator_username}
 								{contribution.accepted ? 'aprovou' : 'recusou'} #{contribution.id} por {contribution.author_username}
-								- {new Date(contribution.submission_date).toString().split(' GMT')[0]}
+								- {new Date(contribution.submission_date).toLocaleString('pt')}
 							</h2>
 							<ChangeViewer change={contribution.change} {stops} />
 							{#if contribution.comment}
@@ -89,17 +175,23 @@
 						</li>
 					{/each}
 				</ul>
-			</div>
+			{:else}
+				<div class="w-full flex justify-center">
+					<span class="loading loading-dots loading-lg" />
+				</div>
+			{/if}
 		</div>
-		<div class="card bg-base-100 shadow-md">
-			<div class="card-body">
-				<h2 class="card-title">Alterações</h2>
-				{#each data.changesets.slice(0, changelogPage * 5) as changeset}
+	</div>
+	<div class="card bg-base-100 shadow-md self-start">
+		<div class="card-body">
+			<h2 class="card-title">Alterações</h2>
+			{#if $stops && changelogLoaded}
+				{#each $changelog?.slice(0, ($changelogPage + 1) * 5) || [] as changeset}
 					<div class="card card-compact bg-base-100 shadow-sm">
 						<div class="card-body">
 							<h2 class="card-title text-lg">
 								#{changeset.id} - aplicado por {changeset.author_username} em
-								{new Date(changeset.datetime).toString().split(' GMT')[0]}
+								{new Date(changeset.datetime).toLocaleString('pt')}
 							</h2>
 							<ul>
 								{#each changeset.changes as change}
@@ -116,11 +208,15 @@
 					class="btn btn-neutral"
 					value="Mostar mais"
 					on:mouseup={() => {
-						changelogPage++;
+						$changelogPage++;
 					}}
-					disabled={data.changesets.length <= changelogPage * 5}
+					disabled={$changelog && $changelog.length <= ($changelogPage + 1) * 5}
 				/>
-			</div>
+			{:else}
+				<div class="w-full flex justify-center">
+					<span class="loading loading-dots loading-lg" />
+				</div>
+			{/if}
 		</div>
-	{/await}
+	</div>
 </div>
