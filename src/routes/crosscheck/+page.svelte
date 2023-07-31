@@ -782,6 +782,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	});
 
 	onDestroy(() => {
+		mapLoaded = false;
 		map.remove();
 	});
 </script>
@@ -791,7 +792,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		<div style="background-color: #33336699" class="z-[2000] absolute inset-0" />
 		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
 			<div
-				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl  border-2 border-warning  max-h-full"
+				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl border-2 border-warning max-h-full"
 			>
 				<span class="text-xl">A carregar</span>
 				<span

@@ -245,6 +245,7 @@
 	});
 
 	onDestroy(() => {
+		mapLoaded = false;
 		map.remove();
 	});
 </script>
