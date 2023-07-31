@@ -224,4 +224,4 @@
 	});
 </script>
 
-<div bind:this={mapEl} class=" w-full" class:h-[40em]={$compact} class:h-[50em]={!$compact} />
+<div bind:this={mapEl} class="w-full max-h-[50vh]" class:h-[40em]={$compact} class:h-[50em]={!$compact} />

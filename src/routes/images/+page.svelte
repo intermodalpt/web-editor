@@ -284,12 +284,34 @@
 					on:selectPic={selectPicHandler}
 					compact={compactMap}
 				/>
-				{#if $selectedPicId}
-					<PicInfo picId={selectedPicId} {stops} />
-				{/if}
-				{#if $selectedStop}
-					<StopPicsInfo {selectedStop} {stops} />
-				{/if}
+				<div class="md:px-2 pb-2">
+					{#if $selectedPicId}
+						<PicInfo
+							picId={selectedPicId}
+							{stops}
+							on:edit-pic={(e) => {
+								openPicEditor(e.detail.id);
+							}}
+							on:select-stop={(e) => {
+								selectStopHandler(e);
+								// TODO center
+							}}
+						/>
+					{/if}
+					{#if $selectedStop}
+						<StopPicsInfo
+							{selectedStop}
+							{stops}
+							on:select-pic={(e) => {
+								selectPicHandler(e);
+								// TODO center
+							}}
+							on:select-stop={(e) => {
+								// TODO center
+							}}
+						/>
+					{/if}
+				</div>
 			</div>
 		{:else if $tab === tabs.tagged}
 			<div class="card-body">

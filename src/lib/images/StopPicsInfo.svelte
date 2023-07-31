@@ -1,7 +1,10 @@
 <script>
+	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
 	import { token } from '$lib/stores';
 	import { apiServer } from '$lib/settings';
+
+	const dispatch = createEventDispatcher();
 
 	export let stops;
 	export let selectedStop;
@@ -21,23 +24,24 @@
 				set(r);
 			});
 	});
-
-	function picClickHandler(picId) {
-		console.log('picClickHandler', picId);
-	}
 </script>
 
 {#if $stopPics}
-	<span class="card-title">Paragem selecionada</span>
+	<span class="card-title"
+		>Fotografias de
 
-	<span class="badge badge-lg badge-secondary">
-		{$selectedStop?.id}: {$selectedStop?.short_name ||
-			$selectedStop?.name ||
-			$selectedStop?.official_name ||
-			$selectedStop?.osm_name}
-	</span>
-
-	<span class="card-title">Fotografias</span>
+		<span
+			class="badge badge-lg badge-secondary cursor-pointer whitespace-nowrap"
+			on:click={() => {
+				dispatch('select-stop', { id: $selectedStop.id });
+			}}
+		>
+			{$selectedStop?.id}: {$selectedStop?.short_name ||
+				$selectedStop?.name ||
+				$selectedStop?.official_name ||
+				$selectedStop?.osm_name}
+		</span></span
+	>
 	{#if $stopPics.length === 0}
 		<span class="text-lg">Sem fotografias associadas</span>
 	{/if}
@@ -48,7 +52,7 @@
 					src={pic.url_medium}
 					class="rounded-box transition-all hover:scale-105"
 					on:click={() => {
-						picClickHandler(pic.id);
+						dispatch('select-pic', { id: pic.id });
 					}}
 				/>
 			</div>

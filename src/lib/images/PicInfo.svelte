@@ -1,7 +1,10 @@
 <script>
+	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
 	import { token } from '$lib/stores';
 	import { apiServer } from '$lib/settings';
+
+	const dispatch = createEventDispatcher();
 
 	export let stops;
 	export let picId;
@@ -22,21 +25,21 @@
 			});
 	});
 
-    const picStops = derived(data, ($data) => {
-        if (!$data) {
-            return [];
-        }
-        
-        return $data.stops.map((stopId) => $stops[stopId]);
-    });
+	const picStops = derived(data, ($data) => {
+		if (!$data) {
+			return [];
+		}
+
+		return $data.stops.map((stopId) => $stops[stopId]);
+	});
 </script>
 
 {#if $data}
 	<span class="card-title">Imagem selecionada</span>
 	<div class="flex flex-wrap gap-4">
-		<a href={$data.url_full} class="link" target="_blank"
-			><img src={$data.url_medium} alt="Fotografia selecionada" class="h-96" /></a
-		>
+		<a href={$data.url_full} class="link" target="_blank">
+			<img src={$data.url_medium} alt="Fotografia selecionada" class="w-full max-h-96" />
+		</a>
 
 		<div class="flex flex-col gap-2 grow">
 			<span class="flex gap-4">
@@ -46,7 +49,12 @@
 					<span class="text-xs">/10</span>
 					<span class="text-lg">⭐</span>
 				</span>
-				<a class="btn btn-xs btn-primary">Editar</a>
+				<span
+					class="btn btn-xs btn-primary"
+					on:click={() => {
+						dispatch('edit-pic', { id: $data.id });
+					}}>Editar</span
+				>
 			</span>
 			<div class="flex gap-2">
 				<div class="flex">
@@ -78,14 +86,19 @@
 			</div>
 			<div class="flex flex-col">
 				<span class="label-text">Paragens</span>
-                <div class="flex flex-col gap-1 ml-2">
-                    {#each $picStops as stop}
-                        <span class="badge badge-md badge-secondary">
-                            {stop?.id} 
-                            {stop?.short_name || stop?.name || stop?.official_name || stop?.osm_name}
-                        </span>
-                    {/each}
-                </div>
+				<div class="flex flex-col gap-1 ml-2">
+					{#each $picStops as stop}
+						<span
+							class="badge badge-md badge-secondary cursor-pointer whitespace-nowrap"
+							on:click={() => {
+								dispatch('select-stop', { id: stop?.id });
+							}}
+						>
+							{stop?.id}
+							{stop?.short_name || stop?.name || stop?.official_name || stop?.osm_name}
+						</span>
+					{/each}
+				</div>
 			</div>
 			<div class="flex flex-col">
 				<span class="label-text">Captura (dispositivo)</span>
@@ -125,7 +138,9 @@
 			<div class="flex flex-col">
 				<span class="label-text">Formato</span>
 				<span class="ml-2">
-					{$data.width} x {$data.height} ({Math.round(($data.width * $data.height) / 1_000_000)} MPix)
+					{$data.width} x {$data.height} ({Math.round(
+						($data.width * $data.height * 10) / 1_000_000
+					) / 10} MPix)
 				</span>
 			</div>
 			<div class="flex flex-col">
