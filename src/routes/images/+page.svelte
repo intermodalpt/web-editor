@@ -6,6 +6,7 @@
 	import StopPicsInfo from '$lib/images/StopPicsInfo.svelte';
 	import PicInfo from '$lib/images/PicInfo.svelte';
 	import { apiServer } from '$lib/settings.js';
+	import { Gallery } from '$lib/images/utils.js';
 	import { token } from '$lib/stores.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
@@ -45,43 +46,6 @@
 		return $selectedStop || $selectedPicId;
 	});
 
-	class Gallery {
-		constructor(asc = true, pageSize = defaultPageSize) {
-			this.pageSize = pageSize;
-			this.asc = asc;
-			this.pictures = [];
-			this.seenIds = new Set();
-		}
-
-		mergePictures(pictures) {
-			const newPictures = pictures.filter((pic) => {
-				return !this.seenIds.has(pic.id);
-			});
-
-			newPictures.forEach((pic) => {
-				this.seenIds.add(pic.id);
-			});
-
-			let hasUploadDate = pictures[0]?.upload_date || this.pictures[0]?.upload_date;
-
-			if (hasUploadDate) {
-				this.pictures = this.pictures
-					.concat(newPictures)
-					.sort((a, b) =>
-						this.asc
-							? (a.capture_date || a.upload_date).localeCompare(b.capture_date || b.upload_date)
-							: (b.capture_date || b.upload_date).localeCompare(a.capture_date || a.upload_date)
-					);
-			} else {
-				this.pictures = this.pictures.concat(newPictures).sort((a, b) => (this.asc ? a.id - b.id : b.id - a.id));
-			}
-		}
-
-		get nextPage() {
-			return this.pictures.length / this.pageSize;
-		}
-	}
-
 	let taggedGallery = new Gallery(false);
 	let untaggedGallery = new Gallery(false);
 	let unpositionedGallery = new Gallery(true);
@@ -100,12 +64,14 @@
 			if (untaggedGallery.pictures.length === 0) {
 				loadMoreUntaggedStops();
 			}
+		} else if (value === tabs.unpositioned) {
+			if (unpositionedGallery.pictures.length === 0) {
+				loadMoreUnpositionedStops();
+			}
 		}
 	});
 
-	let uploadModal = false;
-	let openImage = writable(null);
-	const defaultPageSize = 20;
+	let openImageId = writable(null);
 
 	function pagesToFetch(page) {
 		let pages = [];
@@ -196,14 +162,12 @@
 			});
 	}
 
-	function openPic(id) {
-		$openImage = untaggedStopPictures[id];
+	function openPicEditor(id) {
+		$openImageId = id;
 	}
 
-	function close() {
-		uploadModal = false;
-		$openImage = null;
-		untaggedStopPictures = untaggedStopPictures;
+	function closePicEditor() {
+		$openImageId = null;
 	}
 
 	function selectPicHandler(e) {
@@ -214,6 +178,56 @@
 	function selectStopHandler(e) {
 		$selectedPicId = null;
 		$selectedStop = $stops[e.detail.id];
+	}
+
+	function handlePictureSave(e) {
+		let picId = e.detail.id;
+
+		fetch(`${apiServer}/v1/stop_pics/${picId}`, {
+			headers: {
+				Authorization: `Bearer ${$token}`
+			}
+		})
+			.then((r) => r.json())
+			.then((pic) => {
+				let isTagged = pic.tagged;
+				let isPositioned = pic.lon && pic.lat;
+
+				if (isTagged) {
+					untaggedGallery.dropPicture(picId);
+				}
+
+				if (isPositioned) {
+					unpositionedGallery.dropPicture(picId);
+				}
+
+				if (isTagged && isPositioned) {
+					taggedGallery.mergePictures([pic]);
+					taggedGallery = taggedGallery;
+				} else if (isTagged && !isPositioned) {
+					unpositionedGallery.mergePictures(pic);
+					unpositionedGallery = unpositionedGallery;
+				} else if (!isTagged) {
+					untaggedGallery.mergePictures(pic);
+					untaggedGallery = untaggedGallery;
+				}
+				closePicEditor();
+			})
+			.catch((e) => {
+				console.error(e);
+				alert('Unable to refresh picture ' + picId + ' due to: ' + e.message);
+			});
+	}
+
+	function handlePictureDelete(e) {
+		let picId = e.detail.id;
+
+		taggedGallery.dropPicture(picId);
+		untaggedGallery.dropPicture(picId);
+		unpositionedGallery.dropPicture(picId);
+		taggedGallery = taggedGallery;
+		unpositionedGallery = unpositionedGallery;
+		untaggedGallery = untaggedGallery;
 	}
 </script>
 
@@ -288,10 +302,10 @@
 						{#each taggedGallery.pictures as pic}
 							<div class="p-2 flex justify-center items-center cursor-pointer">
 								<img
-									src={pic.url_medium}
-									class="rounded-box transition-all hover:scale-105"
+									src={pic.url_thumb}
+									class="rounded-box transition-all hover:scale-125"
 									on:click={() => {
-										openPic(pic.id);
+										openPicEditor(pic.id);
 									}}
 								/>
 							</div>
@@ -313,10 +327,10 @@
 						{#each untaggedGallery.pictures as pic}
 							<div class="p-2 flex justify-center items-center cursor-pointer">
 								<img
-									src={pic.url_medium}
-									class="rounded-box transition-all hover:scale-105"
+									src={pic.url_thumb}
+									class="rounded-box transition-all hover:scale-125"
 									on:click={() => {
-										openPic(pic.id);
+										openPicEditor(pic.id);
 									}}
 								/>
 							</div>
@@ -338,10 +352,10 @@
 						{#each unpositionedGallery.pictures as pic}
 							<div class="p-2 flex justify-center items-center cursor-pointer">
 								<img
-									src={pic.url_medium}
+									src={pic.url_thumb}
 									class="rounded-box transition-all hover:scale-105"
 									on:click={() => {
-										openPic(pic.id);
+										openPicEditor(pic.id);
 									}}
 								/>
 							</div>
@@ -361,6 +375,12 @@
 	</div>
 </div>
 
-{#if $openImage}
-	<ImageEditor image={openImage} on:close={close} />
+{#if $openImageId}
+	<ImageEditor
+		imageId={openImageId}
+		{stops}
+		on:save={handlePictureSave}
+		on:delete={handlePictureDelete}
+		on:close={closePicEditor}
+	/>
 {/if}
