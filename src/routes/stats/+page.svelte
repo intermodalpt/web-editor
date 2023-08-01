@@ -1,10 +1,8 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import * as turf from '@turf/turf';
-	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { fetchStops, fetchParishes, getStops, getParishes, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
@@ -254,7 +252,7 @@
 					...parish.geojson
 				};
 				console.log(scoringAttr, parish.totalCount);
-				let complete = parish.totalCount == 0 || scoringAttr == parish.totalCount; 
+				let complete = parish.totalCount == 0 || scoringAttr == parish.totalCount;
 				obj.properties = {
 					score: complete ? 1.0 : scoringAttr / parish.totalCount,
 					percentage: Math.round((complete ? 1.0 : scoringAttr / parish.totalCount) * 100) + '%',
@@ -416,38 +414,38 @@
 	});
 </script>
 
-<div class="self-center w-[80em] my-4">
+<div class="self-center max-w-[80em] w-full my-4">
 	<div class="tabs">
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.identifier}
 			on:click={() => {
 				$tab = mapTabs.identifier;
 			}}>Identificação</a
 		>
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.position}
 			on:click={() => {
 				$tab = mapTabs.position;
 			}}>Posição</a
 		>
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.service}
 			on:click={() => {
 				$tab = mapTabs.service;
 			}}>Serviço</a
 		>
 		<a
-			class="tab tab-lg tab-lifted"
+			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.pics}
 			on:click={() => {
 				$tab = mapTabs.pics;
 			}}>Reg.Fotografico</a
 		>
 	</div>
-	<div id="map" class="h-[60em] w-full">
+	<div id="map" class="h-[30em] xl:h-[60em] w-full">
 		<!-- {#if loading}
 		<div style="background-color: #33336699" class="z-[2000] absolute inset-0" />
 		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
