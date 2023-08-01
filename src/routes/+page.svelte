@@ -1,7 +1,6 @@
 <script>
-	import StopCheckbox from '$lib/editor/StopCheckbox.svelte';
-	import { readable } from 'svelte/store';
-	import { token } from '$lib/stores.js';
+	import { token } from '$lib/stores';
+	import { version } from '$lib/settings';
 </script>
 
 <svelte:head>
@@ -68,5 +67,8 @@
 				{/if}
 			</div>
 		</div>
+	</div>
+	<div class="flex justify-end">
+		<span class="text-xs">V:{version}</span>
 	</div>
 </div>
