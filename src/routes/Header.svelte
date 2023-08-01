@@ -40,18 +40,12 @@
 			<a href="/images" class="tab" class:tab-active={$page.url.pathname.startsWith('/images')}>
 				Fotos
 			</a>
-			{#if $decodedToken?.permissions?.is_admin}
-				<a
-					href="/moderation"
-					class="tab"
-					class:tab-active={$page.url.pathname.startsWith('/moderation')}
-				>
-					Moderação
-				</a>
-				<a href="/actions" class="tab" class:tab-active={$page.url.pathname.startsWith('/actions')}>
-					Ações
-				</a>
-			{/if}
+			<a href="/contrib" class="tab" class:tab-active={$page.url.pathname.startsWith('/contrib')}>
+				Contribuições
+			</a>
+			<a href="/stats" class="tab" class:tab-active={$page.url.pathname.startsWith('/stats')}>
+				Estado
+			</a>
 		</div>
 	</nav>
 	<div>

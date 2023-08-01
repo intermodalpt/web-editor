@@ -2,7 +2,7 @@
 	import '../app.css';
 	import Header from './Header.svelte';
 	import { page, navigating } from '$app/stores';
-	import { toasts, decodedToken } from '$lib/stores';
+	import { toasts } from '$lib/stores';
 </script>
 
 {#if $navigating}
@@ -37,16 +37,16 @@
 			<li>
 				<a href="/images" class:active={$page.url.pathname.startsWith('/images')}>Fotos</a>
 			</li>
-			{#if $decodedToken?.permissions?.is_admin}
-				<li>
-					<a href="/moderation" class:active={$page.url.pathname.startsWith('/moderation')}>
-						Moderação
-					</a>
-				</li>
-				<li>
-					<a href="/actions" class:active={$page.url.pathname.startsWith('/actions')}>Ações</a>
-				</li>
-			{/if}
+			<li>
+				<a href="/contrib" class:active={$page.url.pathname.startsWith('/contrib')}>
+					Contribuições
+				</a>
+			</li>
+			<li>
+				<a href="/stats" class:active={$page.url.pathname.startsWith('/stats')}>
+					Estado
+				</a>
+			</li>
 		</ul>
 	</div>
 </div>
