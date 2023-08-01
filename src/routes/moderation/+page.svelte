@@ -4,10 +4,14 @@
 	import { apiServer } from '$lib/settings.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
-	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
-	import ContributionPrompt from '$lib/changes/ContributionPrompt.svelte';
+	import ContributionRow from '$lib/changes/rows/ContributionRow.svelte';
+	import DecidedContributionRow from '$lib/changes/rows/DecidedContributionRow.svelte';
+	import ChangesetRow from '$lib/changes/rows/ChangesetRow.svelte';
+	import ContributionWindow from '$lib/changes/ContributionWindow.svelte';
 
 	const stops = liveQuery(() => getStops());
+
+	const openContribution = writable(null);
 
 	const userFilter = writable(null);
 
@@ -107,19 +111,34 @@
 	<meta name="description" content="Contribuições" />
 </svelte:head>
 
-<div class="grid grid-cols-1 2xl:grid-cols-3 gap-4 w-full p-4 self-center min-h-0">
-	<div class="card bg-base-100 shadow-md self-start">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-4 w-full p-4 self-center min-h-0">
+	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
 			<h2 class="card-title">Contribuições por decidir</h2>
+			{#if $stops && undecidedLoaded}
+				<ul class="flex flex-col gap-2">
+					{#each $undecidedContributions || [] as contribution (contribution.id)}
+						<ContributionRow
+							{contribution}
+							{stops}
+							on:click={() => {
+								$openContribution = contribution;
+							}}
+						/>
+					{/each}
+				</ul>
+			{:else}
+				<div class="w-full flex justify-center">
+					<span class="loading loading-dots loading-lg" />
+				</div>
+			{/if}
 			{#if contributorsLoaded}
 				<div class="flex justify-between">
-					<div class="input-group">
-						<span>Manter verificação</span>
-						<input type="checkbox" bind:checked={keepVerification} />
-					</div>
 					<div class="input-group w-fit">
+						<span class="bg-base-200">Filtros</span>
 						<span>Utilizador</span>
 						<select bind:value={$userFilter} class="input input-bordered">
+							<option selected value>-------</option>
 							{#each contributors as contributor}
 								<option value={contributor.id}>{contributor.username}</option>
 							{/each}
@@ -127,52 +146,21 @@
 					</div>
 				</div>
 			{/if}
-			{#if $stops && undecidedLoaded}
-				<ul>
-					{#each $undecidedContributions || [] as contribution (contribution.id)}
-						<ContributionPrompt
-							{contribution}
-							{stops}
-							{keepVerification}
-							on:accept={(e) => {
-								// undecidedContributions = undecidedContributions.filter(
-								// 	(c) => c.id !== e.detail.contribution_id
-								// );
-							}}
-							on:reject={(e) => {
-								// undecidedContributions = undecidedContributions.filter(
-								// 	(c) => c.id !== e.detail.contribution_id
-								// );
-							}}
-						/>
-						<hr />
-					{/each}
-				</ul>
-			{:else}
-				<div class="w-full flex justify-center">
-					<span class="loading loading-dots loading-lg" />
-				</div>
-			{/if}
 		</div>
 	</div>
-	<div class="card bg-base-100 shadow-md self-start">
+	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
 			<h2 class="card-title">Contribuições decididas</h2>
 			{#if $stops && decidedLoaded}
-				<ul>
+				<ul class="flex flex-col gap-2">
 					{#each $decidedContributions || [] as contribution}
-						<li>
-							<h2 class="card-title text-lg">
-								{contribution.evaluator_username}
-								{contribution.accepted ? 'aprovou' : 'recusou'} #{contribution.id} por {contribution.author_username}
-								- {new Date(contribution.submission_date).toLocaleString('pt')}
-							</h2>
-							<ChangeViewer change={contribution.change} {stops} />
-							{#if contribution.comment}
-								<h4 class="font-bold">Comentário:</h4>
-								<textarea disabled class="w-full">{contribution.comment}</textarea>
-							{/if}
-						</li>
+						<DecidedContributionRow
+							{contribution}
+							{stops}
+							on:click={() => {
+								$openContribution = contribution;
+							}}
+						/>
 					{/each}
 				</ul>
 			{:else}
@@ -182,27 +170,15 @@
 			{/if}
 		</div>
 	</div>
-	<div class="card bg-base-100 shadow-md self-start">
+	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
-			<h2 class="card-title">Alterações</h2>
+			<h2 class="card-title">Alterações aplicadas</h2>
 			{#if $stops && changelogLoaded}
-				{#each $changelog?.slice(0, ($changelogPage + 1) * 5) || [] as changeset}
-					<div class="card card-compact bg-base-100 shadow-sm">
-						<div class="card-body">
-							<h2 class="card-title text-lg">
-								#{changeset.id} - aplicado por {changeset.author_username} em
-								{new Date(changeset.datetime).toLocaleString('pt')}
-							</h2>
-							<ul>
-								{#each changeset.changes as change}
-									<li>
-										<ChangeViewer {change} {stops} />
-									</li>
-								{/each}
-							</ul>
-						</div>
-					</div>
-				{/each}
+				<ul class="flex flex-col gap-2">
+					{#each $changelog?.slice(0, ($changelogPage + 1) * 5) || [] as changeset}
+						<ChangesetRow {changeset} {stops} />
+					{/each}
+				</ul>
 				<input
 					type="button"
 					class="btn btn-neutral"
@@ -220,3 +196,13 @@
 		</div>
 	</div>
 </div>
+
+{#if $openContribution}
+	<ContributionWindow
+		contribution={$openContribution}
+		{stops}
+		on:close={() => {
+			$openContribution = null;
+		}}
+	/>
+{/if}

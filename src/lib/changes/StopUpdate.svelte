@@ -3,7 +3,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { listDifferences, getNearestStops } from '$lib/utils.js';
 	import { tileStyle } from '$lib/settings.js';
-	import { onDestroy, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { derived } from 'svelte/store';
 	import FlagsWidget from '$lib/instructions/widgets/Flags.svelte';
 	import SchedulesWidget from '$lib/instructions/widgets/Schedules.svelte';
@@ -18,9 +18,9 @@
 	export let stops;
 	export let ignoredKeys;
 
-	let expand = false;
 	let mapElem;
 	let map;
+	let mapLoaded = false;
 
 	let originalStop;
 
@@ -36,6 +36,7 @@
 	});
 
 	const updateMapSource = (stops) => {
+		if (!mapLoaded) return;
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
 			features: stops.map((stop) => {
@@ -52,12 +53,11 @@
 	};
 
 	nearestStops.subscribe((stops) => {
-		if (map) {
-			updateMapSource(stops);
-		}
+		if (!mapLoaded) return;
+		updateMapSource(stops);
 	});
 
-	const currentStop = $stops[change.original.id];
+	const currentStop = $stops && $stops[change.original.id];
 
 	$: diffs = listDifferences(change.original, change.patch);
 	let currentDiffs = currentStop
@@ -66,13 +66,7 @@
 		  })
 		: [];
 
-	onDestroy(() => {
-		if (map) {
-			map.remove();
-		}
-	});
-
-	function loadMap() {
+	onMount(() => {
 		map = new Map({
 			container: mapElem,
 			style: tileStyle,
@@ -115,11 +109,20 @@
 				}
 			});
 
+			mapLoaded = true;
+
 			if ($nearestStops) {
 				updateMapSource($nearestStops);
 			}
 		});
-	}
+	});
+
+	onDestroy(() => {
+		mapLoaded = false;
+		if (map) {
+			map.remove();
+		}
+	});
 </script>
 
 <h3 class="font-bold">
@@ -140,89 +143,78 @@
 	>
 </h3>
 
-{#if expand}
-	<div class="grid grid-cols-2">
-		<ul>
-			{#each diffs as diff}
-				{#if ignoredKeys && !ignoredKeys.includes(diff.key)}
-					<li>
-						<span
-							class="btn btn-xs btn-circle btn-error btn-outline"
-							on:click={() => {
-								ignoredKeys.push(diff.key);
-								ignoredKeys = ignoredKeys;
-							}}>✕</span
-						>
-						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{diff.key}:
-						{#if diff.key === 'flags'}
-							<FlagsWidget flagsData={diff.new} />
-						{:else if diff.key === 'schedules'}
-							<SchedulesWidget schedulesData={diff.new} />
-						{:else if diff.key === 'advertisement_qty'}
-							{#if diff.original}
-								<AdvertisementQtySelector val={diff.original} wrong={true} />
-							{/if}
-							<AdvertisementQtySelector val={diff.new} />
-						{:else if diff.key === 'illumination_strength'}
-							{#if diff.original}
-								<IlluminationStrengthSelector val={diff.original} wrong={true} />
-							{/if}
-							<IlluminationStrengthSelector val={diff.new} />
-						{:else if diff.key === 'illumination_position'}
-							{#if diff.original}
-								<IlluminationPositionSelector val={diff.original} wrong={true} />
-							{/if}
-							<IlluminationPositionSelector val={diff.new} />
-						{:else if diff.key === 'parking_visibility_impairment'}
-							{#if diff.original}
-								<ParkingVisibilityImpairmentSelector val={diff.original} wrong={true} />
-							{/if}
-							<ParkingVisibilityImpairmentSelector val={diff.new} />
-						{:else if diff.key === 'parking_local_access_impairment'}
-							{#if diff.original}
-								<ParkingLocalAccessImpairmentSelector val={diff.original} wrong={true} />
-							{/if}
-							<ParkingLocalAccessImpairmentSelector val={diff.new} />
-						{:else if diff.key === 'parking_area_access_impairment'}
-							{#if diff.original}
-								<ParkingAreaAccessImpairmentSelector val={diff.original} wrong={true} />
-							{/if}
-							<ParkingAreaAccessImpairmentSelector val={diff.new} />
-						{:else}
-							{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
-							<span class="bg-green-300">{diff.new}</span>
-						{/if}
-					</li>
-				{/if}
-			{/each}
-		</ul>
-		<div bind:this={mapElem} class="h-96" />
-	</div>
-	{#if ignoredKeys && ignoredKeys.length > 0}
-		<h3 class="font-bold">Chaves ignoradas</h3>
-		<div class="flex flex-wrap">
-			{#each ignoredKeys as key}
-				<span class="badge badge-outline badge-error"
-					>{key}
-					<div
-						class="btn btn-error btn-circle btn-xs"
+<div class="grid grid-cols-2">
+	<ul>
+		{#each diffs as diff}
+			{#if ignoredKeys && !ignoredKeys.includes(diff.key)}
+				<li>
+					<span
+						class="btn btn-xs btn-circle btn-error btn-outline"
 						on:click={() => {
-							ignoredKeys = ignoredKeys.filter((ignored) => ignored != key);
-						}}
+							ignoredKeys.push(diff.key);
+							ignoredKeys = ignoredKeys;
+						}}>✕</span
 					>
-						✕
-					</div>
-				</span>
-			{/each}
-		</div>
-	{/if}
-{:else}
-	<span
-		class="link"
-		on:mouseup={async () => {
-			expand = true;
-			await tick();
-			loadMap();
-		}}>Mostrar</span
-	>
+					{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{diff.key}:
+					{#if diff.key === 'flags'}
+						<FlagsWidget flagsData={diff.new} />
+					{:else if diff.key === 'schedules'}
+						<SchedulesWidget schedulesData={diff.new} />
+					{:else if diff.key === 'advertisement_qty'}
+						{#if diff.original}
+							<AdvertisementQtySelector val={diff.original} wrong={true} />
+						{/if}
+						<AdvertisementQtySelector val={diff.new} />
+					{:else if diff.key === 'illumination_strength'}
+						{#if diff.original}
+							<IlluminationStrengthSelector val={diff.original} wrong={true} />
+						{/if}
+						<IlluminationStrengthSelector val={diff.new} />
+					{:else if diff.key === 'illumination_position'}
+						{#if diff.original}
+							<IlluminationPositionSelector val={diff.original} wrong={true} />
+						{/if}
+						<IlluminationPositionSelector val={diff.new} />
+					{:else if diff.key === 'parking_visibility_impairment'}
+						{#if diff.original}
+							<ParkingVisibilityImpairmentSelector val={diff.original} wrong={true} />
+						{/if}
+						<ParkingVisibilityImpairmentSelector val={diff.new} />
+					{:else if diff.key === 'parking_local_access_impairment'}
+						{#if diff.original}
+							<ParkingLocalAccessImpairmentSelector val={diff.original} wrong={true} />
+						{/if}
+						<ParkingLocalAccessImpairmentSelector val={diff.new} />
+					{:else if diff.key === 'parking_area_access_impairment'}
+						{#if diff.original}
+							<ParkingAreaAccessImpairmentSelector val={diff.original} wrong={true} />
+						{/if}
+						<ParkingAreaAccessImpairmentSelector val={diff.new} />
+					{:else}
+						{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
+						<span class="bg-green-300">{diff.new}</span>
+					{/if}
+				</li>
+			{/if}
+		{/each}
+	</ul>
+	<div bind:this={mapElem} class="h-96" />
+</div>
+{#if ignoredKeys && ignoredKeys.length > 0}
+	<h3 class="font-bold">Chaves ignoradas</h3>
+	<div class="flex flex-wrap">
+		{#each ignoredKeys as key}
+			<span class="badge badge-outline badge-error"
+				>{key}
+				<div
+					class="btn btn-error btn-circle btn-xs"
+					on:click={() => {
+						ignoredKeys = ignoredKeys.filter((ignored) => ignored != key);
+					}}
+				>
+					✕
+				</div>
+			</span>
+		{/each}
+	</div>
 {/if}
