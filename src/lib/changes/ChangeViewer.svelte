@@ -9,10 +9,12 @@
 	export let change;
 	export let stops;
 	export let ignoredKeys;
+
+	export let isEvaluation = false;
 </script>
 
 {#if 'StopUpdate' in change}
-	<StopUpdate change={change.StopUpdate} {stops} bind:ignoredKeys />
+	<StopUpdate change={change.StopUpdate} {stops} {isEvaluation} bind:ignoredKeys />
 {:else if 'StopPicUpload' in change}
 	<StopPicUpload change={change.StopPicUpload} />
 {:else if 'RouteUpdate' in change}

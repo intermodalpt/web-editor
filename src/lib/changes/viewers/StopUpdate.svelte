@@ -16,6 +16,7 @@
 
 	export let change;
 	export let stops;
+	export let isEvaluation = false;
 	export let ignoredKeys;
 
 	let mapElem;
@@ -146,16 +147,17 @@
 <div class="grid grid-cols-2">
 	<ul>
 		{#each diffs as diff}
-			{#if ignoredKeys && !ignoredKeys.includes(diff.key)}
+			{#if (ignoredKeys && !ignoredKeys.includes(diff.key)) || !isEvaluation}
 				<li>
-					<span
-						class="btn btn-xs btn-circle btn-error btn-outline"
-						on:click={() => {
-							ignoredKeys.push(diff.key);
-							ignoredKeys = ignoredKeys;
-						}}>✕</span
-					>
-					{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{diff.key}:
+					{#if isEvaluation}
+						<span
+							class="btn btn-xs btn-circle btn-error btn-outline"
+							on:click={() => {
+								ignoredKeys.push(diff.key);
+								ignoredKeys = ignoredKeys;
+							}}>✕</span
+						>
+						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{/if}{diff.key}:
 					{#if diff.key === 'flags'}
 						<FlagsWidget flagsData={diff.new} />
 					{:else if diff.key === 'schedules'}

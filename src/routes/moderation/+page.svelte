@@ -8,14 +8,14 @@
 	import DecidedContributionRow from '$lib/changes/rows/DecidedContributionRow.svelte';
 	import ChangesetRow from '$lib/changes/rows/ChangesetRow.svelte';
 	import ContributionWindow from '$lib/changes/ContributionWindow.svelte';
+	import ChangesetWindow from '$lib/changes/ChangesetWindow.svelte';
 
 	const stops = liveQuery(() => getStops());
 
 	const openContribution = writable(null);
+	const openChangeset = writable(null);
 
 	const userFilter = writable(null);
-
-	let keepVerification = false;
 
 	let contributors = [];
 
@@ -176,7 +176,13 @@
 			{#if $stops && changelogLoaded}
 				<ul class="flex flex-col gap-2">
 					{#each $changelog?.slice(0, ($changelogPage + 1) * 5) || [] as changeset}
-						<ChangesetRow {changeset} {stops} />
+						<ChangesetRow
+							{changeset}
+							{stops}
+							on:click={() => {
+								$openChangeset = changeset;
+							}}
+						/>
 					{/each}
 				</ul>
 				<input
@@ -203,6 +209,15 @@
 		{stops}
 		on:close={() => {
 			$openContribution = null;
+		}}
+	/>
+{/if}
+{#if $openChangeset}
+	<ChangesetWindow
+		changeset={$openChangeset}
+		{stops}
+		on:close={() => {
+			$openChangeset = null;
 		}}
 	/>
 {/if}
