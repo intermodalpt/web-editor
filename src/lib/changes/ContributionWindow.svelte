@@ -10,7 +10,7 @@
 	export let keepVerification = false;
 
 	let ignoredKeys = [];
-	
+
 	const isEvaluation = $decodedToken?.permissions?.is_admin && contribution.accepted == null;
 
 	const dispatch = createEventDispatcher();
@@ -27,14 +27,19 @@
 					Authorization: `Bearer ${$token}`
 				}
 			}
-		).then(async (r) => {
-			if (r.error) {
-				alert(r.error);
-			} else {
-				await wipeCachedData();
-				dispatch('accept', { id: contribution.id });
-			}
-		});
+		)
+			.catch((e) => {
+				alert("Couldn't decline contribution: " + e.message);
+				console.error(e);
+			})
+			.then(async (r) => {
+				if (r.ok) {
+					// await wipeCachedData();
+					dispatch('accept', { id: contribution.id });
+				} else {
+					alert("Couldn't accept contribution: " + r.status + ' ' + r.statusText);
+				}
+			});
 	}
 
 	function declineContribution() {
@@ -45,13 +50,18 @@
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${$token}`
 			}
-		}).then((r) => {
-			if (r.error) {
-				alert(r.error);
-			} else {
-				dispatch('reject', { id: contribution.id });
-			}
-		});
+		})
+			.catch((e) => {
+				alert("Couldn't decline contribution: " + e.message);
+				console.error(e);
+			})
+			.then((r) => {
+				if (r.ok) {
+					dispatch('reject', { id: contribution.id });
+				} else {
+					alert("Couldn't decline contribution: " + r.status + ' ' + r.statusText);
+				}
+			});
 	}
 
 	function close() {
@@ -62,16 +72,21 @@
 <div
 	class="fixed top-0 bottom-0 left-0 right-0 overflow-y-scroll grid grid-cols-1 bg-base-100 modal modal-open modal-bottom xl:modal-middle"
 	style="grid-template-rows: 1fr auto;"
-	on:click={close} on:keypress={close}
+	on:click={close}
+	on:keypress={close}
 >
-	<div class="modal-box xl:max-w-[80em]" on:click|stopPropagation={() => {}}  on:keypress|stopPropagation={() => {}}>
+	<div
+		class="modal-box xl:max-w-[80em]"
+		on:click|stopPropagation={() => {}}
+		on:keypress|stopPropagation={() => {}}
+	>
 		<div class="flex flex-col gap-1 max-h-[75vh]">
 			<h2 class="card-title text-lg">
 				#{contribution.id} por {contribution.author_username} -
 				{new Date(contribution.submission_date).toString().split(' GMT')[0]}
 			</h2>
 			<div class="overflow-y-auto">
-				<ChangeViewer change={contribution.change} {stops} isEvaluation={isEvaluation} bind:ignoredKeys />
+				<ChangeViewer change={contribution.change} {stops} {isEvaluation} bind:ignoredKeys />
 				{#if contribution.comment}
 					<div class="flex flex-col">
 						<h4 class="label-text">Comentário:</h4>

@@ -37,14 +37,20 @@
 	const decidedPage = writable(0);
 	const changelogPage = writable(0);
 
+	// Singin', "This'll be the day that I die
+	// This'll be the day that I die,"
+	// -
+	const forceDerivedStoresToUpdate = writable(0);
+
 	let decidedTotal = 0;
 	let undecidedTotal = 0;
 	let changelogTotal = 0;
 
 	const undecidedContributions = derived(
-		[undecidedPage, userFilter],
+		[undecidedPage, userFilter, forceDerivedStoresToUpdate],
 		([$page, $userFilter], set) => {
 			undecidedLoaded = false;
+			console.log('fetching undecided contributions', $page);
 			const fetchParams = {
 				headers: {
 					authorization: `Bearer ${$token}`
@@ -68,24 +74,27 @@
 		}
 	);
 
-	const decidedContributions = derived([decidedPage], ([$page], set) => {
-		decidedLoaded = false;
-		const fetchParams = {
-			headers: {
-				authorization: `Bearer ${$token}`
-			}
-		};
+	const decidedContributions = derived(
+		[decidedPage, forceDerivedStoresToUpdate],
+		([$page], set) => {
+			decidedLoaded = false;
+			const fetchParams = {
+				headers: {
+					authorization: `Bearer ${$token}`
+				}
+			};
 
-		fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, fetchParams)
-			.then((res) => res.json())
-			.then((res) => {
-				decidedTotal = res.total;
-				set(res.items);
-				decidedLoaded = true;
-			});
-	});
+			fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, fetchParams)
+				.then((res) => res.json())
+				.then((res) => {
+					decidedTotal = res.total;
+					set(res.items);
+					decidedLoaded = true;
+				});
+		}
+	);
 
-	const changelog = derived([changelogPage], ([$page], set) => {
+	const changelog = derived([changelogPage, forceDerivedStoresToUpdate], ([$page], set) => {
 		changelogLoaded = false;
 		const fetchParams = {
 			headers: {
@@ -100,6 +109,17 @@
 				changelogLoaded = true;
 			});
 	});
+
+	function refreshData() {
+		console.log('refreshing data');
+		// Force a data refresh
+		// This should've worked...
+		$decidedPage = $decidedPage;
+		$undecidedPage = $undecidedPage;
+		$changelogPage = $changelogPage;
+		// It doesn't. Let's drown a kitten
+		$forceDerivedStoresToUpdate = $forceDerivedStoresToUpdate + 1;
+	}
 
 	async function loadData() {
 		let fetchParams = {
@@ -260,6 +280,14 @@
 	<ContributionWindow
 		contribution={$openContribution}
 		{stops}
+		on:accept={() => {
+			refreshData();
+			$openContribution = null;
+		}}
+		on:reject={() => {
+			refreshData();
+			$openContribution = null;
+		}}
 		on:close={() => {
 			$openContribution = null;
 		}}
