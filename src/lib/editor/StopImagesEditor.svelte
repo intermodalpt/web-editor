@@ -21,7 +21,7 @@
 	let uploadDone = false;
 	let uploadCount = 0;
 	let sendingPictures = false;
-	const selectedImage = writable(null);
+	const selectedImageId = writable(null);
 
 	let currentImageHasChanges = false;
 
@@ -118,7 +118,7 @@
 			}
 		}
 
-		$selectedImage = picture;
+		$selectedImageId = picture.id;
 	}
 </script>
 
@@ -149,7 +149,7 @@
 				<img
 					src={picture.url_medium}
 					class="rounded-box transition-all h-24 lg:h-32 max-w-xl border-primary cursor-pointer"
-					class:border-b-4={$selectedImage === picture}
+					class:border-b-4={$selectedImageId === picture.id}
 					on:click={async () => await gotoPicture(picture)}
 				/>
 			</div>
@@ -170,7 +170,7 @@
 				<img
 					src={picture.url_medium}
 					class="rounded-box transition-all h-24 lg:h-32 max-w-xl border-primary cursor-pointer"
-					class:border-b-4={$selectedImage === picture}
+					class:border-b-4={$selectedImageId === picture.id}
 					on:click={async () => await gotoPicture(picture)}
 				/>
 			</div>
@@ -182,9 +182,9 @@
 		style="grid-template-rows: auto 1fr;"
 	>
 		<div class="max-w-[60em]">
-			{#if $selectedImage}
+			{#if $selectedImageId}
 				<ImageEditor
-					{selectedImage}
+					imageId={selectedImageId}
 					{stops}
 					on:save={() => {
 						// HACK - this is a hack to force the stop pics to update
