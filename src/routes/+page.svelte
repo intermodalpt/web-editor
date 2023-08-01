@@ -12,7 +12,7 @@
 <div class="flex flex-col gap-4 w-full max-w-5xl mt-4 self-center">
 	{#if !$token}
 		<div class="alert alert-info shadow-lg">
-			<div>
+			<div class="flex">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -64,12 +64,9 @@
 			</div>
 			<div class="card-actions justify-end">
 				{#if !$token}
-					<a class="btn btn-primary" href="/auth">Entrar</a>
+					<a class="btn btn-primary" href="/login">Entrar</a>
 				{/if}
 			</div>
 		</div>
-	</div>
-	<div class="flex justify-end">
-		<a class="link link-primary" href="/stats">Estatisticas</a>
 	</div>
 </div>

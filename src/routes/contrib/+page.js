@@ -13,8 +13,4 @@ export async function load({ params, fetch }) {
 	}
 
 	const token = await loadToken(fetch);
-
-	if (!token) {
-		goto('/auth', { replaceState: true });
-	}
 }
