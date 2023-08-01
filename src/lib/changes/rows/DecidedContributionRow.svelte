@@ -18,7 +18,7 @@
 	on:keypress={onClick}
 >
 	<h2 class="card-title text-lg">
-		{contribution.accepted ? '✅' : '✅'} #{contribution.id}
+		{contribution.accepted ? '✅' : '❌'} #{contribution.id}
 	</h2>
 	<ChangeTitle change={contribution.change} {stops} />
 	{#if contribution.comment}
@@ -26,10 +26,12 @@
 		<textarea disabled class="w-full">{contribution.comment}</textarea>
 	{/if}
 	<div class="flex flex-wrap gap-1 justify-end">
+		<span class="text-xs">Sub:</span>
 		<span class="label-text">{contribution.author_username}</span>
 		<span class="label-text">{new Date(contribution.submission_date).toLocaleString('pt')}</span>
 	</div>
 	<div class="flex flex-wrap gap-1 justify-end">
+		<span class="text-xs">Aval:</span>
 		<span class="label-text">{contribution.evaluator_username}</span>
 		<span class="label-text">{new Date(contribution.evaluation_date).toLocaleString('pt')}</span>
 	</div>
