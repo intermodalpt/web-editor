@@ -156,7 +156,7 @@
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
 			{#if $tab === mapTabs.undecided}
-				<div class="flex flex-wrap justify-between">
+				<div class="flex flex-wrap gap-2 justify-between">
 					<h2 class="card-title">Contribuições por decidir</h2>
 					<Paginator
 						bind:page={$undecidedPage}
@@ -165,6 +165,18 @@
 							$undecidedPage = e.detail.page;
 						}}
 					/>
+					{#if contributorsLoaded}
+						<div class="input-group w-fit">
+							<span class="bg-base-200 label-text">Filtros</span>
+							<span class="label-text">Utilizador</span>
+							<select bind:value={$userFilter} class="input h-full input-bordered">
+								<option selected value>-------</option>
+								{#each contributors as contributor}
+									<option value={contributor.id}>{contributor.username}</option>
+								{/each}
+							</select>
+						</div>
+					{/if}
 				</div>
 				{#if $stops && undecidedLoaded}
 					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -183,22 +195,8 @@
 						<span class="loading loading-dots loading-lg" />
 					</div>
 				{/if}
-				{#if contributorsLoaded}
-					<div class="flex justify-between">
-						<div class="input-group w-fit">
-							<span class="bg-base-200">Filtros</span>
-							<span>Utilizador</span>
-							<select bind:value={$userFilter} class="input input-bordered">
-								<option selected value>-------</option>
-								{#each contributors as contributor}
-									<option value={contributor.id}>{contributor.username}</option>
-								{/each}
-							</select>
-						</div>
-					</div>
-				{/if}
 			{:else if $tab === mapTabs.decided}
-				<div class="flex flex-wrap justify-between">
+				<div class="flex flex-wrap gap-2 justify-between">
 					<h2 class="card-title">Contribuições decididas</h2>
 					<Paginator
 						bind:page={$decidedPage}
@@ -226,7 +224,7 @@
 					</div>
 				{/if}
 			{:else if $tab === mapTabs.changelog}
-				<div class="flex flex-wrap justify-between">
+				<div class="flex flex-wrap gap-2 justify-between">
 					<h2 class="card-title">Alterações aplicadas</h2>
 					<Paginator
 						bind:page={$changelogPage}
