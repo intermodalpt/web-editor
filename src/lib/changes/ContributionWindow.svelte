@@ -79,22 +79,31 @@
 			</div>
 		</div>
 		<div class="modal-action">
-			<button class="btn btn-error" on:click={declineContribution}>Recusar</button>
-			<span class="grow" />
-
-			<div class="input-group w-auto border-success">
-				<span><label for="keep-verification">Manter verificação</label></span>
-				<span
-					><input
-						id="keep-verification"
-						class="checkbox checkbox-success"
-						type="checkbox"
-						bind:checked={keepVerification}
-					/></span
+			{#if $decodedToken?.permissions?.is_admin}
+				<button
+					class="btn btn-error"
+					on:click={declineContribution}
+					on:keypress={declineContribution}>Recusar</button
 				>
-			</div>
+			{/if}
+			<span class="grow" />
+			{#if $decodedToken?.permissions?.is_admin}
+				<div class="input-group w-auto border-success">
+					<span><label for="keep-verification">Manter verificação</label></span>
+					<span
+						><input
+							id="keep-verification"
+							class="checkbox checkbox-success"
+							type="checkbox"
+							bind:checked={keepVerification}
+						/></span
+					>
+				</div>
+			{/if}
 			<button class="btn" on:click={close}>Fechar sem guardar</button>
-			<button class="btn btn-success" on:click={acceptContribution}>Aceitar</button>
+			{#if $decodedToken?.permissions?.is_admin}
+				<button class="btn btn-success" on:click={acceptContribution}>Aceitar</button>
+			{/if}
 		</div>
 	</div>
 </div>

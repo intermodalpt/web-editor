@@ -1,10 +1,10 @@
 <script>
-	import StopUpdate from '$lib/changes/StopUpdate.svelte';
-	import StopPicUpload from '$lib/changes/StopPicUpload.svelte';
-	import RouteUpdate from '$lib/changes/RouteUpdate.svelte';
-	import SubrouteCreation from '$lib/changes/SubrouteCreation.svelte';
-	import SubrouteUpdate from '$lib/changes/SubrouteUpdate.svelte';
-	import SubrouteDeletion from '$lib/changes/SubrouteDeletion.svelte';
+	import StopUpdate from '$lib/changes/viewers/StopUpdate.svelte';
+	import StopPicUpload from '$lib/changes/viewers/StopPicUpload.svelte';
+	import RouteUpdate from '$lib/changes/viewers/RouteUpdate.svelte';
+	import SubrouteCreation from '$lib/changes/viewers/SubrouteCreation.svelte';
+	import SubrouteUpdate from '$lib/changes/viewers/SubrouteUpdate.svelte';
+	import SubrouteDeletion from '$lib/changes/viewers/SubrouteDeletion.svelte';
 
 	export let change;
 	export let stops;
@@ -12,7 +12,7 @@
 </script>
 
 {#if 'StopUpdate' in change}
-	<StopUpdate change={change.StopUpdate} {stops} bind:ignoredKeys={ignoredKeys}/>
+	<StopUpdate change={change.StopUpdate} {stops} bind:ignoredKeys />
 {:else if 'StopPicUpload' in change}
 	<StopPicUpload change={change.StopPicUpload} />
 {:else if 'RouteUpdate' in change}
