@@ -9,6 +9,7 @@
 	import ChangesetRow from '$lib/changes/rows/ChangesetRow.svelte';
 	import ContributionWindow from '$lib/changes/ContributionWindow.svelte';
 	import ChangesetWindow from '$lib/changes/ChangesetWindow.svelte';
+	import Paginator from '$lib/editor/Paginator.svelte';
 
 	const stops = liveQuery(() => getStops());
 
@@ -27,6 +28,10 @@
 	const undecidedPage = writable(0);
 	const decidedPage = writable(0);
 	const changelogPage = writable(0);
+
+	let decidedTotal = 0;
+	let undecidedTotal = 0;
+	let changelogTotal = 0;
 
 	const undecidedContributions = derived(
 		[undecidedPage, userFilter],
@@ -48,13 +53,15 @@
 			)
 				.then((res) => res.json())
 				.then((res) => {
-					set(res);
+					undecidedTotal = res.total;
+					set(res.items);
 					undecidedLoaded = true;
 				});
 		}
 	);
 
 	const decidedContributions = derived([decidedPage], ([$page], set) => {
+		decidedLoaded = false;
 		const fetchParams = {
 			headers: {
 				authorization: `Bearer ${$token}`
@@ -64,21 +71,24 @@
 		fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, fetchParams)
 			.then((res) => res.json())
 			.then((res) => {
-				set(res);
+				decidedTotal = res.total;
+				set(res.items);
 				decidedLoaded = true;
 			});
 	});
 
-	const changelog = derived([decidedPage], ([$page], set) => {
+	const changelog = derived([changelogPage], ([$page], set) => {
+		changelogLoaded = false;
 		const fetchParams = {
 			headers: {
 				authorization: `Bearer ${$token}`
 			}
 		};
-		fetch(`${apiServer}/v1/contrib/changelog`, fetchParams)
+		fetch(`${apiServer}/v1/contrib/changelog?p=${$page}`, fetchParams)
 			.then((res) => res.json())
 			.then((res) => {
-				set(res);
+				changelogTotal = res.total;
+				set(res.items);
 				changelogLoaded = true;
 			});
 	});
@@ -115,6 +125,13 @@
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
 			<h2 class="card-title">Contribuições por decidir</h2>
+			<Paginator
+				bind:page={$undecidedPage}
+				bind:itemCount={undecidedTotal}
+				on:goto={(e) => {
+					$undecidedPage = e.detail.page;
+				}}
+			/>
 			{#if $stops && undecidedLoaded}
 				<ul class="flex flex-col gap-2">
 					{#each $undecidedContributions || [] as contribution (contribution.id)}
@@ -151,6 +168,13 @@
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
 			<h2 class="card-title">Contribuições decididas</h2>
+			<Paginator
+				bind:page={$decidedPage}
+				bind:itemCount={decidedTotal}
+				on:goto={(e) => {
+					$decidedPage = e.detail.page;
+				}}
+			/>
 			{#if $stops && decidedLoaded}
 				<ul class="flex flex-col gap-2">
 					{#each $decidedContributions || [] as contribution}
@@ -173,9 +197,16 @@
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
 			<h2 class="card-title">Alterações aplicadas</h2>
+			<Paginator
+				bind:page={$changelogPage}
+				bind:itemCount={changelogTotal}
+				on:goto={(e) => {
+					$changelogPage = e.detail.page;
+				}}
+			/>
 			{#if $stops && changelogLoaded}
 				<ul class="flex flex-col gap-2">
-					{#each $changelog?.slice(0, ($changelogPage + 1) * 5) || [] as changeset}
+					{#each $changelog || [] as changeset}
 						<ChangesetRow
 							{changeset}
 							{stops}
@@ -185,15 +216,6 @@
 						/>
 					{/each}
 				</ul>
-				<input
-					type="button"
-					class="btn btn-neutral"
-					value="Mostar mais"
-					on:mouseup={() => {
-						$changelogPage++;
-					}}
-					disabled={$changelog && $changelog.length <= ($changelogPage + 1) * 5}
-				/>
 			{:else}
 				<div class="w-full flex justify-center">
 					<span class="loading loading-dots loading-lg" />
