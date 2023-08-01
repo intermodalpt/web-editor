@@ -13,6 +13,14 @@
 
 	const stops = liveQuery(() => getStops());
 
+	const mapTabs = {
+		undecided: 0,
+		decided: 1,
+		changelog: 2
+	};
+
+	const tab = writable(mapTabs.undecided);
+
 	const openContribution = writable(null);
 	const openChangeset = writable(null);
 
@@ -121,105 +129,130 @@
 	<meta name="description" content="Contribuições" />
 </svelte:head>
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-4 w-full p-4 self-center min-h-0">
+<div class="self-center max-w-[80em] w-full my-4">
+	<div class="tabs ml-4">
+		<a
+			class="tab tab-md lg:tab-lg tab-lifted"
+			class:tab-active={$tab === mapTabs.undecided}
+			on:click={() => {
+				$tab = mapTabs.undecided;
+			}}>Por decidir</a
+		>
+		<a
+			class="tab tab-md lg:tab-lg tab-lifted"
+			class:tab-active={$tab === mapTabs.decided}
+			on:click={() => {
+				$tab = mapTabs.decided;
+			}}>Decididas</a
+		>
+		<a
+			class="tab tab-md lg:tab-lg tab-lifted"
+			class:tab-active={$tab === mapTabs.changelog}
+			on:click={() => {
+				$tab = mapTabs.changelog;
+			}}>Alterações</a
+		>
+	</div>
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
 		<div class="card-body">
-			<h2 class="card-title">Contribuições por decidir</h2>
-			<Paginator
-				bind:page={$undecidedPage}
-				bind:itemCount={undecidedTotal}
-				on:goto={(e) => {
-					$undecidedPage = e.detail.page;
-				}}
-			/>
-			{#if $stops && undecidedLoaded}
-				<ul class="flex flex-col gap-2">
-					{#each $undecidedContributions || [] as contribution (contribution.id)}
-						<ContributionRow
-							{contribution}
-							{stops}
-							on:click={() => {
-								$openContribution = contribution;
-							}}
-						/>
-					{/each}
-				</ul>
-			{:else}
-				<div class="w-full flex justify-center">
-					<span class="loading loading-dots loading-lg" />
+			{#if $tab === mapTabs.undecided}
+				<div class="flex flex-wrap justify-between">
+					<h2 class="card-title">Contribuições por decidir</h2>
+					<Paginator
+						bind:page={$undecidedPage}
+						bind:itemCount={undecidedTotal}
+						on:goto={(e) => {
+							$undecidedPage = e.detail.page;
+						}}
+					/>
 				</div>
-			{/if}
-			{#if contributorsLoaded}
-				<div class="flex justify-between">
-					<div class="input-group w-fit">
-						<span class="bg-base-200">Filtros</span>
-						<span>Utilizador</span>
-						<select bind:value={$userFilter} class="input input-bordered">
-							<option selected value>-------</option>
-							{#each contributors as contributor}
-								<option value={contributor.id}>{contributor.username}</option>
-							{/each}
-						</select>
+				{#if $stops && undecidedLoaded}
+					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+						{#each $undecidedContributions || [] as contribution (contribution.id)}
+							<ContributionRow
+								{contribution}
+								{stops}
+								on:click={() => {
+									$openContribution = contribution;
+								}}
+							/>
+						{/each}
+					</ul>
+				{:else}
+					<div class="w-full flex justify-center">
+						<span class="loading loading-dots loading-lg" />
 					</div>
+				{/if}
+				{#if contributorsLoaded}
+					<div class="flex justify-between">
+						<div class="input-group w-fit">
+							<span class="bg-base-200">Filtros</span>
+							<span>Utilizador</span>
+							<select bind:value={$userFilter} class="input input-bordered">
+								<option selected value>-------</option>
+								{#each contributors as contributor}
+									<option value={contributor.id}>{contributor.username}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+				{/if}
+			{:else if $tab === mapTabs.decided}
+				<div class="flex flex-wrap justify-between">
+					<h2 class="card-title">Contribuições decididas</h2>
+					<Paginator
+						bind:page={$decidedPage}
+						bind:itemCount={decidedTotal}
+						on:goto={(e) => {
+							$decidedPage = e.detail.page;
+						}}
+					/>
 				</div>
-			{/if}
-		</div>
-	</div>
-	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
-		<div class="card-body">
-			<h2 class="card-title">Contribuições decididas</h2>
-			<Paginator
-				bind:page={$decidedPage}
-				bind:itemCount={decidedTotal}
-				on:goto={(e) => {
-					$decidedPage = e.detail.page;
-				}}
-			/>
-			{#if $stops && decidedLoaded}
-				<ul class="flex flex-col gap-2">
-					{#each $decidedContributions || [] as contribution}
-						<DecidedContributionRow
-							{contribution}
-							{stops}
-							on:click={() => {
-								$openContribution = contribution;
-							}}
-						/>
-					{/each}
-				</ul>
-			{:else}
-				<div class="w-full flex justify-center">
-					<span class="loading loading-dots loading-lg" />
+				{#if $stops && decidedLoaded}
+					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+						{#each $decidedContributions || [] as contribution}
+							<DecidedContributionRow
+								{contribution}
+								{stops}
+								on:click={() => {
+									$openContribution = contribution;
+								}}
+							/>
+						{/each}
+					</ul>
+				{:else}
+					<div class="w-full flex justify-center">
+						<span class="loading loading-dots loading-lg" />
+					</div>
+				{/if}
+			{:else if $tab === mapTabs.changelog}
+				<div class="flex flex-wrap justify-between">
+					<h2 class="card-title">Alterações aplicadas</h2>
+					<Paginator
+						bind:page={$changelogPage}
+						bind:itemCount={changelogTotal}
+						on:goto={(e) => {
+							$changelogPage = e.detail.page;
+						}}
+					/>
 				</div>
-			{/if}
-		</div>
-	</div>
-	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
-		<div class="card-body">
-			<h2 class="card-title">Alterações aplicadas</h2>
-			<Paginator
-				bind:page={$changelogPage}
-				bind:itemCount={changelogTotal}
-				on:goto={(e) => {
-					$changelogPage = e.detail.page;
-				}}
-			/>
-			{#if $stops && changelogLoaded}
-				<ul class="flex flex-col gap-2">
-					{#each $changelog || [] as changeset}
-						<ChangesetRow
-							{changeset}
-							{stops}
-							on:click={() => {
-								$openChangeset = changeset;
-							}}
-						/>
-					{/each}
-				</ul>
-			{:else}
-				<div class="w-full flex justify-center">
-					<span class="loading loading-dots loading-lg" />
-				</div>
+				{#if $stops && changelogLoaded}
+					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+						{#each $changelog || [] as changeset}
+							<ChangesetRow
+								{changeset}
+								{stops}
+								on:click={() => {
+									$openChangeset = changeset;
+								}}
+							/>
+						{/each}
+					</ul>
+				{:else}
+					<div class="w-full flex justify-center">
+						<span class="loading loading-dots loading-lg" />
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
