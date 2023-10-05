@@ -1,48 +1,46 @@
 <script>
-	/*
-I want a tool that operates on two sets of stops.
-The first set, GTFS stops, has slight errors in the locations.
-The second set has good locations but no IDs.
-We want to use the first set to attach the IDs to the second set.
-
-This is going to be done by estimating, based on proximity, which stops are the same.
-- A radius of 150 meters only contains two stops, then it is very likely that those stops are the sides of the street in the same location.
-- We show both stops to the user and the user can select which stop is the correct one.
-
-For this task, we want to have a maplibre widget that
-- Presents a stop from the first (GTFS) set
-- Red lines showing a vector from the stops that bus routes serve before serving the current, gtfs stop.
-- Green lines showing a vector to the stops that bus routes serve after serving the current, gtfs stop
-- The candidates for the second set are shown as blue dots.
-- The user can select a candidate and the stop is added to the second set.
-
-The inputs are three lists. 
-GTFS stop list (gtfs_stops) has objects with the following properties:
-- gtfs_id: string
-- lat: number
-- lon: number
-- name: string
-
-The stop list (stops) has objects with the following properties:
-- id: string
-- lat: number
-- lon: number
-
-The third list (paths) has triples with (gtfs_origin_id, stop_gtfs_id, gtfs_destination_id).
-
-
-We want to be left with a mapping of (origin_id, destination_id) to stop_id.
-*/
-
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
-	import { decodedToken, token } from '$lib/stores.js';
+	import { decodedToken, token, operators } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
+
+	const operatorId = 1;
+	const operator = operators[operatorId];
+
+	class SearchControl {
+		onAdd(map) {
+			this._map = map;
+			this._container = document.createElement('div');
+			this._container.className =
+				'maplibregl-ctrl maplibregl-ctrl-group mapboxgl-ctrl mapboxgl-ctrl-group';
+
+			// Create a child button
+			this._button = document.createElement('button');
+			// this._button.className = 'maplibregl-ctrl-icon mapboxgl-ctrl-icon mapboxgl-ctrl-search';
+			this._button.textContent = '🔍';
+			this._container.appendChild(this._button);
+
+			// Seach for the element "stop-search-modal" inside the map
+			this._modal = this._map.getContainer().querySelector('#stop-search-modal');
+
+			// When the button is clicked, show the modal
+			this._button.addEventListener('click', () => {
+				this._modal.checked = true;
+			});
+
+			return this._container;
+		}
+
+		onRemove() {
+			this._container.parentNode.removeChild(this._container);
+			this._map = undefined;
+		}
+	}
 
 	let stops = [];
 	let gtfs_stops = [];
@@ -58,12 +56,21 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	const selectedStop = writable(null);
 	const selectedGtfsStop = writable(null);
 
+	const operatorRel = derived(selectedStop, ($selectedStop) => {
+		if (!$selectedStop) {
+			return null;
+		}
+		return $selectedStop.operators.find((stopOpRel) => stopOpRel.operator_id === operatorId);
+	});
+
 	const hasMutualLink = derived(
-		[selectedStop, selectedGtfsStop],
-		([$selectedStop, $selectedGtfsStop]) => {
-			return (
-				$selectedStop && $selectedGtfsStop && $selectedStop.tml_id === $selectedGtfsStop.stop_id
-			);
+		[operatorRel, selectedGtfsStop],
+		([$operatorRel, $selectedGtfsStop]) => {
+			if (!$operatorRel || !$selectedGtfsStop) {
+				return false;
+			}
+
+			return $operatorRel.stop_ref === $selectedGtfsStop.stop_id;
 		}
 	);
 
@@ -95,29 +102,30 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	});
 
 	const stopSearchInput = writable(null);
-	let searchResults = [];
 
-	stopSearchInput.subscribe((input) => {
-		if (!input || input.length < 3) {
-			searchResults = [];
+	const stopSearchResults = derived([stopSearchInput], ([$stopSearchInput]) => {
+		if (!$stopSearchInput || $stopSearchInput.length < 3) {
 			return;
 		}
 
-		let lowerInput = input.toLowerCase();
+		let lowerInput = $stopSearchInput.toLowerCase();
 
 		const stop_results = Object.values(stops)
 			.filter((stop) => {
 				return (
-					(stop.tml_id && stop.tml_id.includes(input)) ||
-					(stop.id && ('' + stop.id).includes(input)) ||
-					(stop.name && stop.name.toLowerCase().includes(lowerInput)) ||
-					(stop.official_name && stop.official_name.toLowerCase().includes(lowerInput))
+					(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
+					stop.operators.some(
+						(op) =>
+							op.stop_ref?.toLowerCase().includes($stopSearchInput) ||
+							op.official_name?.toLowerCase().includes($stopSearchInput)
+					) ||
+					(stop.name && stop.name.toLowerCase().includes(lowerInput))
 				);
 			})
 			.map((stop) => {
 				return {
 					id: stop.id,
-					tml_id: stop.tml_id,
+					stopRef: stop.operators.find((op) => op.operator_id === 1)?.stop_ref,
 					type: 'iml',
 					name: stop.name || stop.official_name || stop.osm_name,
 					lat: stop.lat,
@@ -128,14 +136,14 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		const gtfs_results = Object.values(gtfs_stops)
 			.filter((stop) => {
 				return (
-					(stop.stop_id && stop.stop_id.includes(input)) ||
+					(stop.stop_id && stop.stop_id.includes($stopSearchInput)) ||
 					(stop.stop_name && stop.stop_name.toLowerCase().includes(lowerInput))
 				);
 			})
 			.map((stop) => {
 				return {
 					id: stop.id,
-					tml_id: stop.stop_id,
+					stopRef: stop.stop_id,
 					type: 'gtfs',
 					name: stop.stop_name,
 					lat: stop.lat,
@@ -143,7 +151,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 				};
 			});
 
-		searchResults = stop_results.concat(gtfs_results).sort((a, b) => {
+		return stop_results.concat(gtfs_results).sort((a, b) => {
 			return a.name.localeCompare(b.name);
 		});
 	});
@@ -188,51 +196,69 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	});
 
 	Promise.all([
-		fetch(`${apiServer}/v1/tml/stops`)
+		// TODO Use IndexedDB for stops
+		fetch(`${apiServer}/v1/stops/full`)
 			.then((r) => r.json())
 			.then((r) => {
 				stopsLoaded = true;
 				return r;
 			}),
-		fetch(`${apiServer}/v1/tml/gtfs_stops`)
+		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/stops`)
 			.then((r) => r.json())
 			.then((r) => {
 				gtfsStopsLoaded = true;
 				return r;
 			}),
-		fetch(`${apiServer}/v1/tml/gtfs_routes`)
+		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/routes`)
 			.then((r) => r.json())
 			.then((r) => {
 				gtfsTripsLoaded = true;
 				return r;
 			})
 	]).then(([resp_stops, resp_gtfs_stops, resp_gtfs_routes]) => {
+		const seenGtfsIds = new Set();
+
+		resp_stops.forEach((stop) => {
+			stop.operators.forEach((operatorStop) => {
+				if (operatorStop.operator_id === 1) {
+					seenGtfsIds.add(operatorStop.stop_ref);
+				}
+			});
+		});
+
 		gtfs_stops = Object.fromEntries(
 			resp_gtfs_stops.map((stop) => [
-				parseInt(stop.stop_id),
+				stop.stop_id,
 				Object.assign(stop, {
 					lat: stop.stop_lat,
 					lon: stop.stop_lon,
-					id: parseInt(stop.stop_id),
-					routes: new Set()
+					id: stop.stop_id,
+					routes: new Set(),
+					seen: seenGtfsIds.has(stop.stop_id)
 				})
 			])
 		);
+
 		stops = Object.fromEntries(
-			resp_stops.map((stop) => [
-				stop.id,
-				Object.assign(stop, {
-					gtfsStop: gtfs_stops[parseInt(stop.tml_id)] || null
-				})
-			])
+			resp_stops.map((stop) => {
+				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === 1);
+				if (!rel) return [stop.id, stop];
+				return [
+					stop.id,
+					Object.assign(stop, {
+						source: rel.source,
+						gtfsStop: gtfs_stops[rel.stop_ref] || null
+					})
+				];
+			})
 		);
 
 		gtfs_routes = resp_gtfs_routes;
 
 		gtfs_routes.forEach((route) => {
 			route.trips.forEach((trip) => {
-				trip.stops.forEach((stop) => {
-					gtfs_stops[stop].routes.add(route);
+				trip.stops.forEach((gtfsId) => {
+					gtfs_stops[gtfsId].routes.add(route);
 				});
 			});
 		});
@@ -244,14 +270,20 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 
 	function refreshMatches() {
 		let unvStops = Object.values(stops).filter(
-			(stop) => stop.tml_id && !credibleSources.includes(stop.tml_id_source)
+			(stop) =>
+				stop.operators.length > 0 &&
+				!stop.operators.every((rel) => credibleSources.includes(rel.source))
 		);
 		let verStops = Object.values(stops).filter(
-			(stop) => stop.tml_id && credibleSources.includes(stop.tml_id_source)
+			(stop) =>
+				stop.operators.length > 0 &&
+				stop.operators.every((rel) => credibleSources.includes(rel.source))
 		);
 
 		const matchToFeature = (stop) => {
-			let gtfsStop = gtfs_stops[parseInt(stop.tml_id)];
+			let stopOpRel = stop.operators.find((rel) => rel.operator_id === 1);
+
+			let gtfsStop = gtfs_stops[stopOpRel?.stop_ref];
 
 			return {
 				type: 'Feature',
@@ -362,6 +394,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	}
 
 	function flyToGtfsStop(gtfsStop) {
+		document.getElementById('stop-search-modal').checked = false;
+
 		map.flyTo({
 			center: [gtfsStop.lon, gtfsStop.lat],
 			zoom: 17.5
@@ -369,6 +403,8 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	}
 
 	function flyToStop(stop) {
+		document.getElementById('stop-search-modal').checked = false;
+
 		map.flyTo({
 			center: [stop.lon, stop.lat],
 			zoom: 17.5
@@ -376,50 +412,95 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 	}
 
 	function connectStops(stop, gtfsStop) {
-		if (stop.gtfsStop && stop.gtfsStop != gtfsStop) {
-			// GTFS changed
-			if (
-				!credibleSources.includes(stop.tml_id_source) &&
-				!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
-			) {
-				return;
-			}
-		} else if (
-			credibleSources.includes(stop.tml_id_source) &&
+		const prevOpStopRel = stop.operators.find((rel) => rel.operator_id == operatorId);
+
+		if (
+			stop.gtfsStop &&
+			stop.gtfsStop != gtfsStop &&
+			!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
+		) {
+			// GTFS link conflict
+			return;
+		}
+
+		if (
+			prevOpStopRel &&
+			credibleSources.includes(prevOpStopRel.source) &&
 			!confirm('Paragem já tem um ID confirmado. Alterar?')
 		) {
 			//GTFS didn't change but the source is going to change
 			return;
 		}
 
-		const beingUsed = Object.values(stops).some((s) => {
-			s != stop && s.gtfsStop == gtfsStop;
-		});
+		const beingUsed = Object.values(stops).some((s) => s != stop && s.gtfsStop == gtfsStop);
 
 		if (beingUsed && !confirm('Paragem GTFS já está ligada a outra paragem. Continuar?')) {
 			return;
 		}
 
-		const headers = {
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${$token}`
-		};
-		fetch(`${apiServer}/v1/tml/match/${stop.id}/${gtfsStop.stop_id}?verified=true&source=h1`, {
-			method: 'POST',
-			headers: headers
+		fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stop.id}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${$token}`
+			},
+			body: JSON.stringify({
+				official_name: gtfsStop.stop_name,
+				stop_ref: gtfsStop.stop_id,
+				source: 'h1'
+			})
 		}).then((r) => {
 			if (r.ok) {
 				console.log('ID da paragem atualizado com sucesso.');
 				stop.gtfsStop = gtfsStop;
-				stop.tml_id = gtfsStop.stop_id;
-				stop.tml_id_verified = true;
-				stop.tml_id_source = 'h1';
+
+				stop.operators = stop.operators.filter((rel) => rel.operator_id != operatorId);
+				stop.operators.push({
+					operator_id: operatorId,
+					stop_ref: gtfsStop.stop_id,
+					name: gtfsStop.stop_name,
+					source: 'h1'
+				});
+
 				refreshStops();
 				// Force data refresh
 				$selectedGtfsStop = $selectedGtfsStop;
 				$selectedStop = $selectedStop;
 			} else {
 				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
+			}
+		});
+	}
+
+	function disconnectStops(stop, gtfsStop) {
+		if (stop.gtfsStop != gtfsStop) {
+			console.error('BUG: Tentativa de desligar paragens desligadas');
+			return;
+		}
+
+		if (!confirm(`De certeza que quer desligar #${stop.id} de GTFS#${gtfsStop.stop_id}?`)) {
+			return;
+		}
+
+		fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stop.id}`, {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${$token}`
+			}
+		}).then((r) => {
+			if (r.ok) {
+				console.log('ID da paragem atualizado com sucesso.');
+				stop.gtfsStop = undefined;
+
+				stop.operators = stop.operators.filter((rel) => rel.operator_id != operatorId);
+
+				refreshStops();
+				// Force data refresh
+				$selectedGtfsStop = $selectedGtfsStop;
+				$selectedStop = $selectedStop;
+			} else {
+				alert('Erro a desligar paragens.\nRecarregue e tente novamente.');
 			}
 		});
 	}
@@ -769,6 +850,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 		});
 
 		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new SearchControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -979,7 +1061,7 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 						}}
 					/>
 				</div>
-				{#if $selectedStop?.tml_id}
+				{#if $hasMutualLink}
 					<div class="flex gap-1">
 						<h1 class="text-xs font-bold">Ligada a</h1>
 						{#if $selectedStop.gtfsStop}
@@ -988,11 +1070,11 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 								on:click={() => {
 									$selectedGtfsStop = $selectedStop.gtfsStop;
 									flyToGtfsStop($selectedStop.gtfsStop);
-								}}>{$selectedStop?.tml_id}</button
+								}}>{$operatorRel.stop_ref}</button
 							>
 						{:else}
 							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-								>⚠️{$selectedStop?.tml_id}</button
+								>⚠️{$operatorRel.stop_ref}</button
 							>
 							<button class="btn btn-xs btn-error">Apagar erro</button>
 						{/if}
@@ -1010,57 +1092,78 @@ We want to be left with a mapping of (origin_id, destination_id) to stop_id.
 			</div>
 		</div>
 	</div>
-
-	<div
-		class="absolute top-1 right-[300px] z-10 flex flex-col w-96 transition duration-750 bg-white shadow-sm rounded-md"
-	>
-		<span class="text-xs mx-2">Pesquisa:</span>
-		<input
-			type="text"
-			class="input input-md input-bordered justify-stretch my-1 mx-2"
-			bind:value={$stopSearchInput}
-		/>
-		<ul class="menu flex-nowrap bg-base-100 max-h-96 overflow-y-scroll">
-			{#each searchResults as result}
-				<li
-					on:click={() => {
-						flyToStop(result);
-					}}
+	<div class="absolute">
+		<input type="checkbox" id="stop-search-modal" class="modal-toggle" />
+		<div class="modal z-[11]">
+			<div class="modal-box relative z-[11] max-w-5xl">
+				<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label
 				>
-					<span>
-						<div class="flex gap-1">
-							{#if result.type === 'iml'}
-								<span class="px-2 mr-1 bg-blue-600 rounded-full" />
-							{:else}
-								<span class="px-2 mr-1 bg-orange-600 rounded-full" />
-							{/if}
-							<div class="flex flex-col">
-								<span class="text-xs">({result.id}/{result.tml_id})</span>
-								<span class="font-semibold">{result.name}</span>
+				<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
+				<input
+					type="text"
+					class="input input-primary input-bordered w-full"
+					placeholder="id ou nome"
+					bind:value={$stopSearchInput}
+				/>
+				{#if $stopSearchResults}
+					<div class="flex flex-col gap-1 overflow-y-scroll">
+						{#each $stopSearchResults as result}
+							<div
+								class="card card-compact w-full bg-base-100 shadow-md cursor-pointer"
+								on:click={() => {
+									flyToStop(result);
+								}}
+								on:keypress={() => {
+									flyToStop(result);
+								}}
+							>
+								<div class="card-body">
+									<div class="flex gap-1">
+										{#if result.type === 'iml'}
+											<span class="px-2 mr-1 bg-blue-600 rounded-full" />
+										{:else}
+											<span class="px-2 mr-1 bg-orange-600 rounded-full" />
+										{/if}
+										<h2 class="card-title text-md">
+											({result.id}) {result.name || result.official_name}
+										</h2>
+									</div>
+									<h3 class="text-md">{result.stopRef}</h3>
+								</div>
 							</div>
-						</div>
-					</span>
-				</li>
-			{/each}
-		</ul>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
 	</div>
+	<div class="absolute top-0 z-9 flex justify-center w-full">
+		<a class="mt-4 btn shadow-md p-4 font-bold" href="/operators/{operatorId}">
+			{operator.name}
+		</a>
+	</div>
+
 	{#if $decodedToken?.permissions?.is_admin}
 		<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">
 			<div class="flex justify-center gap-4 lg:w-[50%] mb-4">
-				<button
-					class="btn btn-primary"
-					class:hidden={!(
-						$selectedStop &&
-						$selectedGtfsStop &&
-						(!$hasMutualLink || !credibleSources.includes($selectedStop?.tml_id_source)) &&
-						!($selectedStop.gtfsStop === $selectedGtfsStop && $selectedStop?.tml_id_source === 'h1')
-					)}
-					on:click={() => {
-						connectStops($selectedStop, $selectedGtfsStop);
-					}}>Ligar paragens</button
-				>
-				<!-- <button class="btn btn-warning">Adicionar alerta</button>
-				<button class="btn btn-error" class:hidden={!$hasMutualLink}>Apagar ligação</button> -->
+				{#if $selectedGtfsStop && $selectedStop}
+					{#if !$hasMutualLink || !credibleSources.includes($operatorRel?.source)}
+						<button
+							class="btn btn-primary"
+							on:click={() => {
+								connectStops($selectedStop, $selectedGtfsStop);
+							}}>Ligar paragens</button
+						>
+					{:else if $hasMutualLink}
+						<button
+							class="btn btn-error"
+							on:click={() => {
+								disconnectStops($selectedStop, $selectedGtfsStop);
+							}}>Apagar ligação</button
+						>
+					{/if}
+				{/if}
+				<!-- <button class="btn btn-warning">Adicionar nota</button> -->
 			</div>
 		</div>
 	{/if}

@@ -14,30 +14,36 @@ export async function load({ params, fetch, depends }) {
 
 	const token = await loadToken(fetch);
 
+	const operator_id = 1;
+
 	const [stops, routes, gtfsStops, gtfsRoutes] = await Promise.all([
-		fetch(`${apiServer}/v1/tml/stops`).then((r) => r.json()),
+		fetch(`${apiServer}/v1/stops/full`).then((r) => r.json()),
 		fetch(`${apiServer}/v1/operators/1/routes`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/tml/gtfs_stops`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/tml/gtfs_routes`).then((r) => r.json())
+		fetch(`${apiServer}/v1/operators/1/gtfs/stops`).then((r) => r.json()),
+		fetch(`${apiServer}/v1/operators/1/gtfs/routes`).then((r) => r.json())
 	]);
 
 	const indexedGtfsStops = Object.fromEntries(
 		gtfsStops.map((stop) => [
-			parseInt(stop.stop_id),
+			stop.stop_id,
 			Object.assign(stop, {
 				lat: stop.stop_lat,
 				lon: stop.stop_lon,
-				id: parseInt(stop.stop_id)
+				id: stop.stop_id
 			})
 		])
 	);
 	const indexedStops = Object.fromEntries(
-		stops.map((stop) => [
-			stop.id,
-			Object.assign(stop, {
-				gtfsStop: gtfsStops[parseInt(stop.tml_id)] || null
-			})
-		])
+		stops.map((stop) => {
+			const gtfsId = stop.operators.find((ref) => ref.operator_id === operator_id)?.stop_ref;
+			return [
+				stop.id,
+				Object.assign(stop, {
+					gtfsId: gtfsId,
+					gtfsStop: gtfsId ? gtfsStops[gtfsId] : null,
+				})
+			];
+		})
 	);
 
 	return {

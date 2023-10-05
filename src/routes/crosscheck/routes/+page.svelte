@@ -57,7 +57,7 @@
 							if (stopIds) {
 								subroute.stopsIds = stopIds;
 								subroute.stops = stopIds.map((id) => stops[id]);
-								subroute.gtfsIds = subroute.stops.map((s) => parseInt(s.tml_id));
+								subroute.gtfsIds = subroute.stops.map((s) => s.gtfsId);
 							} else {
 								alert(`Stops not found for subroute ${subroute.id}`);
 							}
@@ -160,8 +160,8 @@
 				for (const subroute of cluster.subroutes) {
 					stopSequences.push(
 						subroute.stops.map((stop) => {
-							if (stop.tml_id) {
-								return gtfsToSeq[parseInt(stop.tml_id)];
+							if (stop.gtfsId) {
+								return gtfsToSeq[stop.gtfsId];
 							} else {
 								return imlToSeq[stop.id];
 							}
@@ -187,12 +187,11 @@
 								const stop = subroute.stops[stopIdx];
 								stopIdx++;
 
-								const gtfsId = parseInt(stop.tml_id) || null;
 								return {
 									type: 'iml',
-									gtfsId: gtfsId,
 									imlStop: stop,
-									gtfsStop: gtfsId ? gtfsStops[gtfsId] : null
+									gtfsId: stop.gtfsId,
+									gtfsStop: stop.gtfsStop
 								};
 							} else {
 								return null;
@@ -288,7 +287,7 @@
 		}
 	);
 
-	const drawnPaths = selectedDirection.subscribe(($selectedDirection) => {
+	selectedDirection.subscribe(($selectedDirection) => {
 		if (!$selectedDirection) {
 			return [];
 		}
