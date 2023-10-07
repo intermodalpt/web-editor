@@ -97,7 +97,7 @@
 				let pictureCount = 0;
 
 				stops.forEach((stop) => {
-					if (stop.tml_id && credibleSources.includes(stop.tml_id_source)) {
+					if (stop.operators.length > 0 && stop.operators.every((rel) => credibleSources.includes(rel.source))) {
 						idCount++;
 					}
 					if ($stopsByPic[stop.id]) {
@@ -251,7 +251,6 @@
 				const obj = {
 					...parish.geojson
 				};
-				console.log(scoringAttr, parish.totalCount);
 				let complete = parish.totalCount == 0 || scoringAttr == parish.totalCount;
 				obj.properties = {
 					score: complete ? 1.0 : scoringAttr / parish.totalCount,

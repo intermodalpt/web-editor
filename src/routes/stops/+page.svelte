@@ -141,30 +141,24 @@
 
 			let lowerInput = $stopSearchInput.toLowerCase();
 
-			const results = Object.values($patchedStops).filter((stop) => {
-				return (
-					(stop.tml_id && stop.tml_id.includes($stopSearchInput)) ||
-					(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
-					(stop.name && stop.name.toLowerCase().includes(lowerInput)) ||
-					(stop.official_name && stop.official_name.toLowerCase().includes(lowerInput))
-				);
-			});
-
-			return results
-				.map((result) => {
+			const results = Object.values($patchedStops)
+				.map((stop) => {
 					let id_score = 0;
-					if (result.tml_id && result.tml_id.includes($stopSearchInput)) {
-						result.tml_id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
-					}
+					let name_score = 0;
 
 					if (('' + stop.id).includes($stopSearchInput)) {
 						'' + stop.id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
 					}
 
-					let name_score = 0;
-
 					if (result.name && result.name.toLowerCase().includes(lowerInput)) {
 						name_score = Math.max(name_score, result.name.toLowerCase() == lowerInput ? 100 : 50);
+					}
+
+					// GTFS ID
+					if (stop.operators.some((op) => op.stop_ref?.toLowerCase().includes($stopSearchInput))) {
+						stop.operators.some((op) => op.stop_ref?.toLowerCase() == $stopSearchInput)
+							? (id_score += 100)
+							: (id_score += 50);
 					}
 
 					if (result.official_name && result.official_name.toLowerCase().includes(lowerInput)) {
@@ -174,9 +168,21 @@
 						);
 					}
 
+					if (
+						stop.operators.some((op) => op.official_name?.toLowerCase().includes($stopSearchInput))
+					) {
+						name_score = Math.max(
+							name_score,
+							stop.operators.some((op) => op.official_name?.toLowerCase() == $stopSearchInput)
+								? 100
+								: 50
+						);
+					}
+
 					const score = id_score + name_score;
 					return [score, result];
 				})
+				.filter(([score, result]) => score > 0)
 				.sort((a, b) => a[0] - b[0])
 				.map(([, result]) => result);
 		}
@@ -192,7 +198,7 @@
 	let name = null;
 	let shortName = null;
 	let officialName = null;
-	let officialId = null;
+	let operators = [];
 	let locality = null;
 	let street = null;
 	let door = null;
@@ -337,8 +343,8 @@
 		id = stop.id;
 		name = stop.name ?? null;
 		shortName = stop.short_name ?? null;
-		officialName = stop.official_name ?? null;
-		officialId = stop.refs.join(';');
+		operators = stop.operators;
+		officialName = operators[0]?.official_name ?? null;
 		locality = stop.locality ?? null;
 		street = stop.street ?? null;
 		door = stop.door ?? null;
@@ -456,10 +462,6 @@
 			name: name,
 			short_name: shortName,
 			official_name: officialName,
-			refs: officialId
-				.split(';')
-				.map((ref) => ref.trim())
-				.filter((ref) => ref !== ''),
 			locality: locality,
 			street: street,
 			door: door,
@@ -593,19 +595,24 @@
 			case 'attrs_weighted_log':
 				return logWeightedStopScore(stop);
 			case 'refs':
-				if (!stop.tml_id) {
+				if (stop.operators.length == 0) {
 					return 0.0;
 				}
-				switch (stop.tml_id_source) {
-					case 'manual':
-						return 1.0;
-					case 'flags':
-						return 0.9;
-					case 'h1':
-						return 0.8;
-					default:
-						return 0.5;
-				}
+				Math.min(
+					0,
+					...stop.operators.map((operatorStop) => {
+						switch (operatorStop.source) {
+							case 'manual':
+								return 1.0;
+							case 'flags':
+								return 0.9;
+							case 'h1':
+								return 0.8;
+							default:
+								return 0.5;
+						}
+					})
+				);
 			case 'pics':
 				const pics = picsPerStop[stop.id];
 				if (!pics) {
@@ -1090,7 +1097,9 @@
 									<h2 class="card-title text-md">
 										({result.id}) {result.name || result.official_name}
 									</h2>
-									<h3 class="text-md">{result.tml_id}</h3>
+									{#each operators as operator}
+										<h3 class="text-md">{operator.stop_red}</h3>
+									{/each}
 								</div>
 							</div>
 						{/each}
@@ -1214,73 +1223,29 @@
 							href="https://www.openstreetmap.org/node/{$selectedStop?.external_id}"
 							>{$selectedStop?.osm_name}</a
 						>
-						<span>Completude</span>
-						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
-							<div>
-								Serviço:
-								<span>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span>
-							</div>
-							<div>
-								Atributos:
-								<span
-									>{($hasSidewalk === null ? 0 : 1) +
-										($hasSidewalkedPath === null ? 0 : 1) +
-										($hasShelter === null ? 0 : 1) +
-										($hasCover === null ? 0 : 1) +
-										($hasBench === null ? 0 : 1) +
-										($hasTrashCan === null ? 0 : 1) +
-										($hasWaitingTimes === null ? 0 : 1) +
-										($hasTicketSeller === null ? 0 : 1) +
-										($hasCostumerSupport === null ? 0 : 1) +
-										(advertisementQty === null ? 0 : 1) +
-										($hasCrossing === null ? 0 : 1) +
-										($hasFlatAccess === null ? 0 : 1) +
-										($hasWideAccess === null ? 0 : 1) +
-										($hasTactileAccess === null ? 0 : 1) +
-										(illuminationPosition === null ? 0 : 1) +
-										(illuminationStrength === null ? 0 : 1) +
-										($hasIlluminatedPath === null ? 0 : 1) +
-										($hasVisibilityFromArea === null ? 0 : 1) +
-										($hasVisibilityFromWithin === null ? 0 : 1) +
-										($isVisibleFromOutside === null ? 0 : 1) +
-										(parkingVisibilityImpairment === null ? 0 : 1) +
-										(parkingLocalAccessImpairment === null ? 0 : 1) +
-										(parkingAreaAccessImpairment === null ? 0 : 1)}/{$hasShelter === true
-										? 23
-										: 22}</span
-								>
-							</div>
-						</div>
-						<span>Autenticidade</span>
-						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
-							<AuthenticitySelectors bind:value={verificationLevel} disabled={!$decodedToken?.permissions.is_admin}/>
-						</div>
+						<span>Operadores</span>
+						<table class="table table-xs table-zebra">
+							<thead>
+								<tr>
+									<th>Id</th>
+									<th>Nome</th>
+									<th>Ref</th>
+									<th>Source</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each operators as operatorStop}
+									<tr>
+										<td>{operatorStop.operator_id}</td>
+										<td>{operatorStop.name}</td>
+										<td>{operatorStop.stop_ref}</td>
+										<td>{operatorStop.source}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 					<div class="flex flex-col gap-1">
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Oficial</span>
-								<input
-									type="text"
-									bind:value={officialName}
-									placeholder="Vl. Qts. R Pessoa 29"
-									disabled
-									class="input input-bordered w-full input-xs"
-								/>
-							</label>
-						</div>
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Opr. Id</span>
-								<input
-									type="text"
-									bind:value={officialId}
-									placeholder="150000"
-									disabled
-									class="input input-bordered w-full input-xs"
-								/>
-							</label>
-						</div>
 						<div class="form-control w-full">
 							<label class="input-group">
 								<span class="label-text w-24">Nome</span>
@@ -1340,6 +1305,52 @@
 									disabled={!$decodedToken}
 								/>
 							</label>
+						</div>
+					</div>
+					<div class="flex flex-col gap-1">
+						<span>Completude</span>
+						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
+							<div>
+								Serviço:
+								<span>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span>
+							</div>
+							<div>
+								Atributos:
+								<span
+									>{($hasSidewalk === null ? 0 : 1) +
+										($hasSidewalkedPath === null ? 0 : 1) +
+										($hasShelter === null ? 0 : 1) +
+										($hasCover === null ? 0 : 1) +
+										($hasBench === null ? 0 : 1) +
+										($hasTrashCan === null ? 0 : 1) +
+										($hasWaitingTimes === null ? 0 : 1) +
+										($hasTicketSeller === null ? 0 : 1) +
+										($hasCostumerSupport === null ? 0 : 1) +
+										(advertisementQty === null ? 0 : 1) +
+										($hasCrossing === null ? 0 : 1) +
+										($hasFlatAccess === null ? 0 : 1) +
+										($hasWideAccess === null ? 0 : 1) +
+										($hasTactileAccess === null ? 0 : 1) +
+										(illuminationPosition === null ? 0 : 1) +
+										(illuminationStrength === null ? 0 : 1) +
+										($hasIlluminatedPath === null ? 0 : 1) +
+										($hasVisibilityFromArea === null ? 0 : 1) +
+										($hasVisibilityFromWithin === null ? 0 : 1) +
+										($isVisibleFromOutside === null ? 0 : 1) +
+										(parkingVisibilityImpairment === null ? 0 : 1) +
+										(parkingLocalAccessImpairment === null ? 0 : 1) +
+										(parkingAreaAccessImpairment === null ? 0 : 1)}/{$hasShelter === true
+										? 23
+										: 22}</span
+								>
+							</div>
+						</div>
+						<span>Autenticidade</span>
+						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
+							<AuthenticitySelectors
+								bind:value={verificationLevel}
+								disabled={!$decodedToken?.permissions.is_admin}
+							/>
 						</div>
 					</div>
 				</div>
