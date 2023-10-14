@@ -9,18 +9,31 @@ export const prerender = false;
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch, depends }) {
 	if (!browser) {
-		return { calendars: {} };
+		return { operatorId: 1 };
 	}
 
 	const token = await loadToken(fetch);
 
-	const operator_id = 1;
+	const operatorTag = params.tag;
+
+	let operatorId;
+	for (const [id, operator] of Object.entries(operators)) {
+		if (operator.tag === operatorTag) {
+			operatorId = parseInt(id);
+			break;
+		}
+	}
+
+	if (operatorId === undefined) {
+		error(404, 'Operator not found');
+	}
+
 
 	const [stops, routes, gtfsStops, gtfsRoutes] = await Promise.all([
 		fetch(`${apiServer}/v1/stops/full`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/operators/1/routes`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/operators/1/gtfs/stops`).then((r) => r.json()),
-		fetch(`${apiServer}/v1/operators/1/gtfs/routes`).then((r) => r.json())
+		fetch(`${apiServer}/v1/operators/${operatorId}/routes`).then((r) => r.json()),
+		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/stops`).then((r) => r.json()),
+		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/routes`).then((r) => r.json())
 	]);
 
 	const indexedGtfsStops = Object.fromEntries(
@@ -47,6 +60,7 @@ export async function load({ params, fetch, depends }) {
 	);
 
 	return {
+		operatorId: operatorId,
 		stops: indexedStops,
 		routes: routes,
 		gtfsStops: indexedGtfsStops,

@@ -518,8 +518,12 @@
 			<div class="card-body">
 				<h2 class="card-title">Ferramentas</h2>
 				<div class="flex gap-4">
-					<a class="btn btn-primary" href={`/crosscheck`}>Emparelhamento paragens</a>
-					<a class="btn btn-primary" href={`/crosscheck/routes`}>Validação de rotas</a>
+					<a class="btn btn-primary" href="/operators/{operator.tag}/crosscheck">
+						Emparelhamento paragens
+					</a>
+					<a class="btn btn-primary" href="/operators/{operator.tag}/crosscheck/routes">
+						Validação de rotas
+					</a>
 				</div>
 			</div>
 		</div>

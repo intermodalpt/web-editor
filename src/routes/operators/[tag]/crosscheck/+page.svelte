@@ -9,7 +9,9 @@
 
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
-	const operatorId = 1;
+	/** @type {import('./$types').PageData} */
+	export let data;
+	const operatorId = data.operatorId;
 	const operator = operators[operatorId];
 
 	class SearchControl {
@@ -909,7 +911,7 @@
 		</div>
 	{/if}
 	<div
-		class="absolute left-0 z-10 flex flex-col justify-center h-full transition duration-750"
+		class="absolute left-0 z-20 flex flex-col justify-center h-full transition duration-750"
 		class:-translate-x-[300px]={!$selectedGtfsStop}
 	>
 		<div
@@ -988,7 +990,7 @@
 		</div>
 	</div>
 	<div
-		class="absolute right-0 z-10 flex flex-col justify-center h-full transition duration-750"
+		class="absolute right-0 z-20 flex flex-col justify-center h-full transition duration-750"
 		class:translate-x-[300px]={!$selectedStop}
 	>
 		<div
@@ -1137,7 +1139,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="absolute top-0 z-9 flex justify-center w-full">
+	<div class="absolute top-0 z-10 flex justify-center w-full">
 		<a class="mt-4 btn shadow-md p-4 font-bold" href="/operators/{operatorId}">
 			{operator.name}
 		</a>

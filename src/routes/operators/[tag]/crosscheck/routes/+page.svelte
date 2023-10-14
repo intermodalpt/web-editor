@@ -10,6 +10,7 @@
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+	const operatorId = data.operatorId;
 
 	let gtfsStops = data.gtfsStops;
 	let gtfsRoutes = data.gtfsRoutes;
