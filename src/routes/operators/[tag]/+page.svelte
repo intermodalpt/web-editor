@@ -1,10 +1,8 @@
 <script>
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { writable, derived } from 'svelte/store';
-	import { token, decodedToken, operators } from '$lib/stores.js';
-	import { calendarStr, isDeepEqual } from '$lib/utils.js';
+	import { operators } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	
 	import {
 		fetchCalendars,
 		fetchRoutes,
@@ -513,19 +511,17 @@
 		</div>
 	</div>
 
-	{#if operatorId === 1}
-		<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
-			<div class="card-body">
-				<h2 class="card-title">Ferramentas</h2>
-				<div class="flex gap-4">
-					<a class="btn btn-primary" href="/operators/{operator.tag}/crosscheck">
-						Emparelhamento paragens
-					</a>
-					<a class="btn btn-primary" href="/operators/{operator.tag}/crosscheck/routes">
-						Validação de rotas
-					</a>
-				</div>
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
+		<div class="card-body">
+			<h2 class="card-title">Ferramentas</h2>
+			<div class="flex gap-4">
+				<a class="btn btn-primary" href="/operators/{operator.tag}/matcher">
+					Emparelhamento paragens
+				</a>
+				<a class="btn btn-primary" href="/operators/{operator.tag}/matcher/routes">
+					Validação de rotas
+				</a>
 			</div>
 		</div>
-	{/if}
+	</div>
 </div>
