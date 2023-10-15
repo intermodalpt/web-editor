@@ -216,7 +216,6 @@
 			return;
 		}
 
-		// TODO check if one can $gtfsStops[stop] -> stop.gtfsStop
 		map.getSource('trippreview').setData({
 			type: 'LineString',
 			coordinates: trip.stops.map((stop) => [$gtfsStops[stop].lon, $gtfsStops[stop].lat])
@@ -281,10 +280,10 @@
 
 	function refreshMatches() {
 		let unvStops = Object.values($linkedStops).filter(
-			(stop) => stop.operators.length > 0 && !credibleSources.includes(stop.source)
+			(stop) => stop.source && !credibleSources.includes(stop.source)
 		);
 		let verStops = Object.values($linkedStops).filter(
-			(stop) => stop.operators.length > 0 && credibleSources.includes(stop.source)
+			(stop) => stop.source && credibleSources.includes(stop.source)
 		);
 
 		const matchToFeature = (stop) => {
