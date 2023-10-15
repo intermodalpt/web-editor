@@ -119,7 +119,7 @@
 					stop.operators.some(
 						(op) =>
 							op.stop_ref?.toLowerCase().includes($stopSearchInput) ||
-							op.official_name?.toLowerCase().includes($stopSearchInput)
+							op.name?.toLowerCase().includes($stopSearchInput)
 					) ||
 					(stop.name && stop.name.toLowerCase().includes(lowerInput))
 				);
@@ -127,7 +127,7 @@
 			.map((stop) => {
 				return {
 					id: stop.id,
-					stopRef: stop.operators.find((op) => op.operator_id === 1)?.stop_ref,
+					stopRef: stop.operators.find((op) => op.operator_id === operatorId)?.stop_ref,
 					type: 'iml',
 					name: stop.name || stop.official_name || stop.osm_name,
 					lat: stop.lat,
@@ -154,7 +154,7 @@
 			});
 
 		return stop_results.concat(gtfs_results).sort((a, b) => {
-			return a.name.localeCompare(b.name);
+			return a.name?.localeCompare(b.name);
 		});
 	});
 
@@ -222,7 +222,7 @@
 
 		resp_stops.forEach((stop) => {
 			stop.operators.forEach((operatorStop) => {
-				if (operatorStop.operator_id === 1) {
+				if (operatorStop.operator_id === operatorId) {
 					seenGtfsIds.add(operatorStop.stop_ref);
 				}
 			});
@@ -243,11 +243,12 @@
 
 		stops = Object.fromEntries(
 			resp_stops.map((stop) => {
-				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === 1);
+				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
 				if (!rel) return [stop.id, stop];
 				return [
 					stop.id,
 					Object.assign(stop, {
+						official_name: rel.name,
 						source: rel.source,
 						gtfsStop: gtfs_stops[rel.stop_ref] || null
 					})
@@ -283,7 +284,7 @@
 		);
 
 		const matchToFeature = (stop) => {
-			let stopOpRel = stop.operators.find((rel) => rel.operator_id === 1);
+			let stopOpRel = stop.operators.find((rel) => rel.operator_id === operatorId);
 
 			let gtfsStop = gtfs_stops[stopOpRel?.stop_ref];
 
@@ -1124,21 +1125,27 @@
 	<div class="absolute">
 		<input type="checkbox" id="stop-search-modal" class="modal-toggle" />
 		<div class="modal z-30">
-			<div class="modal-box relative z-30 max-w-5xl">
-				<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label
-				>
-				<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
-				<input
-					type="text"
-					class="input input-primary input-bordered w-full"
-					placeholder="id ou nome"
-					bind:value={$stopSearchInput}
-				/>
+			<div
+				class="modal-box relative z-30 max-w-5xl grid grid-cols-1"
+				style="grid-template-rows: auto 1fr;"
+			>
+				<div>
+					<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2"
+						>✕</label
+					>
+					<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
+					<input
+						type="text"
+						class="input input-primary input-bordered w-full"
+						placeholder="Nome ou identificador"
+						bind:value={$stopSearchInput}
+					/>
+				</div>
 				{#if $stopSearchResults}
-					<div class="flex flex-col gap-1 overflow-y-scroll">
+					<div class="flex flex-col gap-1 mt-2 overflow-y-scroll">
 						{#each $stopSearchResults as result}
 							<div
-								class="card card-compact w-full bg-base-100 shadow-md cursor-pointer"
+								class="card card-compact w-full bg-base-100 border-2 shadow-sm cursor-pointer"
 								on:click={() => {
 									flyToStop(result);
 								}}
@@ -1149,15 +1156,25 @@
 								<div class="card-body">
 									<div class="flex gap-1">
 										{#if result.type === 'iml'}
-											<span class="px-2 mr-1 bg-blue-600 rounded-full" />
+											<span class="px-2 mr-1 bg-blue-500 rounded-full" />
+											<h2 class="text-md font-semibold">
+												<span class="text-md border-b-2 border-blue-500">{result.id}</span>
+												{result.name || result.official_name}
+											</h2>
+											{#if result.stopRef}
+												→
+												<span class="text-md border-b-2 border-orange-600 self-start">
+													{result.stopRef}
+												</span>
+											{/if}
 										{:else}
 											<span class="px-2 mr-1 bg-orange-600 rounded-full" />
+											<h2 class="text-md font-semibold">
+												<span class="text-md border-b-2 border-orange-600">{result.id}</span>
+												{result.name || result.official_name}
+											</h2>
 										{/if}
-										<h2 class="card-title text-md">
-											({result.id}) {result.name || result.official_name}
-										</h2>
 									</div>
-									<h3 class="text-md">{result.stopRef}</h3>
 								</div>
 							</div>
 						{/each}
