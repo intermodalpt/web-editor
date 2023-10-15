@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 
 export const db = new Dexie('intermodal');
 
-db.version(3).stores({
+db.version(4).stores({
     stops: '&id',
     routes: '&id',
     calendars: '&id',
@@ -63,13 +63,14 @@ export async function fetchStops(ifMissing = true) {
     }
 
     console.log('fetching stops');
-    const response = await fetch(`${apiServer}/v1/tml/stops`);
+    const response = await fetch(`${apiServer}/v1/stops/full`);
     const stops = await response.json();
     await db.stops.clear();
     await db.stops.bulkPut(stops);
     updateCacheTimestamp('stops');
     stopsLoaded = true;
     console.log('end loadingStops');
+
 }
 
 export async function fetchRoutes(ifMissing = true) {
@@ -175,6 +176,10 @@ export async function getParishes() {
     const parishes = await db.parishes.toArray();
     const parishesObject = Object.fromEntries(parishes.map((c) => [c.id, c]));
     return parishesObject;
+}
+
+export async function softInvalidateStops() {
+    await invalidateCacheTimestamp('stops');
 }
 
 
