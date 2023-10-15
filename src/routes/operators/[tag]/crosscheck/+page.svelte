@@ -601,7 +601,7 @@
 			type: 'circle',
 			source: 'stops',
 			paint: {
-				'circle-color': 'rgb(50, 150, 220)',
+				'circle-color': 'rgba(50, 150, 220, 0.6)',
 				'circle-radius': {
 					base: 1.75,
 					stops: [
