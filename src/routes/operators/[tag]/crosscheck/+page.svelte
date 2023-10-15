@@ -910,194 +910,221 @@
 			</div>
 		</div>
 	{/if}
-	<div
-		class="absolute left-0 z-20 flex flex-col justify-center h-full transition duration-750"
-		class:-translate-x-[300px]={!$selectedGtfsStop}
-	>
+	<div class="absolute left-0 z-20 flex flex-col justify-center h-full">
 		<div
-			class="w-[300px] bg-orange-900 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-r-xl border-r-2 border-orange-700"
-			style="grid-template-rows: auto 1fr;"
+			class="w-[300px] h-full lg:h-[95%] overflow-y-scroll p-2 bg-base-100 flex flex-col gap-2 lg:rounded-r-xl shadow-md"
 		>
-			<div class="flex gap-1 justify-between p-1">
-				<span class="text-base-100 font-bold self-center">{$selectedGtfsStop?.stop_name}</span>
-				<button
-					class="btn btn-circle btn-xs btn-error self-start"
-					on:click={() => ($selectedGtfsStop = null)}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						/></svg
-					>
-				</button>
+			<div class="justify-center w-full">
+				<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operatorId}">
+					{operator.name}
+				</a>
 			</div>
-			<div class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col lg:rounded-br-xl">
-				<div class="flex gap-2">
-					<span class="font-bold">GTFS ID:</span>
+			<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-orange-600 relative">
+				{#if $selectedGtfsStop}
 					<button
-						class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-						on:click={() => {
-							if ($selectedGtfsStop) {
-								flyToGtfsStop($selectedGtfsStop);
-							}
-						}}
+						class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
+						on:click={() => ($selectedGtfsStop = null)}
 					>
-						{$selectedGtfsStop?.stop_id}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-6 w-6"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/></svg
+						>
 					</button>
-				</div>
-				<div class="flex flex-col">
-					<h1 class="text-sm font-semibold self-center">Rotas</h1>
-					<ul class="flex flex-col gap-3">
-						{#each $selectedGtfsStopRoutes as route}
-							<li class="flex flex-col">
-								<span class="badge badge-secondary badge-outline">{route.id}</span>
-								<ul class="ml-4 flex flex-col gap-2">
-									{#each route.trips as trip}
-										<li class="flex flex-col">
-											<div class="flex">
-												<button
-													class="btn btn-outline btn-xs !rounded-r-0 grow"
-													on:click={() => {
-														flyToTrip(trip);
-														$previewedTrip = trip;
-													}}>{trip.id}</button
-												>
-												<button
-													class="btn btn-outline btn-xs !rounded-l-0"
-													class:btn-primary={trip === $previewedTrip}
-													on:click={() => {
-														$previewedTrip = trip === $previewedTrip ? null : trip;
-													}}>Ver</button
-												>
-											</div>
-											<span>Destino: <span class="font-bold">{trip.headsign}</span></span>
-										</li>
-									{/each}
-								</ul>
-							</li>
-						{/each}
-					</ul>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div
-		class="absolute right-0 z-20 flex flex-col justify-center h-full transition duration-750"
-		class:translate-x-[300px]={!$selectedStop}
-	>
-		<div
-			class="w-[300px] bg-blue-950 grid grid-cols-1 h-full lg:h-[95%] lg:rounded-l-xl border-l-2 border-blue-700"
-			style="grid-template-rows: auto 1fr;"
-		>
-			<div class="flex gap-1 justify-between p-1">
-				<span class="text-base-100 font-bold self-center">{$selectedStop?.osm_name}</span>
-				<button
-					class="btn btn-circle btn-xs btn-error self-start"
-					on:click={() => ($selectedStop = null)}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						/></svg
-					>
-				</button>
-			</div>
-			<div
-				class="w-full h-full overflow-y-scroll p-2 bg-base-100 flex flex-col gap-1 lg:rounded-bl-xl"
-			>
-				<div class="flex gap-2">
-					<span class="font-bold">IML ID:</span>
-					<div
-						class="btn btn-xs text-blue-200 bg-blue-600 border-blue-600"
-						on:click={() => {
-							flyToStop($selectedStop);
-						}}
-					>
-						{$selectedStop?.id}
-					</div>
-				</div>
-				<div class="flex gap-2">
-					<span class="font-bold">Coord:</span>
-					<div class="flex">
-						<input
-							class="btn btn-primary btn-xs rounded-r-none"
-							type="button"
-							value={$selectedStop?.lat.toFixed(6)}
+					<div class="flex gap-2">
+						<button
+							class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
 							on:click={() => {
-								navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+								if ($selectedGtfsStop) {
+									flyToGtfsStop($selectedGtfsStop);
+								}
 							}}
-						/>
-						<input
-							class="btn btn-primary btn-xs rounded-l-none"
-							type="button"
-							value={$selectedStop?.lon.toFixed(6)}
-							on:click={() => {
-								navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
-							}}
-						/>
+						>
+							{$selectedGtfsStop?.stop_id}
+						</button>
+						<span class="font-bold">{$selectedGtfsStop?.stop_name}</span>
 					</div>
-					<input
-						class="btn btn-secondary btn-xs"
-						type="button"
-						value="Copiar"
-						on:click={() => {
-							navigator.clipboard.writeText(
-								$selectedStop?.lat.toFixed(6) + '\t' + $selectedStop?.lon.toFixed(6)
-							);
-						}}
-					/>
-				</div>
-				{#if $hasMutualLink}
-					<div class="flex gap-1">
-						<h1 class="text-xs font-bold">Ligada a</h1>
-						{#if $selectedStop.gtfsStop}
-							<button
-								class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-								on:click={() => {
-									$selectedGtfsStop = $selectedStop.gtfsStop;
-									flyToGtfsStop($selectedStop.gtfsStop);
-								}}>{$operatorRel.stop_ref}</button
-							>
-						{:else}
-							<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-								>⚠️{$operatorRel.stop_ref}</button
-							>
-							<button class="btn btn-xs btn-error">Apagar erro</button>
-						{/if}
+					<div class="border border-base-300 rounded-md p-2">
+						<h1 class="text-sm font-semibold text-center">Rotas</h1>
+						<div class="max-h-64 xl:max-h-96 overflow-scroll">
+							<ul class="flex flex-col gap-3">
+								{#each $selectedGtfsStopRoutes as route}
+									<li class="flex flex-col">
+										<span class="badge badge-neutral">{route.id}</span>
+										<ul class="ml-4 flex flex-col gap-2">
+											{#each route.trips as trip}
+												<li class="flex flex-col">
+													<div class="flex">
+														<button
+															class="btn btn-neutral btn-outline btn-xs !rounded-r-0 grow"
+															on:click={() => {
+																flyToTrip(trip);
+																$previewedTrip = trip;
+															}}>{trip.id}</button
+														>
+														<button
+															class="btn btn-xs !rounded-l-0"
+															class:btn-primary={trip === $previewedTrip}
+															on:click={() => {
+																$previewedTrip = trip === $previewedTrip ? null : trip;
+															}}>Ver</button
+														>
+													</div>
+													<span>Destino: <span class="font-bold">{trip.headsign}</span></span>
+												</li>
+											{/each}
+										</ul>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					</div>
+				{:else}
+					<div class="text-slate-500 font-semibold text-lg">
+						Pontos <span class="border-b-2 border-orange-600">laranja</span> denotam paragens no
+						<a
+							href="https://en.wikipedia.org/wiki/GTFS"
+							target="_blank"
+							class="link-primary font-bold">GTFS</a
+						> do operador.
 					</div>
 				{/if}
-				<h1 class="text-sm self-center font-semibold">Rotas</h1>
-				<ul class="flex flex-col gap-3">
-					{#each $selectedStopRoutes || [] as route}
-						<li class="flex flex-nowrap gap-1">
-							<span class="badge badge-secondary badge-outline">{route.code}</span>
-							<span class="font-bold">{route.name}</span>
-						</li>
-					{/each}
-				</ul>
+			</div>
+
+			{#if $decodedToken?.permissions?.is_admin}
+				<div class="flex justify-center">
+					{#if $selectedGtfsStop && $selectedStop}
+						{#if !$hasMutualLink || !credibleSources.includes($operatorRel?.source)}
+							<button
+								class="btn btn-primary btn-sm"
+								on:click={() => {
+									connectStops($selectedStop, $selectedGtfsStop);
+								}}>↑ Ligar paragens ↓</button
+							>
+						{:else if $hasMutualLink}
+							<button
+								class="btn btn-error btn-sm"
+								on:click={() => {
+									disconnectStops($selectedStop, $selectedGtfsStop);
+								}}>↑ Apagar ligação ↓</button
+							>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+			<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-blue-500 relative">
+				{#if $selectedStop}
+					<button
+						class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
+						on:click={() => ($selectedStop = null)}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-6 w-6"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/></svg
+						>
+					</button>
+					<div class="flex gap-1">
+						<div
+							class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
+							on:click={() => {
+								flyToStop($selectedStop);
+							}}
+						>
+							{$selectedStop?.id}
+						</div>
+						<span class="font-bold">{$selectedStop?.osm_name}</span>
+					</div>
+					<div class="flex gap-2">
+						<div class="flex">
+							<input
+								class="btn btn-secondary btn-xs rounded-r-none"
+								type="button"
+								value={$selectedStop?.lat.toFixed(6)}
+								on:click={() => {
+									navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+								}}
+							/>
+							<input
+								class="btn btn-secondary btn-xs rounded-l-none"
+								type="button"
+								value={$selectedStop?.lon.toFixed(6)}
+								on:click={() => {
+									navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
+								}}
+							/>
+						</div>
+						<input
+							class="btn btn-secondary btn-xs"
+							type="button"
+							value="Copiar"
+							on:click={() => {
+								navigator.clipboard.writeText(
+									$selectedStop?.lat.toFixed(6) + '\t' + $selectedStop?.lon.toFixed(6)
+								);
+							}}
+						/>
+					</div>
+					{#if $operatorRel && !$hasMutualLink}
+						<div class="flex gap-1">
+							<h1 class="text-xs font-bold">Ligada a</h1>
+							{#if $selectedStop.gtfsStop}
+								<button
+									class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+									on:click={() => {
+										$selectedGtfsStop = $selectedStop.gtfsStop;
+										flyToGtfsStop($selectedStop.gtfsStop);
+									}}>{$operatorRel.stop_ref}</button
+								>
+							{:else}
+								<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+									>⚠️{$operatorRel.stop_ref}</button
+								>
+								<button class="btn btn-xs btn-error">Apagar erro</button>
+							{/if}
+						</div>
+					{/if}
+					<h2 class="text-sm self-center font-semibold">Rotas</h2>
+					<div class="w-full flex flex-wrap gap-1">
+						{#each $selectedStopRoutes || [] as route}
+							<div
+								class="badge badge-secondary badge-outline"
+								on:click={() => {
+									alert(route.code + ' - ' + route.name);
+								}}
+							>
+								{route.code}
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="text-slate-500 font-semibold text-lg">
+						Pontos <span class="border-b-2 border-blue-500">azuis</span> denotam paragens no intermodal.
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
 	<div class="absolute">
 		<input type="checkbox" id="stop-search-modal" class="modal-toggle" />
-		<div class="modal z-[11]">
-			<div class="modal-box relative z-[11] max-w-5xl">
+		<div class="modal z-30">
+			<div class="modal-box relative z-30 max-w-5xl">
 				<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label
 				>
 				<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
@@ -1139,34 +1166,4 @@
 			</div>
 		</div>
 	</div>
-	<div class="absolute top-0 z-10 flex justify-center w-full">
-		<a class="mt-4 btn shadow-md p-4 font-bold" href="/operators/{operatorId}">
-			{operator.name}
-		</a>
-	</div>
-
-	{#if $decodedToken?.permissions?.is_admin}
-		<div class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750">
-			<div class="flex justify-center gap-4 lg:w-[50%] mb-4">
-				{#if $selectedGtfsStop && $selectedStop}
-					{#if !$hasMutualLink || !credibleSources.includes($operatorRel?.source)}
-						<button
-							class="btn btn-primary"
-							on:click={() => {
-								connectStops($selectedStop, $selectedGtfsStop);
-							}}>Ligar paragens</button
-						>
-					{:else if $hasMutualLink}
-						<button
-							class="btn btn-error"
-							on:click={() => {
-								disconnectStops($selectedStop, $selectedGtfsStop);
-							}}>Apagar ligação</button
-						>
-					{/if}
-				{/if}
-				<!-- <button class="btn btn-warning">Adicionar nota</button> -->
-			</div>
-		</div>
-	{/if}
 </div>
