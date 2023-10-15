@@ -930,7 +930,7 @@
 			class="w-[300px] h-full lg:h-[95%] overflow-y-scroll p-2 bg-base-100 flex flex-col gap-2 lg:rounded-r-xl shadow-md"
 		>
 			<div class="justify-center w-full">
-				<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operatorId}">
+				<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operator.tag}">
 					{operator.name}
 				</a>
 			</div>
@@ -1061,6 +1061,9 @@
 							on:click={() => {
 								flyToStop($selectedStop);
 							}}
+							on:keypress={() => {
+								flyToStop($selectedStop);
+							}}
 						>
 							{$selectedStop?.id}
 						</div>
@@ -1121,6 +1124,9 @@
 							<div
 								class="badge badge-secondary badge-outline"
 								on:click={() => {
+									alert(route.code + ' - ' + route.name);
+								}}
+								on:keypress={() => {
 									alert(route.code + ' - ' + route.name);
 								}}
 							>
