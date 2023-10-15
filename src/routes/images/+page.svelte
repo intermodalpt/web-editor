@@ -348,7 +348,7 @@
 				<h2 class="card-title">Por catalogar</h2>
 				<div class="flex flex-col items-center">
 					{#if untaggedGallery.pictures.length === 0}
-						<span class="text-lg">Não há imagens por catalogar</span>
+						<span class="text-lg">Sem imagens por catalogar</span>
 					{/if}
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
 						{#each untaggedGallery.pictures as pic}
@@ -373,7 +373,7 @@
 				<h2 class="card-title">Por posicionar</h2>
 				<div class="flex flex-col items-center">
 					{#if unpositionedGallery.pictures.length === 0}
-						<span class="text-lg">Não há imagens por posicionar</span>
+						<span class="text-lg">Sem imagens por posicionar</span>
 					{/if}
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
 						{#each unpositionedGallery.pictures as pic}
