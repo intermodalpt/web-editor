@@ -1,9 +1,11 @@
 <script>
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl, GeolocateControl, LngLatBounds } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
+	import { liveQuery } from 'dexie';
+	import { fetchStops, getStops, softInvalidateStops } from '$lib/db';
 	import { decodedToken, token, operators } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 
@@ -44,9 +46,6 @@
 		}
 	}
 
-	let stops = [];
-	let gtfs_stops = [];
-	let gtfs_routes = [];
 	let map;
 
 	let stopsLoaded = false;
@@ -54,6 +53,29 @@
 	let gtfsTripsLoaded = false;
 	let mapLoaded = false;
 	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
+
+	const stops = liveQuery(() => getStops());
+	const gtfsStops = writable(null);
+	const gtfsRoutes = writable(null);
+
+	const linkedStops = derived([stops, gtfsStops], ([$stops, $gtfsStops]) => {
+		if (!$stops || !$gtfsStops) return;
+
+		return Object.fromEntries(
+			Object.values($stops).map((stop) => {
+				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
+				if (!rel) return [stop.id, stop];
+				return [
+					stop.id,
+					Object.assign(stop, {
+						official_name: rel.name,
+						source: rel.source,
+						gtfsStop: $gtfsStops[rel.stop_ref] || null
+					})
+				];
+			})
+		);
+	});
 
 	const selectedStop = writable(null);
 	const selectedGtfsStop = writable(null);
@@ -105,58 +127,61 @@
 
 	const stopSearchInput = writable(null);
 
-	const stopSearchResults = derived([stopSearchInput], ([$stopSearchInput]) => {
-		if (!$stopSearchInput || $stopSearchInput.length < 3) {
-			return;
+	const stopSearchResults = derived(
+		[stopSearchInput, linkedStops, gtfsStops],
+		([$stopSearchInput, $linkedStops, $gtfsStops]) => {
+			if (!$stopSearchInput || $stopSearchInput.length < 3) {
+				return;
+			}
+
+			let lowerInput = $stopSearchInput.toLowerCase();
+
+			const stop_results = Object.values($linkedStops)
+				.filter((stop) => {
+					return (
+						(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
+						stop.operators.some(
+							(op) =>
+								op.stop_ref?.toLowerCase().includes($stopSearchInput) ||
+								op.name?.toLowerCase().includes($stopSearchInput)
+						) ||
+						(stop.name && stop.name.toLowerCase().includes(lowerInput))
+					);
+				})
+				.map((stop) => {
+					return {
+						id: stop.id,
+						stopRef: stop.operators.find((op) => op.operator_id === operatorId)?.stop_ref,
+						type: 'iml',
+						name: stop.name || stop.official_name || stop.osm_name,
+						lat: stop.lat,
+						lon: stop.lon
+					};
+				});
+
+			const gtfs_results = Object.values($gtfsStops)
+				.filter((stop) => {
+					return (
+						(stop.stop_id && stop.stop_id.includes($stopSearchInput)) ||
+						(stop.stop_name && stop.stop_name.toLowerCase().includes(lowerInput))
+					);
+				})
+				.map((stop) => {
+					return {
+						id: stop.id,
+						stopRef: stop.stop_id,
+						type: 'gtfs',
+						name: stop.stop_name,
+						lat: stop.lat,
+						lon: stop.lon
+					};
+				});
+
+			return stop_results.concat(gtfs_results).sort((a, b) => {
+				return a.name?.localeCompare(b.name);
+			});
 		}
-
-		let lowerInput = $stopSearchInput.toLowerCase();
-
-		const stop_results = Object.values(stops)
-			.filter((stop) => {
-				return (
-					(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
-					stop.operators.some(
-						(op) =>
-							op.stop_ref?.toLowerCase().includes($stopSearchInput) ||
-							op.name?.toLowerCase().includes($stopSearchInput)
-					) ||
-					(stop.name && stop.name.toLowerCase().includes(lowerInput))
-				);
-			})
-			.map((stop) => {
-				return {
-					id: stop.id,
-					stopRef: stop.operators.find((op) => op.operator_id === operatorId)?.stop_ref,
-					type: 'iml',
-					name: stop.name || stop.official_name || stop.osm_name,
-					lat: stop.lat,
-					lon: stop.lon
-				};
-			});
-
-		const gtfs_results = Object.values(gtfs_stops)
-			.filter((stop) => {
-				return (
-					(stop.stop_id && stop.stop_id.includes($stopSearchInput)) ||
-					(stop.stop_name && stop.stop_name.toLowerCase().includes(lowerInput))
-				);
-			})
-			.map((stop) => {
-				return {
-					id: stop.id,
-					stopRef: stop.stop_id,
-					type: 'gtfs',
-					name: stop.stop_name,
-					lat: stop.lat,
-					lon: stop.lon
-				};
-			});
-
-		return stop_results.concat(gtfs_results).sort((a, b) => {
-			return a.name?.localeCompare(b.name);
-		});
-	});
+	);
 
 	const previewedTrip = writable(null);
 
@@ -191,20 +216,18 @@
 			return;
 		}
 
+		// TODO check if one can $gtfsStops[stop] -> stop.gtfsStop
 		map.getSource('trippreview').setData({
 			type: 'LineString',
-			coordinates: trip.stops.map((stop) => [gtfs_stops[stop].lon, gtfs_stops[stop].lat])
+			coordinates: trip.stops.map((stop) => [$gtfsStops[stop].lon, $gtfsStops[stop].lat])
 		});
 	});
 
 	Promise.all([
-		// TODO Use IndexedDB for stops
-		fetch(`${apiServer}/v1/stops/full`)
-			.then((r) => r.json())
-			.then((r) => {
-				stopsLoaded = true;
-				return r;
-			}),
+		fetchStops().then(async () => {
+			await tick();
+			stopsLoaded = true;
+		}),
 		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/stops`)
 			.then((r) => r.json())
 			.then((r) => {
@@ -217,19 +240,19 @@
 				gtfsTripsLoaded = true;
 				return r;
 			})
-	]).then(([resp_stops, resp_gtfs_stops, resp_gtfs_routes]) => {
+	]).then(([, resGtfsStops, resGtfsRoutes]) => {
 		const seenGtfsIds = new Set();
 
-		resp_stops.forEach((stop) => {
-			stop.operators.forEach((operatorStop) => {
-				if (operatorStop.operator_id === operatorId) {
-					seenGtfsIds.add(operatorStop.stop_ref);
+		Object.values($stops).forEach((stop) => {
+			stop.operators.forEach((rel) => {
+				if (rel.operator_id === operatorId) {
+					seenGtfsIds.add(rel.stop_ref);
 				}
 			});
 		});
 
-		gtfs_stops = Object.fromEntries(
-			resp_gtfs_stops.map((stop) => [
+		$gtfsStops = Object.fromEntries(
+			resGtfsStops.map((stop) => [
 				stop.stop_id,
 				Object.assign(stop, {
 					lat: stop.stop_lat,
@@ -241,30 +264,15 @@
 			])
 		);
 
-		stops = Object.fromEntries(
-			resp_stops.map((stop) => {
-				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
-				if (!rel) return [stop.id, stop];
-				return [
-					stop.id,
-					Object.assign(stop, {
-						official_name: rel.name,
-						source: rel.source,
-						gtfsStop: gtfs_stops[rel.stop_ref] || null
-					})
-				];
-			})
-		);
-
-		gtfs_routes = resp_gtfs_routes;
-
-		gtfs_routes.forEach((route) => {
+		resGtfsRoutes.forEach((route) => {
 			route.trips.forEach((trip) => {
 				trip.stops.forEach((gtfsId) => {
-					gtfs_stops[gtfsId].routes.add(route);
+					$gtfsStops[gtfsId].routes.add(route);
 				});
 			});
 		});
+
+		$gtfsRoutes = resGtfsRoutes;
 
 		if (!loading) {
 			refreshStops();
@@ -272,27 +280,22 @@
 	});
 
 	function refreshMatches() {
-		let unvStops = Object.values(stops).filter(
-			(stop) =>
-				stop.operators.length > 0 &&
-				!stop.operators.every((rel) => credibleSources.includes(rel.source))
+		let unvStops = Object.values($linkedStops).filter(
+			(stop) => stop.operators.length > 0 && !credibleSources.includes(stop.source)
 		);
-		let verStops = Object.values(stops).filter(
-			(stop) =>
-				stop.operators.length > 0 &&
-				stop.operators.every((rel) => credibleSources.includes(rel.source))
+		let verStops = Object.values($linkedStops).filter(
+			(stop) => stop.operators.length > 0 && credibleSources.includes(stop.source)
 		);
 
 		const matchToFeature = (stop) => {
-			let stopOpRel = stop.operators.find((rel) => rel.operator_id === operatorId);
-
-			let gtfsStop = gtfs_stops[stopOpRel?.stop_ref];
-
 			return {
 				type: 'Feature',
 				geometry: {
 					type: 'LineString',
-					coordinates: [[stop.lon, stop.lat], gtfsStop ? [gtfsStop.lon, gtfsStop.lat] : [0.0, 90.0]]
+					coordinates: [
+						[stop.lon, stop.lat],
+						stop.gtfsStop ? [stop.gtfsStop.lon, stop.gtfsStop.lat] : [0.0, 90.0]
+					]
 				}
 			};
 		};
@@ -312,8 +315,8 @@
 			return;
 		}
 
-		const origins = prev_succ_pairs.filter((w) => w[0]).map((w) => gtfs_stops[w[0]]);
-		const destinations = prev_succ_pairs.filter((w) => w[1]).map((w) => gtfs_stops[w[1]]);
+		const origins = prev_succ_pairs.filter((w) => w[0]).map((w) => $gtfsStops[w[0]]);
+		const destinations = prev_succ_pairs.filter((w) => w[1]).map((w) => $gtfsStops[w[1]]);
 		const ori_points = turf.points(origins.map((s) => [s.stop_lon, s.stop_lat]));
 		const dst_points = turf.points(destinations.map((s) => [s.stop_lon, s.stop_lat]));
 		const avg_ori = turf.center(ori_points);
@@ -351,7 +354,7 @@
 
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values(stops).map((stop) => {
+			features: Object.values($linkedStops).map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -367,7 +370,7 @@
 		});
 		map.getSource('gtfs').setData({
 			type: 'FeatureCollection',
-			features: Object.values(gtfs_stops).map((stop) => {
+			features: Object.values($gtfsStops).map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -376,7 +379,6 @@
 					},
 					properties: {
 						id: stop.id,
-						// name: stop.stop_name,
 						id_name: `${stop.id} - ${stop.stop_name}`
 					}
 				};
@@ -387,7 +389,7 @@
 	function flyToTrip(trip) {
 		const bounds = new LngLatBounds();
 		trip.stops
-			.map((s) => gtfs_stops[s])
+			.map((s) => $gtfsStops[s])
 			.forEach((stop) => {
 				bounds.extend([stop.lon, stop.lat]);
 			});
@@ -452,7 +454,7 @@
 				stop_ref: gtfsStop.stop_id,
 				source: 'h1'
 			})
-		}).then((r) => {
+		}).then(async (r) => {
 			if (r.ok) {
 				console.log('ID da paragem atualizado com sucesso.');
 				stop.gtfsStop = gtfsStop;
@@ -464,6 +466,7 @@
 					name: gtfsStop.stop_name,
 					source: 'h1'
 				});
+				await softInvalidateStops();
 
 				refreshStops();
 				// Force data refresh
@@ -491,12 +494,13 @@
 				'Content-Type': 'application/json',
 				authorization: `Bearer ${$token}`
 			}
-		}).then((r) => {
+		}).then(async (r) => {
 			if (r.ok) {
 				console.log('ID da paragem atualizado com sucesso.');
 				stop.gtfsStop = undefined;
 
 				stop.operators = stop.operators.filter((rel) => rel.operator_id != operatorId);
+				await softInvalidateStops();
 
 				refreshStops();
 				// Force data refresh
@@ -695,14 +699,14 @@
 		});
 
 		map.on('click', 'stops', (e) => {
-			let stop = stops[e.features[0].properties.id];
+			let stop = $linkedStops[e.features[0].properties.id];
 			$selectedStop = stop;
 		});
 
 		map.on('click', 'gtfs', (e) => {
 			if (map.getZoom() < 15) return;
 
-			let stop = gtfs_stops[e.features[0].properties.id];
+			let stop = $gtfsStops[e.features[0].properties.id];
 			$selectedGtfsStop = stop;
 
 			// For each route, for each trip, build a three stop window with the previous, current and next stop
@@ -714,13 +718,13 @@
 					// If not found, ignore
 					if (idx === -1) continue;
 					// If found, build a window with the previous, current and next stop
-					const trip_window = JSON.stringify([trip.stops[idx - 1], trip.stops[idx + 1]]);
+					const tripWindow = JSON.stringify([trip.stops[idx - 1], trip.stops[idx + 1]]);
 					// If the window is not in the map, add it, pointing to the current route, trip pair
-					if (!windows.has(trip_window)) {
-						windows.set(trip_window, [[route, trip]]);
+					if (!windows.has(tripWindow)) {
+						windows.set(tripWindow, [[route, trip]]);
 					} else {
 						// If the window is already in the map, add the current route, trip pair to the list
-						windows.get(trip_window).push([route, trip]);
+						windows.get(tripWindow).push([route, trip]);
 					}
 				}
 			});
@@ -786,7 +790,7 @@
 
 			canvas.style.cursor = 'grab';
 
-			draggedGtfsStop = gtfs_stops[e.features[0].properties.id];
+			draggedGtfsStop = $gtfsStops[e.features[0].properties.id];
 
 			map.addLayer(
 				{
@@ -811,7 +815,7 @@
 			// Prevent the default map drag behavior.
 			e.preventDefault();
 
-			draggedGtfsStop = gtfs_stops[e.features[0].properties.id];
+			draggedGtfsStop = $gtfsStops[e.features[0].properties.id];
 
 			map.addLayer(
 				{
@@ -854,12 +858,23 @@
 
 		map.addControl(new NavigationControl(), 'top-right');
 		map.addControl(new SearchControl(), 'top-right');
+		map.addControl(
+			new GeolocateControl({
+				positionOptions: {
+					enableHighAccuracy: true
+				},
+				showUserHeading: true,
+				trackUserLocation: true
+			})
+		);
 
-		map.on('load', function () {
+		map.on('load', async function () {
 			addSourcesAndLayers();
 			addEvents();
 
 			mapLoaded = true;
+			await tick();
+
 			if (!loading) {
 				refreshStops();
 			}
