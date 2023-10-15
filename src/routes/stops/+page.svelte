@@ -2,7 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { decodedToken, token,toast } from '$lib/stores.js';
+	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import {
@@ -141,7 +141,7 @@
 
 			let lowerInput = $stopSearchInput.toLowerCase();
 
-			const results = Object.values($patchedStops)
+			return Object.values($patchedStops)
 				.map((stop) => {
 					let id_score = 0;
 					let name_score = 0;
@@ -150,8 +150,8 @@
 						'' + stop.id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
 					}
 
-					if (result.name && result.name.toLowerCase().includes(lowerInput)) {
-						name_score = Math.max(name_score, result.name.toLowerCase() == lowerInput ? 100 : 50);
+					if (stop.name && stop.name.toLowerCase().includes(lowerInput)) {
+						name_score = Math.max(name_score, stop.name.toLowerCase() == lowerInput ? 100 : 50);
 					}
 
 					// GTFS ID
@@ -161,26 +161,15 @@
 							: (id_score += 50);
 					}
 
-					if (result.official_name && result.official_name.toLowerCase().includes(lowerInput)) {
+					if (stop.operators.some((op) => op.name?.toLowerCase().includes($stopSearchInput))) {
 						name_score = Math.max(
 							name_score,
-							result.official_name.toLowerCase() == lowerInput ? 100 : 50
-						);
-					}
-
-					if (
-						stop.operators.some((op) => op.official_name?.toLowerCase().includes($stopSearchInput))
-					) {
-						name_score = Math.max(
-							name_score,
-							stop.operators.some((op) => op.official_name?.toLowerCase() == $stopSearchInput)
-								? 100
-								: 50
+							stop.operators.some((op) => op.name?.toLowerCase() == $stopSearchInput) ? 100 : 50
 						);
 					}
 
 					const score = id_score + name_score;
-					return [score, result];
+					return [score, stop];
 				})
 				.filter(([score, result]) => score > 0)
 				.sort((a, b) => a[0] - b[0])
@@ -197,7 +186,6 @@
 	let id = null;
 	let name = null;
 	let shortName = null;
-	let officialName = null;
 	let operators = [];
 	let locality = null;
 	let street = null;
@@ -344,7 +332,6 @@
 		name = stop.name ?? null;
 		shortName = stop.short_name ?? null;
 		operators = stop.operators;
-		officialName = operators[0]?.official_name ?? null;
 		locality = stop.locality ?? null;
 		street = stop.street ?? null;
 		door = stop.door ?? null;
@@ -461,7 +448,6 @@
 			id: id,
 			name: name,
 			short_name: shortName,
-			official_name: officialName,
 			locality: locality,
 			street: street,
 			door: door,
@@ -1003,9 +989,7 @@
 	{#if loading}
 		<div style="background-color: #33336699" class="z-[2000] absolute inset-0 backdrop-blur-sm" />
 		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
-			<div
-				class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl max-h-full"
-			>
+			<div class="m-2 p-4 bg-base-100 flex flex-col gap-4 rounded-2xl shadow-3xl max-h-full">
 				<span class="text-xl">A carregar</span>
 				<span
 					>Mapa: <progress
@@ -1035,7 +1019,7 @@
 	<div class="absolute top-2 left-2 z-10">
 		<input
 			type="button"
-			class="btn btn-sm shadow-lg"
+			class="btn btn-sm bg-base-100 border-2 shadow-md"
 			value="Visualização"
 			on:click={() => (showVisualizationSettings = true)}
 			on:keypress={() => (showVisualizationSettings = true)}
@@ -1070,22 +1054,28 @@
 	</div>
 	<div class="absolute">
 		<input type="checkbox" id="stop-search-modal" class="modal-toggle" />
-		<div class="modal z-[11]">
-			<div class="modal-box relative z-[11] max-w-5xl">
-				<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label
-				>
-				<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
-				<input
-					type="text"
-					class="input input-primary input-bordered w-full"
-					placeholder="id ou nome"
-					bind:value={$stopSearchInput}
-				/>
+		<div class="modal z-30">
+			<div
+				class="modal-box relative z-30 max-w-5xl grid grid-cols-1"
+				style="grid-template-rows: auto 1fr;"
+			>
+				<div>
+					<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2"
+						>✕</label
+					>
+					<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
+					<input
+						type="text"
+						class="input input-primary input-bordered w-full"
+						placeholder="id ou nome"
+						bind:value={$stopSearchInput}
+					/>
+				</div>
 				{#if $stopSearchResults}
-					<div class="flex flex-col gap-1 overflow-y-scroll">
+					<div class="flex flex-col gap-1 mt-2 overflow-y-scroll">
 						{#each $stopSearchResults as result}
 							<div
-								class="card card-compact w-full bg-base-100 shadow-md cursor-pointer"
+								class="card card-compact w-full bg-base-100 border-2 shadow-sm cursor-pointer"
 								on:click={() => {
 									flyToStop(result);
 								}}
@@ -1094,11 +1084,15 @@
 								}}
 							>
 								<div class="card-body">
-									<h2 class="card-title text-md">
-										({result.id}) {result.name || result.official_name}
+									<h2 class="text-md font-semibold">
+										<span class="text-md border-b-2 border-blue-500">{result.id}</span>
+										{result.name || result.osm_name}
 									</h2>
-									{#each operators as operator}
-										<h3 class="text-md">{operator.stop_red}</h3>
+									{#each result.operators as operator}
+										<div class="ml-2">
+											<span class="text-md border-b-2 border-orange-600">{operator.stop_ref}</span>
+											<span class="text-sm">{operator.name}</span>
+										</div>
 									{/each}
 								</div>
 							</div>
