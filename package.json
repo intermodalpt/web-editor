@@ -28,6 +28,8 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@egjs/svelte-view360": "^4.0.0-beta.7",
+		"@egjs/view360": "^4.0.0-beta.7",
 		"@mapbox/polyline": "^1.2.0",
 		"@sveltejs/adapter-node": "1.2.3",
 		"@turf/turf": "^6.5.0",
