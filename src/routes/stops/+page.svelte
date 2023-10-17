@@ -631,8 +631,10 @@
 
 							return (
 								(s.name && filter.nameExp.test(s.name)) ||
-								(s.official_name && filter.nameExp.test(s.official_name)) ||
-								(s.osm_name && filter.nameExp.test(s.osm_name))
+								(s.osm_name && filter.nameExp.test(s.osm_name)) ||
+								s.operators.some((rel) => {
+									filter.nameExp.test(rel.name);
+								})
 							);
 						});
 					};
@@ -758,7 +760,7 @@
 					},
 					properties: {
 						stopId: stop.id,
-						name: `${stop.id} - ${stop.osm_name || stop.official_name}`,
+						label: `${stop.id} - ${stop.name || stop.osm_name}`,
 						score: stopScore(stop)
 					}
 				};
@@ -874,11 +876,11 @@
 		});
 
 		map.addLayer({
-			id: 'gtfsLabels',
+			id: 'stop-labels',
 			type: 'symbol',
 			source: 'stops',
 			layout: {
-				'text-field': ['get', 'name'],
+				'text-field': ['get', 'label'],
 				'text-font': ['Open Sans', 'Arial Unicode MS'],
 				'text-size': 10,
 				'text-offset': [2, 0],

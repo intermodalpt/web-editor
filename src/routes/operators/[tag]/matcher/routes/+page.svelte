@@ -608,9 +608,7 @@
 											<div class="flex flex-col grow">
 												<span class="font-semibold">
 													<span class="px-2 mr-1 bg-blue-600 rounded-full" />
-													{entry.imlStop.official_name ||
-														entry.imlStop.name ||
-														entry.imlStop.osm_name}
+													{entry.imlStop.name || entry.imlStop.osm_name}
 												</span>
 												<span>
 													<span class="px-2 mr-1 bg-orange-600 rounded-full" />{entry.gtfsStop

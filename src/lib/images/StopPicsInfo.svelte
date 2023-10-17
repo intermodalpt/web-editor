@@ -38,7 +38,6 @@
 		>
 			{$selectedStop?.id}: {$selectedStop?.short_name ||
 				$selectedStop?.name ||
-				$selectedStop?.official_name ||
 				$selectedStop?.osm_name}
 		</span></span
 	>

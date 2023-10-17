@@ -127,7 +127,7 @@
 </script>
 
 <h3 class="font-bold">
-	Alteração paragem {change.original.id}; {change.original.name || change.original.official_name}
+	Alteração paragem {change.original.id}; {change.original.name || change.original.osm_name}
 	{originalStop ? '' : '(⚠️Apagada)'}
 	<a
 		class="btn btn-xs btn-info"

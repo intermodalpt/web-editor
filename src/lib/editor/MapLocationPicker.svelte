@@ -54,7 +54,8 @@
 						coordinates: [stop.lon, stop.lat]
 					},
 					properties: {
-						id: stop.id
+						id: stop.id,
+						label: `${stop.id} - ${stop.name || stop.osm_name}`
 					}
 				};
 			})
@@ -154,6 +155,22 @@
 				'circle-stroke-width': 1,
 				'circle-stroke-color': '#ffffff'
 			}
+		});
+
+		map.addLayer({
+			id: 'stopLabels',
+			type: 'symbol',
+			source: 'stops',
+			layout: {
+				'text-field': ['get', 'label'],
+				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+				'text-size': 8,
+				'text-offset': [5, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+			},
+			minzoom: 18
 		});
 	}
 

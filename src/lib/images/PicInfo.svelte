@@ -95,8 +95,7 @@
 								dispatch('select-stop', { id: stop?.id });
 							}}
 						>
-							{stop?.id}:
-							{stop?.short_name || stop?.name || stop?.official_name || stop?.osm_name}
+							{stop?.id}: {stop?.short_name || stop?.name || stop?.osm_name}
 						</span>
 					{/each}
 				</div>

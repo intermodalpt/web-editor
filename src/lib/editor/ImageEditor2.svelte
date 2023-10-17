@@ -233,12 +233,10 @@
 			{#if $stopIds.length === 0}
 				<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
 			{/if}
-			<div class="flex flex-col">
+			<div class="flex flex-row flex-wrap gap-1">
 				{#each $stopIds as stopId}
 					<div class="badge badge-outline badge-lg">
-						{stopId} - {stops[stopId]?.short_name ||
-							stops[stopId]?.name ||
-							stops[stopId]?.official_name}
+						{stopId} - {stops[stopId]?.short_name || stops[stopId]?.name || stops[stopId]?.osm_name}
 						{stops[stopId] ? '' : '(⚠️)'}
 						{#if editable}
 							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>

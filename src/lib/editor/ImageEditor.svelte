@@ -286,7 +286,7 @@
 								<div class="badge badge-outline badge-lg">
 									{stopId} - {$stops[stopId]?.short_name ||
 										$stops[stopId]?.name ||
-										$stops[stopId]?.official_name}
+										$stops[stopId]?.osm_name}
 									<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
 										✕
 									</div>

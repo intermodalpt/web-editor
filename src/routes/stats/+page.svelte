@@ -216,7 +216,7 @@
 					},
 					properties: {
 						id: stop.id,
-						osm_name: stop.osm_name
+						label: `${stop.id} - ${stop.name || stop.osm_name}`
 					}
 				};
 			})
@@ -315,7 +315,7 @@
 			type: 'symbol',
 			source: 'stops',
 			layout: {
-				'text-field': ['get', 'official_name'],
+				'text-field': ['get', 'label'],
 				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
 				'text-size': 8,
 				'text-offset': [5, 0],
