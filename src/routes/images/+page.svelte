@@ -238,46 +238,41 @@
 
 <div class="self-center sm:w-11/12 my-4">
 	<div class="tabs ml-4">
-		<a
-			class="tab tab-md xl:tab-lg tab-lifted"
+		<span
+			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.map}
-			on:click={() => {
-				$tab = tabs.map;
-			}}>Mapa</a
+			on:click={() => ($tab = tabs.map)}
+			on:keypress={() => ($tab = tabs.map)}>Mapa</span
 		>
-		<a
-			class="tab tab-md xl:tab-lg tab-lifted"
+		<span
+			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.tagged}
-			on:click={() => {
-				$tab = tabs.tagged;
-			}}>Catalogadas</a
+			on:click={() => ($tab = tabs.tagged)}
+			on:keypress={() => ($tab = tabs.tagged)}>Catalogadas</span
 		>
-		<a
-			class="tab tab-md xl:tab-lg tab-lifted"
+		<span
+			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.untagged}
-			on:click={() => {
-				$tab = tabs.untagged;
-			}}>Por catalogar</a
+			on:click={() => ($tab = tabs.untagged)}
+			on:keypress={() => ($tab = tabs.untagged)}>Por catalogar</span
 		>
 		{#if $token}
-			<a
-				class="tab tab-md xl:tab-lg tab-lifted"
+			<span
+				class="tab tab-bordered lg:tab-lifted"
 				class:tab-active={$tab === tabs.unpositioned}
-				on:click={() => {
-					$tab = tabs.unpositioned;
-				}}>Por posicionar</a
+				on:click={() => ($tab = tabs.unpositioned)}
+				on:keypress={() => ($tab = tabs.unpositioned)}>Por posicionar</span
 			>
 		{/if}
-		<a
-			class="tab tab-md xl:tab-lg tab-lifted"
+		<span
+			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.upload}
-			on:click={() => {
-				$tab = tabs.upload;
-			}}>Enviar</a
+			on:click={() => ($tab = tabs.upload)}
+			on:keypress={() => ($tab = tabs.upload)}>Enviar</span
 		>
 	</div>
 	<div
-		class="card bg-base-100 shadow-sm border-1 card-compact card-normal"
+		class="card bg-base-100 shadow-sm border-1 card-compact"
 		class:!card-compact={$tab === tabs.map}
 	>
 		{#if $tab === tabs.map}
@@ -331,14 +326,22 @@
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
+									alt="Tagged"
 									on:click={() => {
+										openPicEditor(pic.id);
+									}}
+									on:keypress={() => {
 										openPicEditor(pic.id);
 									}}
 								/>
 							</div>
 						{/each}
 					</div>
-					<div class="btn btn-secondary w-full" on:click={() => loadMoreTaggedStops()}>
+					<div
+						class="btn btn-secondary w-full"
+						on:click={() => loadMoreTaggedStops()}
+						on:keypress={() => loadMoreTaggedStops()}
+					>
 						Listar mais
 					</div>
 				</div>
@@ -356,14 +359,18 @@
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
-									on:click={() => {
-										openPicEditor(pic.id);
-									}}
+									alt="Untagged"
+									on:click={() => openPicEditor(pic.id)}
+									on:keypress={() => openPicEditor(pic.id)}
 								/>
 							</div>
 						{/each}
 					</div>
-					<div class="btn btn-secondary w-full" on:click={() => loadMoreUntaggedStops()}>
+					<div
+						class="btn btn-secondary w-full"
+						on:click={() => loadMoreUntaggedStops()}
+						on:keypress={() => loadMoreUntaggedStops()}
+					>
 						Listar mais
 					</div>
 				</div>
@@ -381,14 +388,18 @@
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-105"
-									on:click={() => {
-										openPicEditor(pic.id);
-									}}
+									alt="Unpositioned"
+									on:click={() => openPicEditor(pic.id)}
+									on:keypress={() => openPicEditor(pic.id)}
 								/>
 							</div>
 						{/each}
 					</div>
-					<div class="btn btn-secondary w-full" on:click={() => loadMoreUnpositionedStops()}>
+					<div
+						class="btn btn-secondary w-full"
+						on:click={() => loadMoreUnpositionedStops()}
+						on:keypress={() => loadMoreUnpositionedStops()}
+					>
 						Listar mais
 					</div>
 				</div>
