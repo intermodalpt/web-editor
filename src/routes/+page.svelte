@@ -1,6 +1,18 @@
 <script>
 	import { token } from '$lib/stores';
 	import { version } from '$lib/settings';
+	import { wipeCachedData, loadMissing } from '$lib/db';
+
+	let cacheRebuilding = false;
+
+	async function wipeCache() {
+		cacheRebuilding = true;
+		wipeCachedData().then(async () => {
+			cacheRebuilding = false;
+			alert('Cache limpa');
+			await loadMissing();
+		});
+	}
 </script>
 
 <svelte:head>
@@ -36,17 +48,15 @@
 				Sê bem-vind@. Neste portal podes contribuir com informações em falta ou que, não estando em
 				falta, acrescentam valor ao projeto.
 			</div>
-			<h3 class="text-lg">1 - Cria uma conta</h3>
 
-			{#if $token}
-				<div>Já tens uma conta, parabéns :)</div>
-			{:else}
+			{#if !$token}
+				<h3 class="text-lg">Cria uma conta</h3>
 				<div>
 					Necessitas de uma conta para poder submeter informações.
 					<a href="/login" class="link">Faz uma aqui</a>.
 				</div>
 			{/if}
-			<h3 class="text-lg">2 - O que podes editar</h3>
+			<h3 class="text-lg">O que podes editar</h3>
 			<p>
 				Enquanto convidado podes adicionar caraterísticas às paragens e fotografias do que
 				observares.<br />
@@ -54,17 +64,56 @@
 				de aprovação de modificações para prevenir vandalismo.
 			</p>
 			<p>Estamos a estudar a concessão de mais capacidades de edição a convidados.</p>
-			<h3 class="text-lg">3 - Condições</h3>
+			<h3 class="text-lg">Condições</h3>
 			<div>
 				Consideram-se as submissões doadas. Naturalmente é necessário que se detenha direitos sobre
 				o que se doa. (O nome de uma paragem não é sujeita a direitos de autor, uma fotografia é).
 				Todas as contribuições serão disponibilizadas em formatos abertos e eventualmente exportadas
-				para o OpenStreetMap.
+				para projectos como o OpenStreetMap.
 			</div>
 			<div class="card-actions justify-end">
 				{#if !$token}
 					<a class="btn btn-primary" href="/login">Entrar</a>
 				{/if}
+			</div>
+
+			<h3 class="text-lg">Avisa-nos dos problemas que encontres</h3>
+			<p>
+				Esta é uma solução em desenvolvimento. Avisa-nos de qualquer problema que encontres.<br />
+				Muitos dos problemas que temos encontrado tem a ver com dados antigos. Caso tenhas um problema
+				experimenta carregar no botão abaixo e tentar novamente.
+			</p>
+			<div>
+				<button
+					type="button"
+					class="btn btn-neutral"
+					on:click={wipeCache}
+					disabled={cacheRebuilding}
+				>
+					{#if cacheRebuilding}
+						<svg
+							class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							/>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							/>
+						</svg>
+					{/if}
+					Limpar dados
+				</button>
 			</div>
 		</div>
 	</div>
