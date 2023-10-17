@@ -1,9 +1,12 @@
 <script>
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
+	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { liveQuery } from 'dexie';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { decodedToken, token, toast } from '$lib/stores.js';
-	import { isDeepEqual, deepCopy } from '$lib/utils.js';
+	import { isDeepEqual } from '$lib/utils.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import {
 		logStopScore,
@@ -11,15 +14,10 @@
 		linearStopScore,
 		weightedStopScore
 	} from '$lib/stops/scoring.js';
-	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
-	import 'maplibre-gl/dist/maplibre-gl.css';
-	import BooleanFormAttr from '$lib/editor/BooleanFormAttr.svelte';
-	import AuthenticityIndicator from '$lib/editor/AuthenticityIndicator.svelte';
-	import AuthenticitySelectors from '$lib/editor/AuthenticitySelectors.svelte';
 	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
 	import PicDialog from '$lib/editor/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
-	import { liveQuery } from 'dexie';
+	import StopAttributesForm from './forms/StopAttributesForm.svelte';
 
 	class SearchControl {
 		onAdd(map) {
@@ -125,6 +123,24 @@
 	});
 
 	let selectedStop = writable(null);
+	selectedStop.subscribe((stop) => {
+		if (map) {
+			if (stop == null) {
+				map.easeTo({
+					padding: { bottom: 0 },
+					duration: 750
+				});
+				return;
+			} else {
+				map.easeTo({
+					padding: { bottom: 350 },
+					duration: 750
+				});
+			}
+		} else if (stop == null) {
+			return;
+		}
+	});
 
 	const stopSearchInput = writable(null);
 
@@ -183,93 +199,7 @@
 	let stopVisualization = 'attrs_log';
 
 	let previewedPic;
-
-	let id = null;
-	let name = null;
-	let shortName = null;
-	let operators = [];
-	let locality = null;
-	let street = null;
-	let door = null;
-
-	let hasFlags = null;
-	let flagsData = null;
-	let hasSchedules = null;
-	let schedulesData = null;
-	let serviceCheckDate = null;
-	let infrastructureCheckDate = null;
-
-	const hasSidewalk = writable(null);
-	const hasSidewalkedPath = writable(null);
-	const hasShelter = writable(null);
-	const hasCover = writable(null);
-	const hasBench = writable(null);
-	const hasTrashCan = writable(null);
-	const hasWaitingTimes = writable(null);
-	const hasTicketSeller = writable(null);
-	const hasCostumerSupport = writable(null);
-	let advertisementQty = null;
-
-	const hasCrossing = writable(null);
-	const hasFlatAccess = writable(null);
-	const hasWideAccess = writable(null);
-	const hasTactileAccess = writable(null);
-
-	let illuminationStrength = null;
-	let illuminationPosition = null;
-	const hasIlluminatedPath = writable(null);
-	const hasVisibilityFromWithin = writable(null);
-	const hasVisibilityFromArea = writable(null);
-	const isVisibleFromOutside = writable(null);
-	let parkingVisibilityImpairment = null;
-	let parkingLocalAccessImpairment = null;
-	let parkingAreaAccessImpairment = null;
-
-	let notes = null;
-	let tags = [];
-	let tmpIssues = [];
-
-	let verificationLevel = 0;
-
-	const subforms = {
-		info: 'info',
-		pics: 'pics',
-		service: 'service',
-		infra: 'infra',
-		extra: 'extra'
-	};
-
-	let currentSubform = subforms.info;
-
-	let selectedTmpIssue;
-
-	const tmpIssueLabels = {
-		lights_broken: 'Luz fundida',
-		path_lights_broken: 'Acesso fundido',
-		damage_low: 'Dano leve',
-		damage_medium: 'Dano moderado',
-		damage_high: 'Dano grave',
-		dirty: 'Suja',
-		thrash: 'Recolha lixo insuf.',
-		weeds: 'Vegetação excessiva',
-		obsolete: 'Info. obsoleta',
-		construction_works: 'Obras'
-	};
-
-	const tmpIssuesOptions = [
-		{ value: 'lights_broken', label: tmpIssueLabels['lights_broken'] },
-		{ value: 'path_lights_broken', label: tmpIssueLabels['path_lights_broken'] },
-		{ value: 'damage_low', label: tmpIssueLabels['damage_low'] },
-		{ value: 'damage_medium', label: tmpIssueLabels['damage_medium'] },
-		{ value: 'damage_high', label: tmpIssueLabels['damage_high'] },
-		{ value: 'dirty', label: tmpIssueLabels['dirty'] },
-		{ value: 'thrash', label: tmpIssueLabels['thrash'] },
-		{ value: 'weeds', label: tmpIssueLabels['weeds'] },
-		{ value: 'obsolete', label: tmpIssueLabels['obsolete'] },
-		{ value: 'construction_works', label: tmpIssueLabels['construction_works'] }
-	];
-
-	let uploadingPics = false;
+	let editingStopPics = false;
 
 	const stopPictures = derived([selectedStop], ([$selectedStop], set) => {
 		if ($selectedStop) {
@@ -311,262 +241,8 @@
 		return newestDate;
 	});
 
-	selectedStop.subscribe((stop) => {
-		if (map) {
-			if (stop == null) {
-				map.easeTo({
-					padding: { bottom: 0 },
-					duration: 750
-				});
-				return;
-			} else {
-				map.easeTo({
-					padding: { bottom: 350 },
-					duration: 750
-				});
-			}
-		} else if (stop == null) {
-			return;
-		}
-
-		id = stop.id;
-		name = stop.name ?? null;
-		shortName = stop.short_name ?? null;
-		operators = stop.operators;
-		locality = stop.locality ?? null;
-		street = stop.street ?? null;
-		door = stop.door ?? null;
-		notes = stop.notes ?? null;
-		tags = stop.tags ?? null;
-		tmpIssues = stop.tmp_issues ?? [];
-
-		if (stop.flags === undefined || stop.flags === null) {
-			hasFlags = null;
-		} else if (stop.flags.length === 0) {
-			hasFlags = false;
-		} else {
-			hasFlags = true;
-		}
-		flagsData = deepCopy(stop.flags) || [];
-
-		if (stop.schedules === undefined || stop.schedules === null) {
-			hasSchedules = null;
-		} else if (stop.schedules.length === 0) {
-			hasSchedules = false;
-		} else {
-			hasSchedules = true;
-		}
-		schedulesData = deepCopy(stop.schedules) || [];
-
-		$hasSidewalk = stop.has_sidewalk ?? null;
-		$hasSidewalkedPath = stop.has_sidewalked_path ?? null;
-		$hasShelter = stop.has_shelter ?? null;
-		$hasCover = stop.has_cover ?? null;
-		$hasBench = stop.has_bench ?? null;
-		$hasTrashCan = stop.has_trash_can ?? null;
-		$hasWaitingTimes = stop.has_waiting_times ?? null;
-		$hasTicketSeller = stop.has_ticket_seller ?? null;
-		$hasCostumerSupport = stop.has_costumer_support ?? null;
-		advertisementQty = stop.advertisement_qty ?? null;
-
-		$hasCrossing = stop.has_crossing ?? null;
-		$hasFlatAccess = stop.has_flat_access ?? null;
-		$hasWideAccess = stop.has_wide_access ?? null;
-		$hasTactileAccess = stop.has_tactile_access ?? null;
-
-		illuminationStrength = stop.illumination_strength ?? null;
-		illuminationPosition = stop.illumination_position ?? null;
-		$hasIlluminatedPath = stop.has_illuminated_path ?? null;
-		$hasVisibilityFromWithin = stop.has_visibility_from_within ?? null;
-		$hasVisibilityFromArea = stop.has_visibility_from_area ?? null;
-		$isVisibleFromOutside = stop.is_visible_from_outside ?? null;
-		parkingVisibilityImpairment = stop.parking_visibility_impairment ?? null;
-		parkingLocalAccessImpairment = stop.parking_local_access_impairment ?? null;
-		parkingAreaAccessImpairment = stop.parking_area_access_impairment ?? null;
-
-		serviceCheckDate = stop.service_check_date ?? null;
-		infrastructureCheckDate = stop.infrastructure_check_date ?? null;
-
-		verificationLevel = stop.verification_level ?? 0;
-	});
-
-	hasVisibilityFromWithin.subscribe((visibility_from_within) => {
-		if (visibility_from_within) {
-			$hasVisibilityFromArea = true;
-		}
-	});
-
-	hasVisibilityFromArea.subscribe((visibility_from_area) => {
-		if (visibility_from_area == null) {
-			$hasVisibilityFromWithin = null;
-		} else if (!visibility_from_area) {
-			$hasVisibilityFromWithin = false;
-		}
-	});
-
-	hasShelter.subscribe((shelter) => {
-		if (shelter == null && !shelter) {
-			$hasVisibilityFromWithin = null;
-		}
-	});
-
 	export function selectStop(stopId) {
 		$selectedStop = $patchedStops[stopId];
-	}
-
-	function saveStopMeta() {
-		if (hasFlags) {
-			if (flagsData.length === 0) {
-				toast('Nenhum postalete inserido', 'error');
-				return;
-			}
-
-			// Check if there are flags without ids
-			if (flagsData.some((flag) => flag.id === null)) {
-				toast('Campo id em falta no postalete', 'error');
-				return;
-			}
-		}
-		if (hasSchedules) {
-			if (hasSchedules.length === 0) {
-				toast('Nenhum horário inserido', 'error');
-				return;
-			}
-
-			// Check if there are schedules with null types
-			if (schedulesData.some((schedule) => schedule.type === null)) {
-				toast('Campo origem em falta no horário', 'error');
-				return;
-			}
-		}
-
-		const headers = {
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${$token}`
-		};
-
-		let newMeta = {
-			id: id,
-			name: name,
-			short_name: shortName,
-			locality: locality,
-			street: street,
-			door: door,
-			tags: tags,
-			notes: !notes || notes.trim() === '' ? null : notes.trim(),
-
-			flags: hasFlags === null ? null : hasFlags ? flagsData : [],
-			schedules: hasSchedules === null ? null : hasSchedules ? schedulesData : [],
-			tmp_issues: tmpIssues,
-
-			has_sidewalk: $hasSidewalk,
-			has_sidewalked_path: $hasSidewalkedPath,
-			has_shelter: $hasShelter,
-			has_cover: $hasCover,
-			has_bench: $hasBench,
-			has_trash_can: $hasTrashCan,
-			has_waiting_times: $hasWaitingTimes,
-			has_ticket_seller: $hasTicketSeller,
-			has_costumer_support: $hasCostumerSupport,
-			advertisement_qty: advertisementQty,
-
-			has_crossing: $hasCrossing,
-			has_flat_access: $hasFlatAccess,
-			has_wide_access: $hasWideAccess,
-			has_tactile_access: $hasTactileAccess,
-
-			illumination_strength: illuminationStrength,
-			illumination_position: illuminationPosition,
-			has_illuminated_path: $hasIlluminatedPath,
-			has_visibility_from_within: $hasShelter ? $hasVisibilityFromWithin : null,
-			has_visibility_from_area: $hasVisibilityFromArea,
-			is_visible_from_outside: $isVisibleFromOutside,
-
-			parking_visibility_impairment: parkingVisibilityImpairment,
-			parking_local_access_impairment: parkingLocalAccessImpairment,
-			parking_area_access_impairment: parkingAreaAccessImpairment,
-
-			service_check_date: serviceCheckDate || null,
-			infrastructure_check_date: infrastructureCheckDate || null,
-			verification_level: verificationLevel
-		};
-
-		let currStop = $selectedStop;
-		let newStop = Object.assign({}, currStop, newMeta);
-		const stopChanged = !isDeepEqual(newStop, currStop);
-
-		if (stopChanged) {
-			console.log('Foram feitas alterações');
-			let request;
-			if ($decodedToken?.permissions.is_admin) {
-				request = fetch(`${apiServer}/v1/stops/update/${currStop.id}`, {
-					method: 'PATCH',
-					headers: headers,
-					body: JSON.stringify(newStop)
-				}).then((r) => {
-					fetchStops(true).then(() => {
-						console.log('Stop database updated');
-					});
-					return r;
-				});
-			} else {
-				let comment = null;
-				if (
-					confirm(
-						'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
-					)
-				) {
-					comment = prompt('Insira o seu comentário');
-				}
-
-				request = fetch(`${apiServer}/v1/contrib/stops/update/${currStop.id}`, {
-					method: 'POST',
-					headers: headers,
-					body: JSON.stringify({ contribution: newStop, comment: comment })
-				});
-			}
-			// If the request answer is ok, update the stop in the stops array
-			// otherwise show an error message with the response body
-			request
-				.then((r) => {
-					if (r.ok) {
-						const applyChanges = () => {
-							Object.assign(currStop, newStop);
-							fetchStops(false).then(() => {
-								console.log('Stop database updated');
-							});
-							map.getSource('stops').setData(getFilteredData());
-							$selectedStop = null;
-						};
-						if ($decodedToken?.permissions.is_admin) {
-							applyChanges();
-						} else {
-							r.json().then((id) => {
-								if (id === -1) {
-									toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
-								} else {
-									applyChanges();
-								}
-							});
-						}
-					} else {
-						r.text()
-							.then((error) => {
-								toast(`Erro a atualizar:\n${error}`, 'error');
-							})
-							.catch(() => {
-								toast('Erro a atualizar', 'error');
-							});
-					}
-				})
-				.catch(() => {
-					alert('Error requesting update');
-				});
-		} else {
-			console.log('Não foram feitas alterações na paragem');
-			toast('Não foram feitas alterações na paragem');
-			$selectedStop = null;
-		}
 	}
 
 	export function stopScore(stop) {
@@ -773,89 +449,6 @@
 		map.getSource('stops').setData(getFilteredData());
 	}
 
-	function addTag() {
-		let entry = document.getElementById('tag-text');
-		let entryValue = entry.value.trim();
-
-		if (entryValue !== '') {
-			tags.push(entryValue);
-			tags = tags;
-		}
-		entry.value = '';
-	}
-
-	function removeTag(tag) {
-		tags.splice(tags.indexOf(tag), 1);
-		tags = tags;
-	}
-
-	function addIssue() {
-		if (selectedTmpIssue !== undefined && selectedTmpIssue !== null) {
-			// Push the issue to the list if it's not already there
-			if (tmpIssues.indexOf(selectedTmpIssue.value) === -1) {
-				tmpIssues.push(selectedTmpIssue.value);
-				tmpIssues = tmpIssues;
-			}
-		}
-		selectedTmpIssue = undefined;
-	}
-
-	function addFlag() {
-		flagsData.push({
-			id: null,
-			name: null,
-			route_codes: []
-		});
-		flagsData = flagsData;
-	}
-
-	function removeFlag(i) {
-		flagsData.splice(i, 1);
-		flagsData = flagsData;
-	}
-
-	function addFlagRoute(i) {
-		const code = prompt('Código da linha:');
-
-		if (!code || code.trim() === '') {
-			return;
-		}
-
-		const trimmedCode = code.trim();
-
-		// Check if the route code is already in the list
-		if (flagsData[i].route_codes.indexOf(trimmedCode) !== -1) {
-			return;
-		}
-
-		flagsData[i].route_codes.push(code);
-		flagsData[i].route_codes = flagsData[i].route_codes;
-	}
-
-	function removeFlagRoute(i, j) {
-		flagsData[i].route_codes.splice(j, 1);
-		flagsData[i].route_codes = flagsData[i].route_codes;
-	}
-
-	function addScheduleEntry() {
-		schedulesData.push({
-			code: null,
-			discriminator: null,
-			type: null
-		});
-		schedulesData = schedulesData;
-	}
-
-	function removeScheduleEntry(index) {
-		schedulesData.splice(index, 1);
-		schedulesData = schedulesData;
-	}
-
-	function removeIssue(tag) {
-		tmpIssues.splice(tmpIssues.indexOf(tag), 1);
-		tmpIssues = tmpIssues;
-	}
-
 	function flyToStop(stop) {
 		document.getElementById('stop-search-modal').checked = false;
 
@@ -863,6 +456,90 @@
 			center: [stop.lon, stop.lat],
 			zoom: 18
 		});
+	}
+
+	function handleStopFormSave(e) {
+		let currStop = $selectedStop;
+		let newStop = e.detail.stop;
+		const hasStopChanged = !isDeepEqual(newStop, currStop);
+
+		const headers = {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${$token}`
+		};
+
+		if (hasStopChanged) {
+			console.log('Foram feitas alterações');
+			let request;
+			if ($decodedToken?.permissions.is_admin) {
+				request = fetch(`${apiServer}/v1/stops/update/${currStop.id}`, {
+					method: 'PATCH',
+					headers: headers,
+					body: JSON.stringify(newStop)
+				}).then((r) => {
+					fetchStops(true).then(() => {
+						console.log('Stop database updated');
+					});
+					return r;
+				});
+			} else {
+				let comment = null;
+				if (
+					confirm(
+						'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
+					)
+				) {
+					comment = prompt('Insira o seu comentário');
+				}
+
+				request = fetch(`${apiServer}/v1/contrib/stops/update/${currStop.id}`, {
+					method: 'POST',
+					headers: headers,
+					body: JSON.stringify({ contribution: newStop, comment: comment })
+				});
+			}
+			// If the request answer is ok, update the stop in the stops array
+			// otherwise show an error message with the response body
+			request
+				.then((r) => {
+					if (r.ok) {
+						const applyChanges = () => {
+							Object.assign(currStop, newStop);
+							fetchStops(false).then(() => {
+								console.log('Stop database updated');
+							});
+							map.getSource('stops').setData(getFilteredData());
+							$selectedStop = null;
+						};
+						if (isAdmin) {
+							applyChanges();
+						} else {
+							r.json().then((id) => {
+								if (id === -1) {
+									toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
+								} else {
+									applyChanges();
+								}
+							});
+						}
+					} else {
+						r.text()
+							.then((error) => {
+								toast(`Erro a atualizar:\n${error}`, 'error');
+							})
+							.catch(() => {
+								toast('Erro a atualizar', 'error');
+							});
+					}
+				})
+				.catch(() => {
+					alert('Error requesting update');
+				});
+		} else {
+			console.log('Não foram feitas alterações na paragem');
+			toast('Não foram feitas alterações na paragem');
+			$selectedStop = null;
+		}
 	}
 
 	function addSourcesAndLayers() {
@@ -1020,7 +697,6 @@
 			</div>
 		</div>
 	{/if}
-
 	<div class="absolute top-2 left-2 z-10">
 		<input
 			type="button"
@@ -1115,868 +791,30 @@
 			class="h-[350px] w-full bg-base-100 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl shadow-md"
 			style="grid-template-rows: auto 1fr;"
 		>
-			<div class="flex gap-1 justify-between flex-wrap-reverse p-2">
-				<div class="btn-group btn-group-horizontal tabs tabs-boxed">
-					<span
-						class="tab tab-sm"
-						class:tab-active={currentSubform === subforms.info}
-						on:click={() => (currentSubform = subforms.info)}
-						on:keypress={() => (currentSubform = subforms.info)}>Info</span
-					>
-					<span
-						class="tab tab-sm"
-						class:tab-active={currentSubform === subforms.pics}
-						on:click={() => (currentSubform = subforms.pics)}
-						on:keypress={() => (currentSubform = subforms.pics)}>Fotos</span
-					>
-					<span
-						class="tab tab-sm"
-						class:tab-active={currentSubform === subforms.service}
-						on:click={() => (currentSubform = subforms.service)}
-						on:keypress={() => (currentSubform = subforms.service)}>Serviço</span
-					>
-					<span
-						class="tab tab-sm"
-						class:tab-active={currentSubform === subforms.infra}
-						on:click={() => (currentSubform = subforms.infra)}
-						on:keypress={() => (currentSubform = subforms.infra)}>Infra</span
-					>
-					<span
-						class="tab tab-sm"
-						class:tab-active={currentSubform === subforms.extra}
-						on:click={() => (currentSubform = subforms.extra)}
-						on:keypress={() => (currentSubform = subforms.extra)}>Extra</span
-					>
-				</div>
-				<div class="flex gap-2 flex-grow justify-end">
-					<AuthenticityIndicator bind:value={verificationLevel} />
-					<span class="w-2" />
-					<input
-						type="button"
-						class="btn btn-success btn-xs"
-						disabled={!$decodedToken}
-						on:click={saveStopMeta}
-						on:keypress={saveStopMeta}
-						value="Guardar"
-					/>
-					<input
-						type="button"
-						class="btn btn-error btn-xs"
-						on:click={() => ($selectedStop = null)}
-						on:keypress={() => ($selectedStop = null)}
-						value="Fechar"
-					/>
-				</div>
-			</div>
-			<div class="w-full overflow-y-auto p-2 pt-0 bg-base-100">
-				<div
-					class="grid gap-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-					class:hidden={currentSubform != subforms.info}
-				>
-					<div class="flex flex-col gap-1 items-start">
-						<div class="flex gap-2 items-center">
-							<span class=" text-lg">#{$selectedStop?.id}</span>
-							<div class="join">
-								<input
-									class="join-item p-1 btn btn-xs"
-									type="button"
-									value={$selectedStop?.lat.toFixed(6)}
-									on:click={() => {
-										navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
-									}}
-									on:keypress={() => {
-										navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
-									}}
-								/>
-								<input
-									class="join-item p-1 btn btn-xs"
-									type="button"
-									value={$selectedStop?.lon.toFixed(6)}
-									on:click={() => {
-										navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
-									}}
-									on:keypress={() => {
-										navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
-									}}
-								/>
-								<input
-									class="btn btn-info btn-xs join-item"
-									type="button"
-									value="Copiar"
-									on:click={() => {
-										navigator.clipboard.writeText(
-											$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
-										);
-									}}
-									on:keypress={() => {
-										navigator.clipboard.writeText(
-											$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
-										);
-									}}
-								/>
-							</div>
-						</div>
-						<span>OpenStreetMap</span>
-						<a
-							class="link link-neutral ml-2 text-base border rounded-lg p-2"
-							href="https://www.openstreetmap.org/node/{$selectedStop?.external_id}"
-							>{$selectedStop?.osm_name}</a
-						>
-						<span>Operadores</span>
-						<table class="table table-xs table-zebra">
-							<thead>
-								<tr>
-									<th>Id</th>
-									<th>Nome</th>
-									<th>Ref</th>
-									<th>Source</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each operators as operatorStop}
-									<tr>
-										<td>{operatorStop.operator_id}</td>
-										<td>{operatorStop.name}</td>
-										<td>{operatorStop.stop_ref}</td>
-										<td>{operatorStop.source}</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-					<div class="flex flex-col gap-1">
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Nome</span>
-								<input
-									type="text"
-									bind:value={name}
-									placeholder="Vale das Quintas, Rua Pessoa, 29"
-									class="input input-bordered w-full input-sm"
-									disabled={!$decodedToken?.permissions?.is_admin}
-								/>
-							</label>
-						</div>
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Abrev.</span>
-								<input
-									type="text"
-									bind:value={shortName}
-									placeholder="Vl. Quintas, Pessoa"
-									class="input input-bordered w-full input-sm"
-									disabled={!$decodedToken?.permissions?.is_admin}
-								/>
-							</label>
-						</div>
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Loc.</span>
-								<input
-									type="text"
-									bind:value={locality}
-									placeholder="Vale das Quintas"
-									class="input input-bordered w-full input-sm"
-									disabled={!$decodedToken}
-								/>
-							</label>
-						</div>
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Via</span>
-								<input
-									type="text"
-									bind:value={street}
-									placeholder="Rua Pessoa"
-									class="input input-bordered w-full input-sm"
-									disabled={!$decodedToken}
-								/>
-							</label>
-						</div>
-						<div class="form-control w-full">
-							<label class="input-group">
-								<span class="label-text w-24">Porta</span>
-								<input
-									type="text"
-									bind:value={door}
-									placeholder="29"
-									class="input input-bordered w-full input-sm"
-									disabled={!$decodedToken}
-								/>
-							</label>
-						</div>
-					</div>
-					<div class="flex flex-col gap-1">
-						<span>Completude</span>
-						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
-							<div>
-								Serviço:
-								<span>{(hasFlags === null ? 0 : 1) + (hasSchedules === null ? 0 : 1)}/2</span>
-							</div>
-							<div>
-								Atributos:
-								<span
-									>{($hasSidewalk === null ? 0 : 1) +
-										($hasSidewalkedPath === null ? 0 : 1) +
-										($hasShelter === null ? 0 : 1) +
-										($hasCover === null ? 0 : 1) +
-										($hasBench === null ? 0 : 1) +
-										($hasTrashCan === null ? 0 : 1) +
-										($hasWaitingTimes === null ? 0 : 1) +
-										($hasTicketSeller === null ? 0 : 1) +
-										($hasCostumerSupport === null ? 0 : 1) +
-										(advertisementQty === null ? 0 : 1) +
-										($hasCrossing === null ? 0 : 1) +
-										($hasFlatAccess === null ? 0 : 1) +
-										($hasWideAccess === null ? 0 : 1) +
-										($hasTactileAccess === null ? 0 : 1) +
-										(illuminationPosition === null ? 0 : 1) +
-										(illuminationStrength === null ? 0 : 1) +
-										($hasIlluminatedPath === null ? 0 : 1) +
-										($hasVisibilityFromArea === null ? 0 : 1) +
-										($hasVisibilityFromWithin === null ? 0 : 1) +
-										($isVisibleFromOutside === null ? 0 : 1) +
-										(parkingVisibilityImpairment === null ? 0 : 1) +
-										(parkingLocalAccessImpairment === null ? 0 : 1) +
-										(parkingAreaAccessImpairment === null ? 0 : 1)}/{$hasShelter === true
-										? 23
-										: 22}</span
-								>
-							</div>
-						</div>
-						<span>Autenticidade</span>
-						<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
-							<AuthenticitySelectors
-								bind:value={verificationLevel}
-								disabled={!$decodedToken?.permissions.is_admin}
-							/>
-						</div>
-					</div>
-				</div>
-				<div class="w-full" class:hidden={currentSubform != subforms.pics}>
-					<div class="flex flex-col gap-2 grow">
-						<div class="flex flex-wrap gap-1">
-							{#if $stopPictures !== undefined && $stopPictures.length > 0}
-								{#each $stopPictures as picture}
-									<img
-										src={picture.url_medium}
-										rel="noreferrer"
-										alt="Fotografia da paragem"
-										class="rounded-box transition-all hover:scale-150 h-40"
-										on:click={() => {
-											previewedPic = picture;
-										}}
-									/>
-								{/each}
-							{:else}
-								<div class="flex flex-col items-center justify-center w-full h-40">
-									<span class="text-gray-500">Sem fotos</span>
-								</div>
-							{/if}
-						</div>
-						<div class="flex justify-end">
-							<input
-								class="btn btn-sm btn-primary"
-								type="button"
-								value="Editar fotos"
-								on:click={() => {
-									uploadingPics = true;
-								}}
-								on:keypress={() => {
-									uploadingPics = true;
-								}}
-								disabled={!$decodedToken}
-							/>
-						</div>
-					</div>
-				</div>
-				<div class="w-full hidden" class:hidden={currentSubform != subforms.service}>
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
-						<div class="rounded-lg border p-2">
-							<div class="flex gap-2 items-center">
-								<span class="text-base">Postaletes</span>
-								<a
-									class="btn btn-circle btn-ghost btn-xs text-info"
-									href="/instructions/stopattrs#flags"
-									target="_blank"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										class="w-4 h-4 stroke-current"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-										/>
-									</svg>
-								</a>
-								<div class="join items-center">
-									<button
-										class="btn btn-xs px-4 join-item"
-										class:btn-active={hasFlags === true}
-										on:click={() => (hasFlags = true)}
-										on:keypress={() => (hasFlags = true)}>Sim</button
-									>
-									<button
-										class="btn btn-xs px-6 join-item"
-										class:btn-active={hasFlags === null}
-										on:click={() => (hasFlags = null)}
-										on:keypress={() => (hasFlags = null)}>?</button
-									>
-									<button
-										class="btn btn-xs px-4 join-item"
-										class:btn-active={hasFlags === false}
-										on:click={() => (hasFlags = false)}
-										on:keypress={() => (hasFlags = false)}>Não</button
-									>
-								</div>
-							</div>
-							{#if hasFlags}
-								{#each flagsData as flag, i}
-									<table class="table table-compact w-full">
-										<thead>
-											<tr>
-												<th class="text-xs">Id</th>
-												<th class="w-full">
-													<input
-														type="text"
-														class="w-32 input input-xs input-bordered px-0"
-														bind:value={flag.id}
-													/>
-												</th>
-												<th>
-													<input
-														type="button"
-														class="btn btn-error btn-xs"
-														value="-"
-														disabled={!$decodedToken}
-														on:click={() => removeFlag(i)}
-														on:keypress={() => removeFlag(i)}
-													/>
-												</th>
-											</tr>
-											<tr>
-												<th class="text-xs">Nome</th>
-												<th class="w-full">
-													<input
-														type="text"
-														class="w-32 input input-xs input-bordered px-0"
-														bind:value={flag.name}
-													/>
-												</th>
-												<th>
-													<input
-														type="button"
-														class="btn btn-success btn-xs"
-														value="+linha"
-														disabled={!$decodedToken}
-														on:click={() => addFlagRoute(i)}
-														on:keypress={() => addFlagRoute(i)}
-													/>
-												</th>
-											</tr>
-										</thead>
-									</table>
-									<div class="flex flex-wrap">
-										{#each flag.route_codes as code, j}
-											<div class="badge badge-outline badge-lg">
-												{code}
-												<div
-													class="btn btn-error btn-circle btn-xs"
-													on:click={() => removeFlagRoute(i, j)}
-													on:keypress={() => removeFlagRoute(i, j)}
-												>
-													✕
-												</div>
-											</div>
-										{/each}
-									</div>
-									<hr />
-								{/each}
-
-								<div class="flex justify-end">
-									<input
-										type="button"
-										class="btn btn-success btn-xs"
-										value="+ postalete"
-										on:click={addFlag}
-										on:keypress={addFlag}
-									/>
-								</div>
-							{/if}
-						</div>
-						<div class="border rounded-lg p-2">
-							<div class="flex gap-2 items-center">
-								<span class="text-base">Horários</span>
-								<a
-									class="btn btn-circle btn-ghost btn-xs text-info"
-									href="/instructions/stopattrs#schedules"
-									target="_blank"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										class="w-4 h-4 stroke-current"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-										/>
-									</svg>
-								</a>
-								<div class="btn-group items-center">
-									<button
-										class="btn btn-xs px-4"
-										class:btn-active={hasSchedules === true}
-										on:click={() => (hasSchedules = true)}
-										on:keypress={() => (hasSchedules = true)}>Sim</button
-									>
-									<button
-										class="btn btn-xs px-6"
-										class:btn-active={hasSchedules === null}
-										on:click={() => (hasSchedules = null)}
-										on:keypress={() => (hasSchedules = null)}>?</button
-									>
-									<button
-										class="btn btn-xs px-4"
-										class:btn-active={hasSchedules === false}
-										on:click={() => (hasSchedules = false)}
-										on:keypress={() => (hasSchedules = false)}>Não</button
-									>
-								</div>
-							</div>
-							{#if hasSchedules}
-								<table class="table table-zebra table-compact w-full">
-									<thead>
-										<tr>
-											<th class="text-xs">Linha</th>
-											<th class="text-xs">Tipo</th>
-											<th class="text-xs">Discrim.</th>
-											<th>
-												<input
-													type="button"
-													class="btn btn-success btn-xs"
-													value="+"
-													on:click={addScheduleEntry}
-													on:keypress={addScheduleEntry}
-													disabled={!$decodedToken}
-												/>
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{#each schedulesData as schedule, i}
-											<tr>
-												<td>
-													<input
-														type="text"
-														class="w-10 input input-xs input-bordered px-0"
-														bind:value={schedule.code}
-													/>
-												</td>
-												<td class="p-0">
-													<select
-														class="select select-primary max-w-xs select-xs"
-														bind:value={schedule.type}
-														disabled={!$decodedToken}
-													>
-														<option disabled selected value={null}>Tipo?</option>
-														<option value="origin">Origem</option>
-														<option value="prediction">Previs.</option>
-														<option value="frequency">Periód.</option>
-													</select>
-												</td>
-												<td class="p-0">
-													<input
-														type="text"
-														class="w-16 input input-xs input-bordered px-0"
-														bind:value={schedule.discriminator}
-													/>
-												</td>
-												<td>
-													<input
-														type="button"
-														class="btn btn-error btn-xs"
-														value="-"
-														on:click={() => removeScheduleEntry(i)}
-														on:keypress={() => removeScheduleEntry(i)}
-														disabled={!$decodedToken}
-													/>
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							{/if}
-						</div>
-						<div class="grow border rounded-lg p-2">
-							<div class="flex gap-2">
-								<div class="label-text">Verificação</div>
-								<input
-									type="date"
-									class="input input-xs input-bordered"
-									bind:value={serviceCheckDate}
-								/>
-								<input
-									type="button"
-									class="btn btn-primary btn-xs"
-									value="Hoje"
-									on:click={() => {
-										serviceCheckDate = new Date().toISOString().split('T')[0];
-									}}
-									on:keypress={() => {
-										serviceCheckDate = new Date().toISOString().split('T')[0];
-									}}
-								/>
-								{#if $latestPictureDate}
-									<input
-										type="button"
-										class="btn btn-info btn-xs"
-										value="Fotos"
-										on:click={() => {
-											serviceCheckDate = $latestPictureDate.toISOString().split('T')[0];
-										}}
-										on:keypress={() => {
-											serviceCheckDate = $latestPictureDate.toISOString().split('T')[0];
-										}}
-									/>
-								{/if}
-							</div>
-						</div>
-					</div>
-				</div>
-				<div
-					class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2"
-					class:hidden={currentSubform != subforms.infra}
-				>
-					<div class="flex flex-col gap-1">
-						<span>Infraestrutura</span>
-						<BooleanFormAttr
-							label="Passeio"
-							bind:state={$hasSidewalk}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_sidewalk"
-						/>
-						<BooleanFormAttr
-							label="Passeio no acesso"
-							bind:state={$hasSidewalkedPath}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_sidewalk"
-						/>
-						<BooleanFormAttr
-							label="Abrigo"
-							bind:state={$hasShelter}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_shelter"
-						/>
-						<BooleanFormAttr
-							label="Cobertura"
-							bind:state={$hasCover}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_cover"
-						/>
-						<BooleanFormAttr
-							label="Banco"
-							bind:state={$hasBench}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_bench"
-						/>
-						<BooleanFormAttr
-							label="Caixote do lixo"
-							bind:state={$hasTrashCan}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_trash_can"
-						/>
-
-						<select
-							class="select select-bordered max-w-xs select-xs"
-							bind:value={advertisementQty}
-							disabled={!$decodedToken}
-						>
-							<option selected value={null}>Anúncios?</option>
-							<option value={0}>Sem anúncios</option>
-							<option value={2}>Pouca área de anúncio</option>
-							<option value={4}>Muita área de anúncio</option>
-							<option value={6}>Anúncios intrusivos</option>
-						</select>
-					</div>
-					<div class="flex flex-col gap-1">
-						<span>Acesso</span>
-
-						<BooleanFormAttr
-							label="Atravessamento de via"
-							bind:state={$hasCrossing}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_crossing"
-						/>
-						<BooleanFormAttr
-							label="Acesso sem ressaltos"
-							bind:state={$hasFlatAccess}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_flat_access"
-						/>
-						<BooleanFormAttr
-							label="Acesso largo"
-							bind:state={$hasWideAccess}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_wide_access"
-						/>
-						<BooleanFormAttr
-							label="Acesso táctil"
-							bind:state={$hasTactileAccess}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_tactile_access"
-						/>
-						<span>Iluminação</span><br />
-						<select
-							class="select select-bordered max-w-xs select-xs"
-							bind:value={illuminationPosition}
-							disabled={!$decodedToken}
-						>
-							<option selected value={null}>Posição?</option>
-							<option value={0}>Iluminação Indireta</option>
-							<option value={10}>Iluminação Directa</option>
-							<option value={20}>Iluminação Própria</option>
-						</select>
-						<select
-							class="select select-bordered max-w-xs select-xs"
-							bind:value={illuminationStrength}
-							disabled={!$decodedToken}
-						>
-							<option selected value={null}>Intensidade?</option>
-							<option value={0}>Sem iluminação</option>
-							<option value={1}>Iluminação Fraca</option>
-							<option value={3}>Iluminação Moderada</option>
-							<option value={5}>Iluminação Forte</option>
-						</select>
-						<BooleanFormAttr
-							label="No acesso"
-							bind:state={$hasIlluminatedPath}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_illuminated_path"
-						/>
-					</div>
-					<div class="flex flex-col gap-1">
-						<span>Visibilidade</span>
-						<BooleanFormAttr
-							label="Da paragem para autocarro"
-							bind:state={$hasVisibilityFromArea}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_visibility_from_area"
-						/>
-						{#if $hasShelter}
-							<BooleanFormAttr
-								label="Do abrigo para autocarro"
-								bind:state={$hasVisibilityFromWithin}
-								disabled={!$decodedToken}
-								infoUrl="/instructions/stopattrs#has_visibility_from_within"
-							/>
-						{/if}
-						<BooleanFormAttr
-							label="Do autocarro para paragem"
-							bind:state={$isVisibleFromOutside}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#is_visible_from_outside"
-						/>
-						<span>Apoios</span>
-						<BooleanFormAttr
-							label="Tempos de espera"
-							bind:state={$hasWaitingTimes}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_waiting_times"
-						/>
-						<BooleanFormAttr
-							label="Ponto de venda"
-							bind:state={$hasTicketSeller}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_ticket_seller"
-						/>
-						<BooleanFormAttr
-							label="Apoio ao passageiro"
-							bind:state={$hasCostumerSupport}
-							disabled={!$decodedToken}
-							infoUrl="/instructions/stopattrs#has_costumer_support"
-						/>
-					</div>
-					<div class="flex flex-col gap-1">
-						<span>Parque automóvel</span>
-						<select
-							class="select select-bordered max-w-xs select-xs"
-							bind:value={parkingVisibilityImpairment}
-							disabled={!$decodedToken}
-						>
-							<option disabled selected value={null}>Limitação visual?</option>
-							<option value={0}>Sem limitações à visibilidade</option>
-							<option value={2}>Pouco limitante à visibilidade</option>
-							<option value={4}>Algo limitante à visibilidade</option>
-							<option value={6}>Muito limitante à visibilidade</option>
-						</select>
-						<select
-							class="select select-bordered max-w-xs select-xs"
-							bind:value={parkingLocalAccessImpairment}
-							disabled={!$decodedToken}
-						>
-							<option disabled selected value={null}>Disfuncional à paragem?</option>
-							<option value={0}>Sem inteferência à paragem</option>
-							<option value={2}>Pouca intreferêcia à paragem</option>
-							<option value={4}>Alguma intreferência à paragem</option>
-							<option value={6}>Muita intreferência à paragem</option>
-						</select>
-						<select
-							class="select select-bordered max-w-xs select-xs"
-							bind:value={parkingAreaAccessImpairment}
-							disabled={!$decodedToken}
-						>
-							<option disabled selected value={null}>Disfuncional ao acesso?</option>
-							<option value={0}>Acesso sem inteferência</option>
-							<option value={2}>Acesso com pouca intreferêcia</option>
-							<option value={4}>Acesso com alguma intreferência</option>
-							<option value={6}>Acesso com muita intreferência</option>
-						</select>
-					</div>
-					<div>
-						<span class="label-text">Verificação</span>
-						<div class="flex gap-1">
-							<input
-								type="date"
-								class="input input-xs input-bordered"
-								bind:value={infrastructureCheckDate}
-							/>
-							<input
-								type="button"
-								class="btn btn-primary btn-xs"
-								value="Hoje"
-								on:click={() => {
-									infrastructureCheckDate = new Date().toISOString().split('T')[0];
-								}}
-								on:keypress={() => {
-									infrastructureCheckDate = new Date().toISOString().split('T')[0];
-								}}
-							/>
-							{#if $latestPictureDate}
-								<input
-									type="button"
-									class="btn btn-info btn-xs"
-									value="Fotos"
-									on:click={() => {
-										infrastructureCheckDate = $latestPictureDate.toISOString().split('T')[0];
-									}}
-									on:keypress={() => {
-										infrastructureCheckDate = $latestPictureDate.toISOString().split('T')[0];
-									}}
-								/>
-							{/if}
-						</div>
-					</div>
-				</div>
-				<div class="flex gap-2 flex-wrap" class:hidden={currentSubform != subforms.extra}>
-					<div class="form-control max-w-xs grow basis-64">
-						<span class="text-sm">Defeitos</span>
-						<div class="flex flex-col items-start flex-wrap gap-1">
-							{#each tmpIssues as issue}
-								<div class="border rounded-xl p-1">
-									{tmpIssueLabels[issue]}
-									<div
-										class="btn btn-error btn-circle btn-xs"
-										on:click={() => removeIssue(issue)}
-										on:keypress={() => removeIssue(issue)}
-									>
-										✕
-									</div>
-								</div>
-							{/each}
-							<div class="grow">
-								<label for="defect-modal" class="btn btn-sm btn-secondary modal-button w-full"
-									>Novo defeito</label
-								>
-								<input type="checkbox" id="defect-modal" class="modal-toggle" />
-								<label for="defect-modal" class="modal cursor-pointer">
-									<label class="modal-box relative max-w-2xl" for="">
-										<span class="text-lg"> Que defeito adicionar? </span>
-										<ul class="menu bg-base-100 w-full rounded-box">
-											{#each tmpIssuesOptions as tmpIssue}
-												<li>
-													<span
-														on:mouseup={() => {
-															selectedTmpIssue = tmpIssue;
-															addIssue();
-															document.getElementById('defect-modal').checked = false;
-														}}
-													>
-														{tmpIssue.label}
-													</span>
-												</li>
-											{/each}
-										</ul>
-									</label>
-								</label>
-							</div>
-						</div>
-					</div>
-					<div class="form-control max-w-xs grow basis-64">
-						<span class="text-sm">Etiquetas</span>
-						<div class="flex flex-col gap-2 items-start">
-							<div class="flex w-full gap-1">
-								<input
-									id="tag-text"
-									type="text"
-									class="input input-bordered input-sm grow"
-									placeholder="Creche ABC123"
-									disabled={!$decodedToken}
-								/>
-								<input
-									class="btn btn-sm btn-primary"
-									type="button"
-									value="+"
-									on:click={addTag}
-									on:keypress={addTag}
-									disabled={!$decodedToken}
-								/>
-							</div>
-							<div class="flex flex-row flex-wrap gap-1">
-								{#each tags as tag}
-									<span class="border rounded-xl p-1">
-										{tag}
-										<span
-											class="btn btn-error btn-circle btn-xs"
-											on:click={() => removeTag(tag)}
-											on:keypress={() => removeTag(tag)}
-										>
-											✕
-										</span>
-									</span>
-								{/each}
-							</div>
-						</div>
-					</div>
-					<div class="form-control grow basis-96">
-						<span class="text-sm">Notas</span>
-						<textarea
-							class="textarea textarea-bordered h-32 w-full"
-							placeholder="Falta obter-se uma foto que mostre que a paragem se encontra frente a xyz"
-							bind:value={notes}
-							disabled={!$decodedToken}
-						/>
-					</div>
-				</div>
-			</div>
+			<StopAttributesForm
+				{selectedStop}
+				{stopPictures}
+				{latestPictureDate}
+				readOnly={!$decodedToken}
+				isAdmin={$decodedToken?.permissions.is_admin}
+				on:pictureClick={(e) => {
+					previewedPic = e.detail.picture;
+				}}
+				on:pictureEditorRequest={(e) => {
+					editingStopPics = true;
+				}}
+				on:save={handleStopFormSave}
+			/>
 		</div>
 	</div>
-	{#if uploadingPics}
+	{#if editingStopPics}
 		<StopImagesEditor
 			stops={$stops}
 			stop={selectedStop}
 			{stopPictures}
 			{newPictures}
 			on:save={() => {
-				uploadingPics = false;
+				editingStopPics = false;
 			}}
 		/>
 	{/if}
