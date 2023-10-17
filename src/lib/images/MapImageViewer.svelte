@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { tileStyle } from '$lib/settings.js';
-	import { Map as Maplibre, NavigationControl } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl, GeolocateControl } from 'maplibre-gl';
 
 	const dispatch = createEventDispatcher();
 
@@ -136,9 +136,18 @@
 					stops: [
 						[0, 1.5],
 						[11, 2],
-						[18, 7]
+						[17, 7],
+						[18, 20]
 					]
-				}
+				},
+				'circle-stroke-width': {
+					stops: [
+						[0, 0.1],
+						[14, 0.5],
+						[18, 1]
+					]
+				},
+				'circle-stroke-color': '#fff'
 			}
 		});
 
@@ -154,15 +163,24 @@
 			type: 'circle',
 			source: 'pics',
 			paint: {
-				'circle-color': 'rgb(230, 210, 150)',
+				'circle-color': 'rgba(230, 210, 150, 0.8)',
 				'circle-radius': {
 					base: 1.2,
 					stops: [
 						[0, 1.5],
 						[11, 2],
-						[18, 7]
+						[17, 7],
+						[18, 15]
 					]
-				}
+				},
+				'circle-stroke-width': {
+					stops: [
+						[0, 0.1],
+						[14, 0.5],
+						[18, 1]
+					]
+				},
+				'circle-stroke-color': '#fff'
 			}
 		});
 	}
@@ -208,6 +226,7 @@
 		});
 
 		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new GeolocateControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -224,4 +243,9 @@
 	});
 </script>
 
-<div bind:this={mapEl} class="w-full max-h-[50vh]" class:h-[40em]={$compact} class:h-[50em]={!$compact} />
+<div
+	bind:this={mapEl}
+	class="w-full max-h-[50vh]"
+	class:h-[40em]={$compact}
+	class:h-[50em]={!$compact}
+/>
