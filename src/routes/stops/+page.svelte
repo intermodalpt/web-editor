@@ -1,5 +1,5 @@
 <script>
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { decodedToken, token, toast } from '$lib/stores.js';
@@ -100,10 +100,11 @@
 						resolve([]);
 				  })
 		])
-			.then(([unpatchedStops, pictures, patches]) => {
+			.then(async ([unpatchedStops, pictures, patches]) => {
 				$userPatches = patches;
 				picsPerStop = pictures;
 
+				await tick();
 				if (mapLoaded) {
 					loadStops();
 				}
@@ -416,25 +417,25 @@
 	function saveStopMeta() {
 		if (hasFlags) {
 			if (flagsData.length === 0) {
-				toast('Nenhum postalete inserido', 'error')
+				toast('Nenhum postalete inserido', 'error');
 				return;
 			}
 
 			// Check if there are flags without ids
 			if (flagsData.some((flag) => flag.id === null)) {
-				toast('Campo id em falta no postalete', 'error')
+				toast('Campo id em falta no postalete', 'error');
 				return;
 			}
 		}
 		if (hasSchedules) {
 			if (hasSchedules.length === 0) {
-				toast('Nenhum horário inserido', 'error')
+				toast('Nenhum horário inserido', 'error');
 				return;
 			}
 
 			// Check if there are schedules with null types
 			if (schedulesData.some((schedule) => schedule.type === null)) {
-				toast('Campo origem em falta no horário', 'error')
+				toast('Campo origem em falta no horário', 'error');
 				return;
 			}
 		}
@@ -542,7 +543,7 @@
 						} else {
 							r.json().then((id) => {
 								if (id === -1) {
-									toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error')
+									toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
 								} else {
 									applyChanges();
 								}
@@ -554,7 +555,7 @@
 								toast(`Erro a atualizar:\n${error}`, 'error');
 							})
 							.catch(() => {
-								toast('Erro a atualizar', 'error')
+								toast('Erro a atualizar', 'error');
 							});
 					}
 				})
@@ -563,7 +564,7 @@
 				});
 		} else {
 			console.log('Não foram feitas alterações na paragem');
-			toast('Não foram feitas alterações na paragem')
+			toast('Não foram feitas alterações na paragem');
 			$selectedStop = null;
 		}
 	}
@@ -965,11 +966,13 @@
 			})
 		);
 
-		map.on('load', function () {
+		map.on('load', async () => {
 			addSourcesAndLayers();
 			addEvents();
 
 			mapLoaded = true;
+			await tick();
+
 			if (stopsLoaded) {
 				loadStops();
 			}
@@ -1146,8 +1149,8 @@
 					>
 				</div>
 				<div class="flex gap-2 flex-grow justify-end">
-					<AuthenticityIndicator bind:value={verificationLevel}/>
-					<span class="w-2"/>
+					<AuthenticityIndicator bind:value={verificationLevel} />
+					<span class="w-2" />
 					<input
 						type="button"
 						class="btn btn-success btn-xs"
@@ -1167,7 +1170,7 @@
 			</div>
 			<div class="w-full overflow-y-auto p-2 pt-0 bg-base-100">
 				<div
-					class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+					class="grid gap-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
 					class:hidden={currentSubform != subforms.info}
 				>
 					<div class="flex flex-col gap-1 items-start">
