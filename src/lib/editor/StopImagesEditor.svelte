@@ -123,9 +123,18 @@
 </script>
 
 <div
-	class="absolute h-full w-full p-2 bg-white z-20 overflow-y-auto grid grid-cols-1"
-	style="grid-template-rows: auto auto 1fr auto;"
+	class="fixed top-0 bottom-0 left-0 right-0 p-2 bg-white z-20 grid grid-cols-1 overflow-y-scroll gap-2"
+	style="grid-template-rows: auto auto 1fr;"
 >
+	<div class="flex gap-3 justify-end">
+		<input
+			type="button"
+			class="btn btn-secondary btn-sm"
+			value="Enviar"
+			on:click={() => (sendingPictures = true)}
+		/>
+		<input type="button" class="btn btn-error btn-sm" value="Fechar" on:click={closeEditor} />
+	</div>
 	<!-- FIXME this min-h is an hack to prevent things from collapsing when the layout is pressured -->
 	<div class="flex gap-2 overflow-x-scroll min-h-[80px] lg:min-h-[120px]">
 		{#each $editedStopPictures as picture}
@@ -176,9 +185,8 @@
 			</div>
 		{/each}
 	</div>
-	<hr />
 	<div
-		class="my-3 py-4 bg-base-200 border-base-300 border-2 rounded-md shadow-sm grid grid-cols-1 justify-items-center"
+		class="py-4 bg-base-200 border-base-300 border-2 rounded-md shadow-sm grid grid-cols-1 justify-items-center"
 		style="grid-template-rows: auto 1fr;"
 	>
 		<div class="max-w-[60em]">
@@ -205,17 +213,6 @@
 				/>
 			{/if}
 		</div>
-	</div>
-
-	<div class="flex gap-2 justify-end">
-		<input
-			type="button"
-			class="btn btn-secondary"
-			value="Adicionar"
-			on:click={() => (sendingPictures = true)}
-		/>
-		<span class="grow" />
-		<input type="button" class="btn btn-neutral" value="Fechar" on:click={closeEditor} />
 	</div>
 </div>
 

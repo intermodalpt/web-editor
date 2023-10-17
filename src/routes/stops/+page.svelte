@@ -779,18 +779,18 @@
 			/>
 		</div>
 	</div>
-	{#if editingStopPics}
-		<StopImagesEditor
-			stops={$stops}
-			stop={selectedStop}
-			{stopPictures}
-			{newPictures}
-			on:save={() => {
-				editingStopPics = false;
-			}}
-		/>
-	{/if}
 </div>
+{#if editingStopPics}
+	<StopImagesEditor
+		stops={$stops}
+		stop={selectedStop}
+		{stopPictures}
+		{newPictures}
+		on:save={() => {
+			editingStopPics = false;
+		}}
+	/>
+{/if}
 
 {#if previewedPic}
 	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
