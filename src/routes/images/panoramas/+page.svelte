@@ -2,9 +2,15 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { Map as Maplibre, Marker, NavigationControl } from 'maplibre-gl';
+	import {
+		Map as Maplibre,
+		Marker,
+		LngLatBounds,
+		NavigationControl,
+		GeolocateControl
+	} from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import View360, { EquirectProjection } from '@egjs/svelte-view360';
+	import View360, { EquirectProjection, LoadingSpinner, ControlBar } from '@egjs/svelte-view360';
 	import '@egjs/svelte-view360/css/view360.min.css';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { token } from '$lib/stores.js';
@@ -42,7 +48,25 @@
 	});
 
 	panoOnion.subscribe((onion) => {
-		updateData();
+		if (map) {
+			updateData();
+
+			// Figure the boundary for every predecessor and antecessor
+			const bounds = new LngLatBounds();
+			onion.predecessors
+				.filter((pic) => pic.lat && pic.lon)
+				.forEach((pic) => {
+					bounds.extend([pic.lon, pic.lat]);
+				});
+			onion.successors
+				.filter((pic) => pic.lat && pic.lon)
+				.forEach((pic) => {
+					bounds.extend([pic.lon, pic.lat]);
+				});
+			map.fitBounds(bounds, {
+				padding: 50
+			});
+		}
 	});
 
 	selectedPano.subscribe((pano) => {
@@ -54,16 +78,26 @@
 			return;
 		}
 
-		projection = new EquirectProjection({
-			src: `https://intermodal-storage-worker.claudioap.workers.dev/pano/${pano.sha1}/pano.jpg`
-		});
+		if (projection?._for != pano) {
+			projection = new EquirectProjection({
+				src: `https://intermodal-storage-worker.claudioap.workers.dev/pano/${pano.sha1}/pano.jpg`
+			});
+			projection._for = pano;
+		}
 
 		if (map) {
 			if (pano.lat && pano.lon) {
-				setMarkerPosition(pano.lon, pano.lat);
-			} else if (marker) {
-				marker.remove();
-				marker = null;
+				if (marker) {
+					marker.setLngLat([pano.lon, pano.lat]);
+				} else {
+					marker = new Marker().setLngLat([pano.lon, pano.lat]).setDraggable(true).addTo(map);
+					marker.on('dragend', markerMoved);
+				}
+			} else {
+				if (marker) {
+					marker.remove();
+					marker = null;
+				}
 			}
 		}
 	});
@@ -155,26 +189,25 @@
 					}) || []
 		});
 
-		/*let relFeatures = [];
-		$pictures
-			.filter((pic) => pic.lat && pic.lon)
-			.forEach((pic) => {
-				pic.stops.map((stopId) => {
-					let stop = $stops[stopId];
-					relFeatures.push({
-						type: 'Feature',
-						geometry: {
-							type: 'LineString',
-							coordinates: [[pic.lon, pic.lat], stop ? [stop.lon, stop.lat] : [0.0, 90.0]]
-						}
-					});
-				});
+		let relFeatures = [];
+		if ($selectedPano && $selectedPano.lat && $selectedPano.lon && $selectedPano.stop_id) {
+			let stop = $stops[$selectedPano.stop_id];
+			relFeatures.push({
+				type: 'Feature',
+				geometry: {
+					type: 'LineString',
+					coordinates: [
+						[$selectedPano.lon, $selectedPano.lat],
+						[stop.lon, stop.lat]
+					]
+				}
 			});
+		}
 
 		map.getSource('relations').setData({
 			type: 'FeatureCollection',
 			features: relFeatures
-		});*/
+		});
 	}
 
 	function addSourcesAndLayers() {
@@ -350,13 +383,31 @@
 		});
 
 		map.on('click', 'stops', (e) => {
+			e.originalEvent.preventDefault();
 			let stopId = e.features[0].properties.id;
-			dispatch('selectStop', { id: stopId });
+			if ($selectedPano) {
+				$selectedPano.stop_id = stopId;
+			}
 		});
 
-		map.on('click', 'pics', (e) => {
-			let picId = e.features[0].properties.id;
-			dispatch('selectPic', { id: picId });
+		map.on('click', function (e) {
+			if (e.originalEvent.defaultPrevented) {
+				return;
+			}
+			if ($selectedPano) {
+				if (marker) {
+					marker.setLngLat(e.lngLat);
+				} else {
+					marker = new Marker({ draggable: true })
+						.setLngLat(e.lngLat)
+						.setDraggable(true)
+						.addTo(map);
+					marker.on('dragend', markerMoved);
+				}
+
+				$selectedPano.lon = e.lngLat.lng;
+				$selectedPano.lat = e.lngLat.lat;
+			}
 		});
 	}
 
@@ -375,6 +426,7 @@
 		});
 
 		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new GeolocateControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -382,15 +434,11 @@
 
 			mapLoaded = true;
 			updateData();
-		});
 
-		map.on('click', function (e) {
-			if (marker) {
-				marker.setLngLat(e.lngLat).addTo(map);
-			} else {
-				marker = new Marker({ draggable: true }).setLngLat(e.lngLat).setDraggable(true).addTo(map);
-				marker.on('dragend', markerMoved);
-			}
+			map.easeTo({
+				padding: { left: 500 },
+				duration: 750
+			});
 		});
 	});
 
@@ -463,7 +511,15 @@
 						</h2>
 
 						{#if $selectedPano?.id === pano.id}
-							<View360 class="is-16by9" bind:projection />
+							<View360
+								class="is-16by9"
+								bind:projection
+								disableContextMenu={true}
+								plugins={[
+									new ControlBar({ fullscreenButton: true, pieView: false, gyroButton: false }),
+									new LoadingSpinner()
+								]}
+							/>
 							<div class="flex gap-2 align-middle">
 								<label
 									class="btn btn-success btn-sm w-32"
