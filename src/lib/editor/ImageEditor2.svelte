@@ -6,6 +6,8 @@
 	import { isDeepEqual } from '$lib/utils.js';
 	import MapLocationPicker from '$lib/editor/MapLocationPicker.svelte';
 
+	const dispatch = createEventDispatcher();
+
 	export let imageId;
 	export let stops;
 
@@ -25,8 +27,6 @@
 			});
 	});
 
-	const dispatch = createEventDispatcher();
-
 	const editable =
 		$image?.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin;
 
@@ -42,16 +42,46 @@
 	let quality;
 	let notes;
 	$: trimmedNotes = notes?.trim() === '' ? null : notes;
+	let tags = [];
+
+	let attrFront;
+	let attrBack;
+	let attrMovement;
+	let attrCounterMovement;
+
+	let attrHasFlag;
+	let attrHasSchedule;
+	let attrHasDefect;
+	let attrHasVehicle;
+	let attrHasInfra;
+	let attrHasSurroundings;
 
 	$: stopsChanged = !isDeepEqual($stopIds, $image?.stops || []);
 	$: posChanged = lon !== $image?.lon || lat !== $image?.lat;
 	$: notesChanged = trimmedNotes !== $image?.notes;
+	$: tagsChanged = !isDeepEqual(tags, $image?.tags || []);
 	$: sensitiveChanged = isSensitive !== $image?.sensitive;
 	$: publicChanged = isPublic !== $image?.public;
 	$: qualityChanged = quality !== $image?.quality;
+
+	$: attrsChanged =
+		$image &&
+		(attrFront !== $image.attrs.includes('vFront') ||
+			attrBack !== $image.attrs.includes('vBack') ||
+			attrMovement !== $image.attrs.includes('vMovement') ||
+			attrCounterMovement !== $image.attrs.includes('vCMovement') ||
+			attrHasFlag !== $image.attrs.includes('fFlag') ||
+			attrHasSchedule !== $image.attrs.includes('fSchedule') ||
+			attrHasDefect !== $image.attrs.includes('fDefect') ||
+			attrHasVehicle !== $image.attrs.includes('fVehicle') ||
+			attrHasInfra !== $image.attrs.includes('fInfra') ||
+			attrHasSurroundings !== $image.attrs.includes('fSurroundings'));
+
 	$: changed =
 		stopsChanged ||
 		posChanged ||
+		tagsChanged ||
+		attrsChanged ||
 		notesChanged ||
 		sensitiveChanged ||
 		publicChanged ||
@@ -66,11 +96,25 @@
 			lon = img.lon;
 			lat = img.lat;
 			notes = img.notes;
+			$stopIds = [...img.tags];
 			$stopIds = [...img.stops];
 			isPublic = img.public;
 			isSensitive = img.sensitive;
 			quality = img.quality;
-			changed = false;
+
+			// Views
+			attrFront = (img.attrs || []).includes('vFront');
+			attrBack = (img.attrs || []).includes('vBack');
+			attrMovement = (img.attrs || []).includes('vMovement');
+			attrCounterMovement = (img.attrs || []).includes('vCMovement');
+			// Focuses
+			attrHasFlag = (img.attrs || []).includes('fFlag');
+			attrHasSchedule = (img.attrs || []).includes('fSchedule');
+			attrHasDefect = (img.attrs || []).includes('fDefect');
+			attrHasVehicle = (img.attrs || []).includes('fVehicle');
+			attrHasInfra = (img.attrs || []).includes('fInfra');
+			attrHasSurroundings = (img.attrs || []).includes('fSurroundings');
+
 			await tick();
 			adjustQualityLabel();
 			locationPicker?.setMarkerPosition(lon, lat);
@@ -125,6 +169,31 @@
 		$stopIds = $stopIds;
 	}
 
+	function addTag() {
+		let entry = document.getElementById('tag-text');
+		let entryValue = entry.value.trim();
+
+		if (entryValue !== '') {
+			tags.push(entryValue);
+			tags = tags;
+		}
+		entry.value = '';
+	}
+
+	function removeTag(tag) {
+		tags.splice(tags.indexOf(tag), 1);
+		tags = tags;
+	}
+
+	function setAttrPresence(pic, attr, presence) {
+		if (presence) {
+			pic.attrs.push(attr);
+		} else {
+			pic.attrs.splice(pic.attrs.indexOf(attr), 1);
+		}
+		pic.attrs = pic.attrs;
+	}
+
 	async function saveChanges() {
 		const savedPic = {
 			lat: $image.lat,
@@ -168,6 +237,18 @@
 				$image.sensitive = savedPic.sensitive;
 				$image.quality = savedPic.quality;
 				$image.notes = savedPic.notes;
+				$image.tags = savedPic.tags;
+
+				setAttrPresence($image, 'vFront', attrFront);
+				setAttrPresence($image, 'vBack', attrBack);
+				setAttrPresence($image, 'vMovement', attrMovement);
+				setAttrPresence($image, 'vCMovement', attrCounterMovement);
+				setAttrPresence($image, 'fFlag', attrHasFlag);
+				setAttrPresence($image, 'fSchedule', attrHasSchedule);
+				setAttrPresence($image, 'fDefect', attrHasDefect);
+				setAttrPresence($image, 'fVehicle', attrHasVehicle);
+				setAttrPresence($image, 'fInfra', attrHasInfra);
+				setAttrPresence($image, 'fSurroundings', attrHasSurroundings);
 
 				dispatch('save', { id: $imageId });
 			});
@@ -213,7 +294,7 @@
 				>
 			{/if}
 		</h2>
-		Onde se encontrava quando tirou esta fotografia?
+		<span>Onde se encontrava quando tirou esta fotografia?</span>
 		<MapLocationPicker
 			bind:this={locationPicker}
 			{lat}
@@ -227,11 +308,10 @@
 			}}
 		/>
 		<div class="form-control">
-			<label class="label">
-				<span class="label-text">Paragens</span>
-			</label>
 			{#if $stopIds.length === 0}
 				<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
+			{:else}
+				<span class="text-xs mt-1">Paragens</span>
 			{/if}
 			<div class="flex flex-row flex-wrap gap-1">
 				{#each $stopIds as stopId}
@@ -239,13 +319,90 @@
 						{stopId} - {stops[stopId]?.short_name || stops[stopId]?.name || stops[stopId]?.osm_name}
 						{stops[stopId] ? '' : '(⚠️)'}
 						{#if editable}
-							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
+							<div
+								class="btn btn-error btn-circle btn-xs"
+								on:click={() => removeStop(stopId)}
+								on:keypress={() => removeStop(stopId)}
+							>
 								✕
 							</div>
 						{/if}
 					</div>
 				{/each}
 			</div>
+		</div>
+		<h2 class="text-xl font-bold py-2">Atributos</h2>
+		<span>Quais os angulos apanhados?</span>
+		<div class="join join-vertical sm:join-horizontal">
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrFront}
+				aria-label="Frontal"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrBack}
+				aria-label="Traseira"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrMovement}
+				aria-label="Movimento"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrCounterMovement}
+				aria-label="Contra-Movimento"
+			/>
+		</div>
+		<!-- TODO link instructions -->
+		<span class="mt-2"
+			><span>A imagem foca-se em algum dos seguintes aspectos?</span> (<a
+				href="#"
+				class="link link-primary text-xs">O que são?</a
+			>)</span
+		>
+		<div class="join join-vertical">
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrHasFlag}
+				aria-label="Postalete"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrHasSchedule}
+				aria-label="Horário"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrHasVehicle}
+				aria-label="Veiculo TP"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrHasDefect}
+				aria-label="Defeito"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrHasInfra}
+				aria-label="Infraestrutura"
+			/>
+			<input
+				class="join-item btn btn-outline"
+				type="checkbox"
+				bind:checked={attrHasSurroundings}
+				aria-label="Arredores"
+			/>
 		</div>
 		<h2 class="text-xl font-bold py-2">Classificação</h2>
 		<div class="flex gap-3 items-baseline flex-wrap">
@@ -308,6 +465,7 @@
 			de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
 			e veículos na via pública, cosméticamente agradavel...
 		</span>
+		<h2 class="text-xl font-bold py-2">Informação adicional</h2>
 		<div class="form-control">
 			<label class="label">
 				<span class="label-text">Notas</span>
@@ -318,6 +476,26 @@
 				disabled={!editable}
 				bind:value={notes}
 			/>
+		</div>
+		<div>
+			<div class="form-control">
+				<label class="label"><span class="label-text">Etiquetas</span></label>
+				<div>
+					{#each tags as tag}
+						<div class="badge badge-outline badge-lg">
+							{tag}
+							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
+						</div>
+					{/each}
+					<input
+						id="tag-text"
+						type="text"
+						class="input input-bordered"
+						placeholder="Creche ABC123"
+					/>
+					<input class="btn btn-secondary" type="button" value="Add" on:click={addTag} />
+				</div>
+			</div>
 		</div>
 
 		{#if editable && (!$image.tagged || changed)}
