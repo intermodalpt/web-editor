@@ -71,12 +71,6 @@
 				Todas as contribuições serão disponibilizadas em formatos abertos e eventualmente exportadas
 				para projectos como o OpenStreetMap.
 			</div>
-			<div class="card-actions justify-end">
-				{#if !$token}
-					<a class="btn btn-primary" href="/login">Entrar</a>
-				{/if}
-			</div>
-
 			<h3 class="text-lg">Avisa-nos dos problemas que encontres</h3>
 			<p>
 				Esta é uma solução em desenvolvimento. Avisa-nos de qualquer problema que encontres.<br />
