@@ -271,240 +271,251 @@
 	}
 </script>
 
-<div class="flex flex-col overflow-y-auto">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-y-auto">
 	{#if $image}
-		<div class="relative w-fit self-center">
-			<img src={$image?.url_medium} class="rounded-lg w-full max-h-[100em]" />
-			<a
-				target="_blank"
-				href={$image.url_full}
-				class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
-				>Ver completa</a
-			>
-			<span
-				class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
-				on:click={deleteImage}>Apagar</span
-			>
-		</div>
-		<h2 class="text-xl font-bold py-2">
-			Localização e paragens
-			{#if !lat || !lon}
-				<span class="bg-warning text-warning-content rounded-full p-1 text-center text-lg"
-					>Incompleto</span
+		<div class="w-fit">
+			<div class="relative w-fit">
+				<img alt="Em análise" src={$image?.url_medium} class="rounded-lg w-full max-h-[100em]" />
+				<a
+					target="_blank"
+					href={$image.url_full}
+					class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
+					>Ver completa</a
 				>
-			{/if}
-		</h2>
-		<span>Onde se encontrava quando tirou esta fotografia?</span>
-		<MapLocationPicker
-			bind:this={locationPicker}
-			{lat}
-			{lon}
-			{stops}
-			selectedStopIds={stopIds}
-			canSelectStops={editable}
-			on:change={(e) => {
-				lat = e.detail.lat;
-				lon = e.detail.lon;
-			}}
-		/>
-		<div class="form-control">
-			{#if $stopIds.length === 0}
-				<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
-			{:else}
-				<span class="text-xs mt-1">Paragens</span>
-			{/if}
-			<div class="flex flex-row flex-wrap gap-1">
-				{#each $stopIds as stopId}
-					<div class="badge badge-outline badge-lg">
-						{stopId} - {stops[stopId]?.short_name || stops[stopId]?.name || stops[stopId]?.osm_name}
-						{stops[stopId] ? '' : '(⚠️)'}
-						{#if editable}
-							<div
-								class="btn btn-error btn-circle btn-xs"
-								on:click={() => removeStop(stopId)}
-								on:keypress={() => removeStop(stopId)}
-							>
-								✕
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		</div>
-		<h2 class="text-xl font-bold py-2">Atributos</h2>
-		<span>Quais os angulos apanhados?</span>
-		<div class="join join-vertical sm:join-horizontal">
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrFront}
-				aria-label="Frontal"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrBack}
-				aria-label="Traseira"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrMovement}
-				aria-label="Movimento"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrCounterMovement}
-				aria-label="Contra-Movimento"
-			/>
-		</div>
-		<!-- TODO link instructions -->
-		<span class="mt-2"
-			><span>A imagem foca-se em algum dos seguintes aspectos?</span> (<a
-				href="#"
-				class="link link-primary text-xs">O que são?</a
-			>)</span
-		>
-		<div class="join join-vertical">
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrHasFlag}
-				aria-label="Postalete"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrHasSchedule}
-				aria-label="Horário"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrHasVehicle}
-				aria-label="Veiculo TP"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrHasDefect}
-				aria-label="Defeito"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrHasInfra}
-				aria-label="Infraestrutura"
-			/>
-			<input
-				class="join-item btn btn-outline"
-				type="checkbox"
-				bind:checked={attrHasSurroundings}
-				aria-label="Arredores"
-			/>
-		</div>
-		<h2 class="text-xl font-bold py-2">Classificação</h2>
-		<div class="flex gap-3 items-baseline flex-wrap">
-			<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
-				{#if isSensitive}Sensivel{:else}Não sensivel{/if}
-				<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
-			</label>
-			<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
-				{#if isPublic}Pública{:else}Privada{/if}
-				<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
-			</label>
-		</div>
-		<span class="text-lg">
-			A imagem
-			{#if isSensitive}
-				<span class="text-error font-bold">deve de ser censurada</span>
-			{:else}
-				<span class="text-success font-bold">não infinge a privacidade</span>
-			{/if}
-			e
-			{#if isPublic}
-				<span class="text-success font-bold">tem</span>
-			{:else}
-				<span class="text-error font-bold">não tem</span>
-			{/if}
-			interesse público.
-		</span>
-		<div class="form-control">
-			<label class="label flex-wrap">
-				<span class="label-text">Qualidade da imagem</span>
-				<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
-			</label>
-			<input
-				type="range"
-				min="0"
-				max="100"
-				class="range range-sm"
-				step="10"
-				disabled={!editable}
-				bind:value={quality}
-				on:change={adjustQualityLabel}
-			/>
-			<div class="w-full flex justify-between text-xs px-2">
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-				<span>|</span>
-			</div>
-		</div>
-		<span class="text-xs">
-			As qualidades acima descritas são sugestões e não critérios.<br />
-			Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma pontuação
-			de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
-			e veículos na via pública, cosméticamente agradavel...
-		</span>
-		<h2 class="text-xl font-bold py-2">Informação adicional</h2>
-		<div class="form-control">
-			<label class="label">
-				<span class="label-text">Notas</span>
-			</label>
-			<textarea
-				class="textarea textarea-bordered h-12"
-				placeholder="Exemplo: Atrás da paragem encontra-se um gambuzino."
-				disabled={!editable}
-				bind:value={notes}
-			/>
-		</div>
-		<div>
-			<div class="form-control">
-				<label class="label"><span class="label-text">Etiquetas</span></label>
-				<div>
-					{#each tags as tag}
-						<div class="badge badge-outline badge-lg">
-							{tag}
-							<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
-						</div>
-					{/each}
-					<input
-						id="tag-text"
-						type="text"
-						class="input input-bordered"
-						placeholder="Creche ABC123"
-					/>
-					<input class="btn btn-secondary" type="button" value="Add" on:click={addTag} />
-				</div>
+				<span
+					class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
+					on:click={deleteImage}
+					on:keypress={deleteImage}>Apagar</span
+				>
 			</div>
 		</div>
 
-		{#if editable && (!$image.tagged || changed)}
-			<input
-				type="button"
-				class="btn btn-primary w-full my-4"
-				value="Guardar"
-				on:mouseup={saveChanges}
+		<div class="flex flex-col">
+			<h2 class="text-xl font-bold py-2">
+				Localização e paragens
+				{#if !lat || !lon}
+					<span class="bg-warning text-warning-content rounded-full p-1 text-center text-lg"
+						>Incompleto</span
+					>
+				{/if}
+			</h2>
+			<span>Onde se encontrava quando tirou esta fotografia?</span>
+			<MapLocationPicker
+				bind:this={locationPicker}
+				{lat}
+				{lon}
+				{stops}
+				selectedStopIds={stopIds}
+				canSelectStops={editable}
+				on:change={(e) => {
+					lat = e.detail.lat;
+					lon = e.detail.lon;
+				}}
 			/>
-		{/if}
+			<div class="form-control">
+				{#if $stopIds.length === 0}
+					<span class="text-lg">Escolha paragens seleccionando-as no mapa acima</span>
+				{:else}
+					<span class="text-xs mt-1">Paragens</span>
+				{/if}
+				<div class="flex flex-row flex-wrap gap-1">
+					{#each $stopIds as stopId}
+						<div class="badge badge-outline badge-lg">
+							{stopId} - {stops[stopId]?.short_name ||
+								stops[stopId]?.name ||
+								stops[stopId]?.osm_name}
+							{stops[stopId] ? '' : '(⚠️)'}
+							{#if editable}
+								<div
+									class="btn btn-error btn-circle btn-xs"
+									on:click={() => removeStop(stopId)}
+									on:keypress={() => removeStop(stopId)}
+								>
+									✕
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+			<h2 class="text-xl font-bold py-2">Atributos</h2>
+			<span>Quais os angulos apanhados?</span>
+			<div class="join join-vertical sm:join-horizontal">
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrFront}
+					aria-label="Frontal"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrBack}
+					aria-label="Traseira"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrMovement}
+					aria-label="Movimento"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrCounterMovement}
+					aria-label="Contra-Movimento"
+				/>
+			</div>
+			<!-- TODO link instructions -->
+			<span class="mt-2"
+				><span>A imagem foca-se em algum dos seguintes aspectos?</span> (<a
+					href="#"
+					class="link link-primary text-xs">O que são?</a
+				>)</span
+			>
+			<div class="join join-vertical">
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrHasFlag}
+					aria-label="Postalete"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrHasSchedule}
+					aria-label="Horário"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrHasVehicle}
+					aria-label="Veiculo TP"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrHasDefect}
+					aria-label="Defeito"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrHasInfra}
+					aria-label="Infraestrutura"
+				/>
+				<input
+					class="join-item btn btn-outline"
+					type="checkbox"
+					bind:checked={attrHasSurroundings}
+					aria-label="Arredores"
+				/>
+			</div>
+			<h2 class="text-xl font-bold py-2">Classificação</h2>
+			<div class="flex gap-3 items-baseline flex-wrap">
+				<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
+					{#if isSensitive}Sensivel{:else}Não sensivel{/if}
+					<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
+				</label>
+				<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
+					{#if isPublic}Pública{:else}Privada{/if}
+					<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
+				</label>
+			</div>
+			<span class="text-lg">
+				A imagem
+				{#if isSensitive}
+					<span class="text-error font-bold">deve de ser censurada</span>
+				{:else}
+					<span class="text-success font-bold">não infinge a privacidade</span>
+				{/if}
+				e
+				{#if isPublic}
+					<span class="text-success font-bold">tem</span>
+				{:else}
+					<span class="text-error font-bold">não tem</span>
+				{/if}
+				interesse público.
+			</span>
+			<div class="form-control">
+				<label class="label flex-wrap">
+					<span class="label-text">Qualidade da imagem</span>
+					<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
+				</label>
+				<input
+					type="range"
+					min="0"
+					max="100"
+					class="range range-sm"
+					step="10"
+					disabled={!editable}
+					bind:value={quality}
+					on:change={adjustQualityLabel}
+				/>
+				<div class="w-full flex justify-between text-xs px-2">
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+					<span>|</span>
+				</div>
+			</div>
+			<span class="text-xs">
+				As qualidades acima descritas são sugestões e não critérios.<br />
+				Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma pontuação
+				de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
+				e veículos na via pública, cosméticamente agradavel...
+			</span>
+			<h2 class="text-xl font-bold py-2">Informação adicional</h2>
+			<div class="form-control">
+				<label class="label">
+					<span class="label-text">Notas</span>
+				</label>
+				<textarea
+					class="textarea textarea-bordered h-12"
+					placeholder="Exemplo: Atrás da paragem encontra-se um gambuzino."
+					disabled={!editable}
+					bind:value={notes}
+				/>
+			</div>
+			<div>
+				<div class="form-control">
+					<label class="label"><span class="label-text">Etiquetas</span></label>
+					<div>
+						{#each tags as tag}
+							<div class="badge badge-outline badge-lg">
+								{tag}
+								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
+							</div>
+						{/each}
+						<input
+							id="tag-text"
+							type="text"
+							class="input input-bordered"
+							placeholder="Creche ABC123"
+						/>
+						<input class="btn btn-secondary" type="button" value="Add" on:click={addTag} />
+					</div>
+				</div>
+			</div>
+
+			{#if editable}
+				<div class="flex justify-end">
+					<input
+						type="button"
+						class="btn btn-primary my-4"
+						value="Guardar"
+						disabled={$image.tagged && !changed}
+						on:mouseup={saveChanges}
+					/>
+				</div>
+			{/if}
+		</div>
 	{/if}
 </div>

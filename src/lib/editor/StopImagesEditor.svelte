@@ -123,7 +123,7 @@
 </script>
 
 <div
-	class="fixed top-0 bottom-0 left-0 right-0 p-2 bg-white z-20 grid grid-cols-1 overflow-y-scroll gap-2"
+	class="fixed top-0 bottom-0 left-0 right-0 p-2 bg-white z-20 grid grid-cols-1 overflow-y-scroll gap-2  bg-base-300"
 	style="grid-template-rows: auto auto 1fr;"
 >
 	<div class="flex gap-3 justify-end">
@@ -186,10 +186,9 @@
 		{/each}
 	</div>
 	<div
-		class="py-4 bg-base-200 border-base-300 border-2 rounded-md shadow-sm grid grid-cols-1 justify-items-center"
-		style="grid-template-rows: auto 1fr;"
+		class="bg-base-100 border-base-300 border-2 rounded-md shadow-sm flex justify-center"
 	>
-		<div class="max-w-[60em]">
+		<div class="max-w-[100em] p-2">
 			{#if $selectedImageId}
 				<ImageEditor
 					imageId={selectedImageId}
@@ -211,6 +210,10 @@
 						currentImageHasChanges = false;
 					}}
 				/>
+			{:else if newPictures.length > 0 || stopPictures.length > 0}
+				<span class="text-xl">Selecione uma fotografia a editar</span>
+			{:else}
+				<span class="text-xl">Envie uma fotografia para poder catalogar</span>
 			{/if}
 		</div>
 	</div>
