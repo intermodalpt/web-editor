@@ -70,7 +70,6 @@ export async function fetchStops(ifMissing = true) {
     updateCacheTimestamp('stops');
     stopsLoaded = true;
     console.log('end loadingStops');
-
 }
 
 export async function fetchRoutes(ifMissing = true) {
@@ -182,6 +181,9 @@ export async function softInvalidateStops() {
     await invalidateCacheTimestamp('stops');
 }
 
+export async function patchStop(stop) {
+    await db.stops.put(stop, stop.id);
+}
 
 export async function loadMissing() {
     const missing = [];

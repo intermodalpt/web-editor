@@ -8,7 +8,7 @@
 	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { isDeepEqual } from '$lib/utils.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { fetchStops, getStops, loadMissing } from '$lib/db';
+	import { fetchStops, getStops, patchStop, loadMissing } from '$lib/db';
 	import {
 		logStopScore,
 		logWeightedStopScore,
@@ -438,79 +438,83 @@
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${$token}`
 		};
+		const isAdmin = $decodedToken?.permissions.is_admin;
 
-		if (hasStopChanged) {
-			console.log('Foram feitas alterações');
-			let request;
-			if ($decodedToken?.permissions.is_admin) {
-				request = fetch(`${apiServer}/v1/stops/update/${currStop.id}`, {
-					method: 'PATCH',
-					headers: headers,
-					body: JSON.stringify(newStop)
-				}).then((r) => {
-					fetchStops(true).then(() => {
-						console.log('Stop database updated');
-					});
-					return r;
-				});
-			} else {
-				let comment = null;
-				if (
-					confirm(
-						'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
-					)
-				) {
-					comment = prompt('Insira o seu comentário');
-				}
-
-				request = fetch(`${apiServer}/v1/contrib/stops/update/${currStop.id}`, {
-					method: 'POST',
-					headers: headers,
-					body: JSON.stringify({ contribution: newStop, comment: comment })
-				});
-			}
-			// If the request answer is ok, update the stop in the stops array
-			// otherwise show an error message with the response body
-			request
-				.then((r) => {
-					if (r.ok) {
-						const applyChanges = () => {
-							Object.assign(currStop, newStop);
-							fetchStops(false).then(() => {
-								console.log('Stop database updated');
-							});
-							map.getSource('stops').setData(getFilteredData());
-							$selectedStop = null;
-						};
-						if (isAdmin) {
-							applyChanges();
-						} else {
-							r.json().then((id) => {
-								if (id === -1) {
-									toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
-								} else {
-									applyChanges();
-								}
-							});
-						}
-					} else {
-						r.text()
-							.then((error) => {
-								toast(`Erro a atualizar:\n${error}`, 'error');
-							})
-							.catch(() => {
-								toast('Erro a atualizar', 'error');
-							});
-					}
-				})
-				.catch(() => {
-					alert('Error requesting update');
-				});
-		} else {
+		if (!hasStopChanged) {
 			console.log('Não foram feitas alterações na paragem');
 			toast('Não foram feitas alterações na paragem');
 			$selectedStop = null;
+			return;
 		}
+
+		console.log('Foram feitas alterações');
+		let request;
+		if (isAdmin) {
+			request = fetch(`${apiServer}/v1/stops/update/${currStop.id}`, {
+				method: 'PATCH',
+				headers: headers,
+				body: JSON.stringify(newStop)
+			});
+		} else {
+			let comment = null;
+			if (
+				confirm(
+					'A sua alteração será aplicada após uma revisão. Deseja deixar algum comentário para o revisor?'
+				)
+			) {
+				comment = prompt('Insira o seu comentário');
+			}
+
+			request = fetch(`${apiServer}/v1/contrib/stops/update/${currStop.id}`, {
+				method: 'POST',
+				headers: headers,
+				body: JSON.stringify({ contribution: newStop, comment: comment })
+			});
+		}
+
+		// If the request answer is ok, update the stop in the stops array
+		// otherwise show an error message with the response body
+		request
+			.then(async (r) => {
+				if (r.ok) {
+					if (isAdmin) {
+						let upstreamStop = await r.json();
+						console.log(upstreamStop);
+
+						// Object.assign(currStop, newStop);
+						Object.assign(currStop, upstreamStop);
+
+						patchStop(upstreamStop).then(() => {
+							console.log('Stop database updated');
+						});
+						map.getSource('stops').setData(getFilteredData());
+						$selectedStop = null;
+					} else {
+						let id = await r.json();
+						if (id === -1) {
+							toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
+						} else {
+							Object.assign(currStop, newStop);
+							map.getSource('stops').setData(getFilteredData());
+							$selectedStop = null;
+							toast('Contribuição submetida. Registada com o ID ' + id);
+						}
+					}
+				} else {
+					r.text()
+						.then((error) => {
+							toast(`Erro a atualizar:\n${error}`, 'error');
+						})
+						.catch(() => {
+							toast('Erro a atualizar', 'error');
+						});
+				}
+			})
+			.catch((e) => {
+				console.log('Error requesting update');
+				console.log(e);
+				toast('Error requesting update');
+			});
 	}
 
 	function addSourcesAndLayers() {
