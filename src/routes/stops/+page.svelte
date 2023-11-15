@@ -15,8 +15,8 @@
 		linearStopScore,
 		weightedStopScore
 	} from '$lib/stops/scoring.js';
-	import StopImagesEditor from '$lib/editor/StopImagesEditor.svelte';
-	import PicDialog from '$lib/editor/PicDialog.svelte';
+	import StopPicsMetaEditor from '$lib/pics/wrappers/StopPicsMetaEditor.svelte';
+	import PicDialog from '$lib/pics/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
 	import StopAttributesForm from './forms/StopAttributesForm.svelte';
 
@@ -784,7 +784,7 @@
 	</div>
 </div>
 {#if editingStopPics}
-	<StopImagesEditor
+	<StopPicsMetaEditor
 		{stops}
 		stop={selectedStop}
 		{stopPictures}

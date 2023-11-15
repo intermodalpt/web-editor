@@ -1,9 +1,9 @@
 <script>
-	import { createEventDispatcher, tick } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
 	import { token, decodedToken } from '$lib/stores.js';
-	import ImageEditor from '$lib/editor/ImageEditor2.svelte';
+	import PicMetaEditor from '$lib/pics/PicMetaEditor.svelte';
 
 	const POSITION_REQUIRED = false;
 
@@ -189,7 +189,7 @@
 	<div class="bg-base-100 border-base-300 border-2 rounded-md shadow-sm flex justify-center">
 		<div class="max-w-[100em] p-2">
 			{#if $selectedImageId}
-				<ImageEditor
+				<PicMetaEditor
 					imageId={selectedImageId}
 					{stops}
 					on:save={() => {

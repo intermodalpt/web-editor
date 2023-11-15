@@ -2,14 +2,14 @@
 	import { derived, writable } from 'svelte/store';
 	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings.js';
-	import { Gallery } from '$lib/images/utils.js';
+	import { Gallery } from '$lib/pics/utils.js';
 	import { token } from '$lib/stores.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
-	import PicEditorWrapper from '$lib/editor/PicEditorWrapper.svelte';
-	import ImageUploader from '$lib/images/ImageUploader.svelte';
-	import MapImageViewer from '$lib/images/MapImageViewer.svelte';
-	import StopPicsInfo from '$lib/images/StopPicsInfo.svelte';
-	import PicInfo from '$lib/images/PicInfo.svelte';
+	import SinglePicMetaEditor from '$lib/pics/wrappers/SinglePicMetaEditor.svelte';
+	import PicUploader from '$lib/pics/PicUploader.svelte';
+	import PicMapViewer from '$lib/pics/PicMapViewer.svelte';
+	import StopPicsInfo from '$lib/pics/StopPicsInfo.svelte';
+	import PicInfo from '$lib/pics/PicInfo.svelte';
 
 	const basePictures = writable([]);
 	const stops = liveQuery(() => getStops());
@@ -277,7 +277,7 @@
 	>
 		{#if $tab === tabs.map}
 			<div class="card-body">
-				<MapImageViewer
+				<PicMapViewer
 					pictures={basePictures}
 					{stops}
 					on:selectStop={selectStopHandler}
@@ -408,7 +408,7 @@
 			<div class="card-body">
 				<h2 class="card-title">Enviar imagens</h2>
 				{#if $token}
-					<ImageUploader />
+					<PicUploader />
 				{:else}
 					<p class="text-lg">Precisa de estar autenticado para enviar imagens</p>
 				{/if}
@@ -418,7 +418,7 @@
 </div>
 
 {#if $openPicId}
-	<PicEditorWrapper
+	<SinglePicMetaEditor
 		selectedPicId={openPicId}
 		{stops}
 		on:save={handlePicSave}

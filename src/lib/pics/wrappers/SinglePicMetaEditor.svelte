@@ -1,6 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import ImageEditor from '$lib/editor/ImageEditor2.svelte';
+	import PicMetaEditor from '$lib/pics/PicMetaEditor.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -23,7 +23,7 @@
 	<div class="bg-base-100 border-base-300 border-2 rounded-md shadow-sm flex justify-center">
 		<div class="max-w-[100em] p-2">
 			{#if $selectedPicId}
-				<ImageEditor imageId={selectedPicId} {stops} on:save on:delete />
+				<PicMetaEditor imageId={selectedPicId} {stops} on:save on:delete />
 			{/if}
 		</div>
 	</div>

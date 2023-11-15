@@ -4,8 +4,8 @@
 	import { writable, derived } from 'svelte/store';
 	import { token, decodedToken } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
-	import MapLocationPicker from '$lib/editor/MapLocationPicker.svelte';
-	import PictureStopAttrs from '$lib/editor/PictureStopAttrs.svelte';
+	import MapLocationPicker from './subcomponents/MapLocationPicker.svelte';
+	import StopAttrs from './subcomponents/StopAttrs.svelte';
 
 	const dispatch = createEventDispatcher();
 	const managedAttrs = ['flag', 'schedule', 'defect', 'vehicle', 'infra', 'nocturnal'];
@@ -329,7 +329,7 @@
 				<div class="flex flex-row flex-wrap gap-1">
 					{#key imageId}
 						{#each $stopRels as rel}
-							<PictureStopAttrs
+							<StopAttrs
 								bind:rel
 								{stops}
 								{editable}
