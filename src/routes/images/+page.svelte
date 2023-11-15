@@ -1,15 +1,15 @@
 <script>
 	import { derived, writable } from 'svelte/store';
-	import ImageEditor from '$lib/editor/ImageEditor.svelte';
-	import ImageUploader from '$lib/images/ImageUploader.svelte';
-	import MapImageViewer from '$lib/images/MapImageViewer.svelte';
-	import StopPicsInfo from '$lib/images/StopPicsInfo.svelte';
-	import PicInfo from '$lib/images/PicInfo.svelte';
+	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings.js';
 	import { Gallery } from '$lib/images/utils.js';
 	import { token } from '$lib/stores.js';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
-	import { liveQuery } from 'dexie';
+	import PicEditorWrapper from '$lib/editor/PicEditorWrapper.svelte';
+	import ImageUploader from '$lib/images/ImageUploader.svelte';
+	import MapImageViewer from '$lib/images/MapImageViewer.svelte';
+	import StopPicsInfo from '$lib/images/StopPicsInfo.svelte';
+	import PicInfo from '$lib/images/PicInfo.svelte';
 
 	const basePictures = writable([]);
 	const stops = liveQuery(() => getStops());
@@ -71,7 +71,7 @@
 		}
 	});
 
-	let openImageId = writable(null);
+	let openPicId = writable(null);
 
 	function pagesToFetch(page) {
 		let pages = [];
@@ -163,11 +163,11 @@
 	}
 
 	function openPicEditor(id) {
-		$openImageId = id;
+		$openPicId = id;
 	}
 
 	function closePicEditor() {
-		$openImageId = null;
+		$openPicId = null;
 	}
 
 	function selectPicHandler(e) {
@@ -180,10 +180,10 @@
 		$selectedStop = $stops[e.detail.id];
 	}
 
-	function handlePictureSave(e) {
-		let picId = e.detail.id;
+	function handlePicSave(e) {
+		let picture = e.detail.picture;
 
-		fetch(`${apiServer}/v1/stop_pics/${picId}`, {
+		fetch(`${apiServer}/v1/stop_pics/${picture.id}`, {
 			headers: {
 				Authorization: `Bearer ${$token}`
 			}
@@ -194,11 +194,11 @@
 				let isPositioned = pic.lon && pic.lat;
 
 				if (isTagged) {
-					untaggedGallery.dropPicture(picId);
+					untaggedGallery.dropPicture(picture.id);
 				}
 
 				if (isPositioned) {
-					unpositionedGallery.dropPicture(picId);
+					unpositionedGallery.dropPicture(picture.id);
 				}
 
 				if (isTagged && isPositioned) {
@@ -215,11 +215,11 @@
 			})
 			.catch((e) => {
 				console.error(e);
-				alert('Unable to refresh picture ' + picId + ' due to: ' + e.message);
+				alert('Unable to refresh picture ' + picture.id + ' due to: ' + e.message);
 			});
 	}
 
-	function handlePictureDelete(e) {
+	function handlePicDelete(e) {
 		let picId = e.detail.id;
 
 		taggedGallery.dropPicture(picId);
@@ -417,12 +417,12 @@
 	</div>
 </div>
 
-{#if $openImageId}
-	<ImageEditor
-		imageId={openImageId}
+{#if $openPicId}
+	<PicEditorWrapper
+		selectedPicId={openPicId}
 		{stops}
-		on:save={handlePictureSave}
-		on:delete={handlePictureDelete}
+		on:save={handlePicSave}
+		on:delete={handlePicDelete}
 		on:close={closePicEditor}
 	/>
 {/if}
