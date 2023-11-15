@@ -8,7 +8,7 @@
 	let mapElem;
 	export let lat;
 	export let lon;
-	export let stops = {};
+	export let stops;
 	export let canSelectStops = false;
 	export let selectedStopIds = writable([]);
 
@@ -46,7 +46,7 @@
 	const drawStops = () => {
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values(stops).map((stop) => {
+			features: Object.values($stops).map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -67,9 +67,9 @@
 		source.setData({
 			type: 'FeatureCollection',
 			features: $selectedStopIds
-				.filter((id) => stops[id])
+				.filter((id) => $stops[id])
 				.map((id) => {
-					const stop = stops[id];
+					const stop = $stops[id];
 					return {
 						type: 'Feature',
 						geometry: {

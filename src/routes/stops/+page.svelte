@@ -479,7 +479,6 @@
 				if (r.ok) {
 					if (isAdmin) {
 						let upstreamStop = await r.json();
-						console.log(upstreamStop);
 
 						// Object.assign(currStop, newStop);
 						Object.assign(currStop, upstreamStop);
@@ -786,7 +785,7 @@
 </div>
 {#if editingStopPics}
 	<StopImagesEditor
-		stops={$stops}
+		{stops}
 		stop={selectedStop}
 		{stopPictures}
 		{newPictures}

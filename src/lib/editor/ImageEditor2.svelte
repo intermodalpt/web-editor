@@ -3,10 +3,12 @@
 	import { apiServer, movementTreshold } from '$lib/settings.js';
 	import { writable, derived } from 'svelte/store';
 	import { token, decodedToken } from '$lib/stores.js';
-	import { isDeepEqual } from '$lib/utils.js';
+	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import MapLocationPicker from '$lib/editor/MapLocationPicker.svelte';
+	import PictureStopAttrs from '$lib/editor/PictureStopAttrs.svelte';
 
 	const dispatch = createEventDispatcher();
+	const managedAttrs = ['flag', 'schedule', 'defect', 'vehicle', 'infra', 'nocturnal'];
 
 	export let imageId;
 	export let stops;
@@ -36,6 +38,8 @@
 	// Provisory state
 	let lon;
 	let lat;
+	let stopRels = writable([]);
+	// This is a reduction of the former meant to be used in the StopPicker
 	let stopIds = writable([]);
 	let isSensitive;
 	let isPublic;
@@ -44,19 +48,14 @@
 	$: trimmedNotes = notes?.trim() === '' ? null : notes;
 	let tags = [];
 
-	let attrFront;
-	let attrBack;
-	let attrMovement;
-	let attrCounterMovement;
-
 	let attrHasFlag;
 	let attrHasSchedule;
 	let attrHasDefect;
 	let attrHasVehicle;
 	let attrHasInfra;
-	let attrHasSurroundings;
+	let attrIsNocturnal;
 
-	$: stopsChanged = !isDeepEqual($stopIds, $image?.stops || []);
+	$: stopsChanged = !isDeepEqual($stopRels, $image?.stops || []);
 	$: posChanged = lon !== $image?.lon || lat !== $image?.lat;
 	$: notesChanged = trimmedNotes !== $image?.notes;
 	$: tagsChanged = !isDeepEqual(tags, $image?.tags || []);
@@ -64,30 +63,37 @@
 	$: publicChanged = isPublic !== $image?.public;
 	$: qualityChanged = quality !== $image?.quality;
 
-	$: attrsChanged =
+	$: globalAttrsChanged =
 		$image &&
-		(attrFront !== $image.attrs.includes('vFront') ||
-			attrBack !== $image.attrs.includes('vBack') ||
-			attrMovement !== $image.attrs.includes('vMovement') ||
-			attrCounterMovement !== $image.attrs.includes('vCMovement') ||
-			attrHasFlag !== $image.attrs.includes('fFlag') ||
-			attrHasSchedule !== $image.attrs.includes('fSchedule') ||
-			attrHasDefect !== $image.attrs.includes('fDefect') ||
-			attrHasVehicle !== $image.attrs.includes('fVehicle') ||
-			attrHasInfra !== $image.attrs.includes('fInfra') ||
-			attrHasSurroundings !== $image.attrs.includes('fSurroundings'));
+		(attrHasFlag !== $image.attrs.includes('flag') ||
+			attrHasSchedule !== $image.attrs.includes('schedule') ||
+			attrHasDefect !== $image.attrs.includes('defect') ||
+			attrHasVehicle !== $image.attrs.includes('vehicle') ||
+			attrHasInfra !== $image.attrs.includes('infra') ||
+			attrIsNocturnal !== $image.attrs.includes('nocurnal'));
 
 	$: changed =
 		stopsChanged ||
 		posChanged ||
 		tagsChanged ||
-		attrsChanged ||
+		globalAttrsChanged ||
 		notesChanged ||
 		sensitiveChanged ||
 		publicChanged ||
 		qualityChanged;
 
 	$: dispatch('change', { fromOriginal: changed });
+
+	stopIds.subscribe((stopIds) => {
+		const newRels = $stopRels.filter((rel) => stopIds.some((id) => rel.id == id));
+
+		stopIds.forEach((id) => {
+			if (!newRels.some((rel) => rel.id == id)) {
+				newRels.push({ id: id, attrs: [] });
+			}
+		});
+		$stopRels = newRels;
+	});
 
 	image.subscribe(async (img) => {
 		if (img == null) {
@@ -97,23 +103,19 @@
 			lat = img.lat;
 			notes = img.notes;
 			$stopIds = [...img.tags];
-			$stopIds = [...img.stops];
+			$stopRels = deepCopy(img.stops);
+			$stopIds = img.stops.map((rel) => rel.id);
 			isPublic = img.public;
 			isSensitive = img.sensitive;
 			quality = img.quality;
 
-			// Views
-			attrFront = (img.attrs || []).includes('vFront');
-			attrBack = (img.attrs || []).includes('vBack');
-			attrMovement = (img.attrs || []).includes('vMovement');
-			attrCounterMovement = (img.attrs || []).includes('vCMovement');
 			// Focuses
-			attrHasFlag = (img.attrs || []).includes('fFlag');
-			attrHasSchedule = (img.attrs || []).includes('fSchedule');
-			attrHasDefect = (img.attrs || []).includes('fDefect');
-			attrHasVehicle = (img.attrs || []).includes('fVehicle');
-			attrHasInfra = (img.attrs || []).includes('fInfra');
-			attrHasSurroundings = (img.attrs || []).includes('fSurroundings');
+			attrHasFlag = (img.attrs || []).includes('flag');
+			attrHasSchedule = (img.attrs || []).includes('schedule');
+			attrHasDefect = (img.attrs || []).includes('defect');
+			attrHasVehicle = (img.attrs || []).includes('vehicle');
+			attrHasInfra = (img.attrs || []).includes('infra');
+			attrIsNocturnal = (img.attrs || []).includes('nocturnal');
 
 			await tick();
 			adjustQualityLabel();
@@ -195,10 +197,20 @@
 	}
 
 	async function saveChanges() {
+		const attrs = $image.attrs.filter((attr) => !managedAttrs.includes(attr));
+
+		if (attrHasFlag) attrs.push('flag');
+		if (attrHasSchedule) attrs.push('schedule');
+		if (attrHasDefect) attrs.push('defect');
+		if (attrHasVehicle) attrs.push('vehicle');
+		if (attrHasInfra) attrs.push('infra');
+		if (attrIsNocturnal) attrs.push('nocturnal');
+
 		const savedPic = {
+			attrs,
 			lat: $image.lat,
 			lon: $image.lon,
-			stops: [...$stopIds],
+			stops: [...$stopRels],
 			public: isPublic,
 			sensitive: isSensitive,
 			quality: quality,
@@ -209,7 +221,7 @@
 
 		if (lat != null) {
 			if ($image.lat == null || Math.abs($image.lat - lat) > movementTreshold) {
-				savedPic.lat = location.lat;
+				savedPic.lat = lat;
 			}
 		}
 
@@ -239,18 +251,14 @@
 				$image.notes = savedPic.notes;
 				$image.tags = savedPic.tags;
 
-				setAttrPresence($image, 'vFront', attrFront);
-				setAttrPresence($image, 'vBack', attrBack);
-				setAttrPresence($image, 'vMovement', attrMovement);
-				setAttrPresence($image, 'vCMovement', attrCounterMovement);
-				setAttrPresence($image, 'fFlag', attrHasFlag);
-				setAttrPresence($image, 'fSchedule', attrHasSchedule);
-				setAttrPresence($image, 'fDefect', attrHasDefect);
-				setAttrPresence($image, 'fVehicle', attrHasVehicle);
-				setAttrPresence($image, 'fInfra', attrHasInfra);
-				setAttrPresence($image, 'fSurroundings', attrHasSurroundings);
+				setAttrPresence($image, 'flag', attrHasFlag);
+				setAttrPresence($image, 'schedule', attrHasSchedule);
+				setAttrPresence($image, 'defect', attrHasDefect);
+				setAttrPresence($image, 'vehicle', attrHasVehicle);
+				setAttrPresence($image, 'infra', attrHasInfra);
+				setAttrPresence($image, 'nocturnal', attrIsNocturnal);
 
-				dispatch('save', { id: $imageId });
+				dispatch('save', { picture: $image });
 			});
 	}
 
@@ -319,125 +327,63 @@
 					<span class="text-xs mt-1">Paragens</span>
 				{/if}
 				<div class="flex flex-row flex-wrap gap-1">
-					{#each $stopIds as stopId}
-						<div class="badge badge-outline badge-lg">
-							{stopId} - {stops[stopId]?.short_name ||
-								stops[stopId]?.name ||
-								stops[stopId]?.osm_name}
-							{stops[stopId] ? '' : '(⚠️)'}
-							{#if editable}
-								<div
-									class="btn btn-error btn-circle btn-xs"
-									on:click={() => removeStop(stopId)}
-									on:keypress={() => removeStop(stopId)}
-								>
-									✕
-								</div>
-							{/if}
-						</div>
-					{/each}
+					{#key imageId}
+						{#each $stopRels as rel}
+							<PictureStopAttrs
+								bind:rel
+								{stops}
+								{editable}
+								on:delete={(e) => {
+									$stopIds = $stopIds.filter((id) => id !== e.detail.stop);
+								}}
+							/>
+						{/each}
+					{/key}
 				</div>
 			</div>
-			<h2 class="text-xl font-bold py-2">Atributos</h2>
-			<span>Quais os angulos apanhados?</span>
-			<div class="join join-vertical sm:join-horizontal">
+			<h2 class="text-xl font-bold py-2">Categorias</h2>
+			<span>Em que categorias se insere esta imagem?</span>
+			<div class="flex flex-wrap gap-2">
 				<input
-					class="join-item btn btn-outline"
-					type="checkbox"
-					bind:checked={attrFront}
-					aria-label="Frontal"
-				/>
-				<input
-					class="join-item btn btn-outline"
-					type="checkbox"
-					bind:checked={attrBack}
-					aria-label="Traseira"
-				/>
-				<input
-					class="join-item btn btn-outline"
-					type="checkbox"
-					bind:checked={attrMovement}
-					aria-label="Movimento"
-				/>
-				<input
-					class="join-item btn btn-outline"
-					type="checkbox"
-					bind:checked={attrCounterMovement}
-					aria-label="Contra-Movimento"
-				/>
-			</div>
-			<!-- TODO link instructions -->
-			<span class="mt-2"
-				><span>A imagem foca-se em algum dos seguintes aspectos?</span> (<a
-					href="#"
-					class="link link-primary text-xs">O que são?</a
-				>)</span
-			>
-			<div class="join join-vertical">
-				<input
-					class="join-item btn btn-outline"
+					class="btn btn-sm"
 					type="checkbox"
 					bind:checked={attrHasFlag}
 					aria-label="Postalete"
 				/>
 				<input
-					class="join-item btn btn-outline"
+					class="btn btn-sm border-2"
 					type="checkbox"
 					bind:checked={attrHasSchedule}
 					aria-label="Horário"
 				/>
 				<input
-					class="join-item btn btn-outline"
+					class="btn btn-sm"
 					type="checkbox"
 					bind:checked={attrHasVehicle}
 					aria-label="Veiculo TP"
 				/>
 				<input
-					class="join-item btn btn-outline"
+					class="btn btn-sm"
 					type="checkbox"
 					bind:checked={attrHasDefect}
 					aria-label="Defeito"
 				/>
 				<input
-					class="join-item btn btn-outline"
+					class="btn btn-sm"
 					type="checkbox"
 					bind:checked={attrHasInfra}
 					aria-label="Infraestrutura"
 				/>
 				<input
-					class="join-item btn btn-outline"
+					class="btn btn-sm"
 					type="checkbox"
-					bind:checked={attrHasSurroundings}
-					aria-label="Arredores"
+					bind:checked={attrIsNocturnal}
+					aria-label="Noturna"
 				/>
 			</div>
-			<h2 class="text-xl font-bold py-2">Classificação</h2>
-			<div class="flex gap-3 items-baseline flex-wrap">
-				<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
-					{#if isSensitive}Sensivel{:else}Não sensivel{/if}
-					<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
-				</label>
-				<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
-					{#if isPublic}Pública{:else}Privada{/if}
-					<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
-				</label>
-			</div>
-			<span class="text-lg">
-				A imagem
-				{#if isSensitive}
-					<span class="text-error font-bold">deve de ser censurada</span>
-				{:else}
-					<span class="text-success font-bold">não infinge a privacidade</span>
-				{/if}
-				e
-				{#if isPublic}
-					<span class="text-success font-bold">tem</span>
-				{:else}
-					<span class="text-error font-bold">não tem</span>
-				{/if}
-				interesse público.
-			</span>
-			<div class="form-control">
+			<h2 class="text-xl font-bold py-2">Visibilidade</h2>
+			<span>Quão adequada é a fotografia ao público?</span>
+			<div class="form-control mb-4">
 				<label class="label flex-wrap">
 					<span class="label-text">Qualidade da imagem</span>
 					<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
@@ -466,11 +412,30 @@
 					<span>|</span>
 				</div>
 			</div>
-			<span class="text-xs">
-				As qualidades acima descritas são sugestões e não critérios.<br />
-				Pontuações acima de 7 indicam uma fotografia boa o suficiente para o utilizador final. Uma pontuação
-				de 10 indica uma fotografia de qualidade profissional com excelente iluminação, ausência de individuos
-				e veículos na via pública, cosméticamente agradavel...
+			<div class="flex gap-3 items-baseline flex-wrap">
+				<label class="btn btn-success w-40" class:btn-error={isSensitive} for="is-sensitive">
+					{#if isSensitive}Sensivel{:else}Não sensivel{/if}
+					<input id="is-sensitive" type="checkbox" class="hidden" bind:checked={isSensitive} />
+				</label>
+				<label class="btn btn-success w-40 btn-xl" class:btn-error={!isPublic} for="is-public">
+					{#if isPublic}Pública{:else}Privada{/if}
+					<input id="is-public" type="checkbox" class="hidden" bind:checked={isPublic} />
+				</label>
+			</div>
+			<span class="text-lg">
+				A imagem
+				{#if isSensitive}
+					<span class="text-error font-bold">deve de ser censurada</span>
+				{:else}
+					<span class="text-success font-bold">não infinge a privacidade</span>
+				{/if}
+				e
+				{#if isPublic}
+					<span class="text-success font-bold">tem</span>
+				{:else}
+					<span class="text-error font-bold">não tem</span>
+				{/if}
+				interesse público.
 			</span>
 			<h2 class="text-xl font-bold py-2">Informação adicional</h2>
 			<div class="form-control">
