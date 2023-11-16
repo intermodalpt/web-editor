@@ -9,7 +9,7 @@
 	import ChangesetRow from '$lib/changes/rows/ChangesetRow.svelte';
 	import ContributionWindow from '$lib/changes/ContributionWindow.svelte';
 	import ChangesetWindow from '$lib/changes/ChangesetWindow.svelte';
-	import Paginator from '$lib/editor/Paginator.svelte';
+	import Paginator from '$lib/components/Paginator.svelte';
 
 	const stops = liveQuery(() => getStops());
 

@@ -1,6 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import BooleanToggle from '$lib/editor/BooleanToggle.svelte';
+	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	const dispatch = createEventDispatcher();
 

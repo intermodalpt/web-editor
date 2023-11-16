@@ -1,5 +1,5 @@
 <script>
-	import BooleanToggle from '$lib/editor/BooleanToggle.svelte';
+	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	export let state = false;
 	export let disabled = false;

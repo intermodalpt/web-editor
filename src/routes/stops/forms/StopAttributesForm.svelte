@@ -8,7 +8,7 @@
 	import ServiceForm from './ServiceForm.svelte';
 	import InfraForm from './InfraForm.svelte';
 	import ExtraForm from './ExtraForm.svelte';
-	import AuthenticityIndicator from '$lib/editor/AuthenticityIndicator.svelte';
+	import AuthenticityIndicator from './AuthenticityIndicator.svelte';
 	import PicturesForm from './PicturesForm.svelte';
 
 	const dispatch = createEventDispatcher();

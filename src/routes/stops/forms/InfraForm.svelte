@@ -1,5 +1,5 @@
 <script>
-	import BooleanFormAttr from '$lib/editor/BooleanFormAttr.svelte';
+	import BooleanFormAttr from '$lib/components/BooleanFormAttr.svelte';
 
 	export let hasSidewalk;
 	export let hasSidewalkedPath;

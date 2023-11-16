@@ -1,5 +1,5 @@
 <script>
-	import AuthenticitySelectors from '$lib/editor/AuthenticitySelectors.svelte';
+	import AuthenticitySelectors from './AuthenticitySelectors.svelte';
 
 	export let selectedStop;
 
