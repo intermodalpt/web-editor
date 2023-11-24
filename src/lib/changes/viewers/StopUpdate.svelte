@@ -157,7 +157,8 @@
 								ignoredKeys = ignoredKeys;
 							}}>✕</span
 						>
-						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{/if}{diff.key}:
+						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{/if}
+					{diff.key}:
 					{#if diff.key === 'flags'}
 						<FlagsWidget flagsData={diff.new} />
 					{:else if diff.key === 'schedules'}

@@ -1,6 +1,7 @@
 <script>
 	import StopUpdate from '$lib/changes/titles/StopUpdate.svelte';
 	import StopPicUpload from '$lib/changes/titles/StopPicUpload.svelte';
+	import StopPicMetaUpdate from '$lib/changes/titles/StopPicMetaUpdate.svelte';
 	import RouteUpdate from '$lib/changes/titles/RouteUpdate.svelte';
 	import SubrouteCreation from '$lib/changes/titles/SubrouteCreation.svelte';
 	import SubrouteUpdate from '$lib/changes/titles/SubrouteUpdate.svelte';
@@ -11,9 +12,11 @@
 </script>
 
 {#if 'StopUpdate' in change}
-	<StopUpdate change={change.StopUpdate} {stops}/>
+	<StopUpdate change={change.StopUpdate} {stops} />
 {:else if 'StopPicUpload' in change}
 	<StopPicUpload change={change.StopPicUpload} />
+{:else if 'StopPicMetaUpdate' in change}
+	<StopPicMetaUpdate change={change.StopPicMetaUpdate} />
 {:else if 'RouteUpdate' in change}
 	<RouteUpdate change={change.RouteUpdate} />
 {:else if 'SubrouteCreation' in change}

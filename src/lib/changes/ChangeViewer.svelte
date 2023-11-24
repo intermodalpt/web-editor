@@ -1,6 +1,7 @@
 <script>
 	import StopUpdate from '$lib/changes/viewers/StopUpdate.svelte';
 	import StopPicUpload from '$lib/changes/viewers/StopPicUpload.svelte';
+	import StopPicMetaUpdate from '$lib/changes/viewers/StopPicMetaUpdate.svelte';
 	import RouteUpdate from '$lib/changes/viewers/RouteUpdate.svelte';
 	import SubrouteCreation from '$lib/changes/viewers/SubrouteCreation.svelte';
 	import SubrouteUpdate from '$lib/changes/viewers/SubrouteUpdate.svelte';
@@ -25,6 +26,8 @@
 	<SubrouteUpdate change={change.SubrouteUpdate} />
 {:else if 'SubrouteDeletion' in change}
 	<SubrouteDeletion change={change.SubrouteDeletion} />
+{:else if 'StopPicMetaUpdate' in change}
+	<StopPicMetaUpdate change={change.StopPicMetaUpdate} />
 {:else}
 	<textarea disabled class="w-full">{JSON.stringify(change)}</textarea>
 {/if}

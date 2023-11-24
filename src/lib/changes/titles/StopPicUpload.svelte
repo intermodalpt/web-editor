@@ -4,5 +4,6 @@
 </script>
 
 <h3 class="font-bold">
-	<!-- {change.pic.id}, {change.pic.original_filename} -->
+	Upload de fotografia
+	<kbd class="kbd">{change.pic.original_filename}</kbd>
 </h3>
