@@ -87,77 +87,89 @@
 </script>
 
 <div
-	class="fixed top-0 bottom-0 left-0 right-0 p-2 bg-white z-20 grid grid-cols-1 overflow-y-scroll gap-2 bg-base-300"
-	style="grid-template-rows: auto auto 1fr;"
+	class="fixed top-0 bottom-0 left-0 right-0 z-20 grid grid-cols-1 gap-1 bg-base-300 grid-rows-[auto_1fr]"
 >
-	<div class="flex gap-3 justify-end">
-		<input
-			type="button"
-			class="btn btn-secondary btn-sm"
-			value="Enviar"
-			on:click={() => (sendingPictures = true)}
-		/>
-		<input type="button" class="btn btn-error btn-sm" value="Fechar" on:click={closeEditor} />
+	<div class="flex justify-between bg-base-100 p-1 shadow-sm">
+		<span class="px-2 font-semibold text-lg">{$stop?.name || $stop?.osm_name}</span>
+		<div class="flex gap-3">
+			<input
+				type="button"
+				class="btn btn-secondary btn-sm"
+				value="Enviar"
+				on:click={() => (sendingPictures = true)}
+			/>
+			<input type="button" class="btn btn-error btn-sm" value="Fechar" on:click={closeEditor} />
+		</div>
 	</div>
-	<!-- FIXME this min-h is an hack to prevent things from collapsing when the layout is pressured -->
-	<div class="flex gap-2 overflow-x-scroll min-h-[80px] lg:min-h-[120px]">
-		{#each $editedStopPictures || [] as picture}
-			<div class="relative">
-				{#if picture.metaCompleteness.total || !picture.metaCompleteness.fixable}
-					<span
-						class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
-						>✓</span
-					>
-				{:else if !picture.metaCompleteness.total && picture.metaCompleteness.fixable}
-					<span
-						class="absolute bottom-0 right-0 text-warning-content bg-warning rounded-full w-8 h-8 text-center text-lg"
-						>!</span
-					>
-				{:else}
-					<span
-						class="absolute bottom-0 right-0 bg-error text-error-content rounded-full w-8 h-8 text-center text-lg cursor-pointer"
-						>X</span
-					>
-				{/if}
-				<img
-					src={picture.url_medium}
-					alt="Miniatura"
-					class="rounded-box transition-all h-24 lg:h-32 max-w-xl border-primary cursor-pointer"
-					class:border-b-4={$selectedImageId === picture.id}
-					on:click={async () => await gotoPicture(picture)}
-					on:keypress={async () => await gotoPicture(picture)}
-				/>
+	<div
+		class="p-2 grid gap-2 bg-base-300 grid-rows-[auto_1fr] md:grid-cols-[auto_1fr] overflow-y-scroll"
+	>
+		<!-- FIXME this h-24 is there to prevent the row from collapse when the layout is pressured -->
+		<div class="md:h-full md:overflow-y-scroll w-full max-w-full overflow-x-hidden h-24">
+			<div class="flex md:flex-col gap-2 w-full max-w-full overflow-x-scroll">
+				{#each $editedStopPictures || [] as picture}
+					<div class="relative">
+						{#if picture.metaCompleteness.total || !picture.metaCompleteness.fixable}
+							<span
+								class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
+								>✓</span
+							>
+						{:else if !picture.metaCompleteness.total && picture.metaCompleteness.fixable}
+							<span
+								class="absolute bottom-0 right-0 text-warning-content bg-warning rounded-full w-8 h-8 text-center text-lg"
+								>!</span
+							>
+						{:else}
+							<span
+								class="absolute bottom-0 right-0 bg-error text-error-content rounded-full w-8 h-8 text-center text-lg cursor-pointer"
+								>X</span
+							>
+						{/if}
+						<img
+							src={picture.url_medium}
+							alt="Miniatura"
+							class="rounded-box transition-all h-24 md:h-auto md:w-40 max-w-xl border-primary cursor-pointer"
+							class:border-b-4={$selectedImageId === picture.id}
+							on:click={async () => await gotoPicture(picture)}
+							on:keypress={async () => await gotoPicture(picture)}
+						/>
+					</div>
+				{/each}
 			</div>
-		{/each}
-	</div>
-	<div class="bg-base-100 border-base-300 border-2 rounded-md shadow-sm flex justify-center">
-		<div class="max-w-[100em] p-2">
-			{#if $selectedImageId}
-				<PicMetaEditor
-					imageId={selectedImageId}
-					{stops}
-					on:save={() => {
-						// HACK - this is a hack to force the stop pics to update
-						$stop.modTimestamp = new Date();
-						$stop = $stop;
-						currentImageHasChanges = false;
-						dispatch('save');
-					}}
-					on:change={(e) => {
-						currentImageHasChanges = e.detail.fromOriginal;
-					}}
-					on:delete={() => {
-						// HACK - this is a hack to force the stop pics to update
-						// $stop.modTimestamp = new Date();
-						// $stop = $stop;
-						currentImageHasChanges = false;
-					}}
-				/>
-			{:else if $editedStopPictures && $editedStopPictures.length > 0}
-				<span class="text-xl">Selecione uma fotografia a editar</span>
-			{:else}
-				<span class="text-xl">Envie uma fotografia para poder catalogar</span>
-			{/if}
+		</div>
+		<div
+			class="bg-base-100 border-base-300 border-2 rounded-lg shadow-sm flex justify-center md:h-full md:overflow-y-scroll"
+		>
+			<div class="max-w-[100em] p-2">
+				{#if $selectedImageId}
+					<PicMetaEditor
+						imageId={selectedImageId}
+						{stops}
+						on:save={() => {
+							// HACK - this is a hack to force the stop pics to update
+							// FIXME this might not be needed anymore
+							$stop.modTimestamp = new Date();
+							$stop = $stop;
+							currentImageHasChanges = false;
+							dispatch('save');
+						}}
+						on:change={(e) => {
+							currentImageHasChanges = e.detail.fromOriginal;
+						}}
+						on:delete={() => {
+							// HACK - this is a hack to force the stop pics to update
+							// $stop.modTimestamp = new Date();
+							// $stop = $stop;
+							// FIXME this might not be needed anymore
+							currentImageHasChanges = false;
+						}}
+					/>
+				{:else if $editedStopPictures && $editedStopPictures.length > 0}
+					<span class="text-xl">Selecione uma fotografia a editar</span>
+				{:else}
+					<span class="text-xl">Envie uma fotografia para poder catalogar</span>
+				{/if}
+			</div>
 		</div>
 	</div>
 </div>
