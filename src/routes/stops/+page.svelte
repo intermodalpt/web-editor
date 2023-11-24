@@ -172,28 +172,27 @@
 	let previewedPic;
 	let editingStopPics = false;
 
-	const stopPictures = derived([selectedStop], ([$selectedStop], set) => {
-		if ($selectedStop) {
-			if ($decodedToken) {
-				fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, {
-					headers: { authorization: `Bearer ${$token}` }
-				})
-					.then((r) => r.json())
-					.then((pictureList) => set(pictureList));
+	const stopPicturesNonce = writable(Date.now());
+	const stopPictures = derived(
+		[selectedStop, stopPicturesNonce],
+		([$selectedStop, stopPicturesNonce], set) => {
+			if ($selectedStop) {
+				if ($decodedToken) {
+					fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, {
+						headers: { authorization: `Bearer ${$token}` }
+					})
+						.then((r) => r.json())
+						.then((pictureList) => set(pictureList));
+				} else {
+					fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures`)
+						.then((r) => r.json())
+						.then((pictureList) => set(pictureList));
+				}
 			} else {
-				fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures`)
-					.then((r) => r.json())
-					.then((pictureList) => set(pictureList));
+				return [];
 			}
-		} else {
-			return [];
 		}
-	});
-
-	const newPictures = writable([]);
-	stopPictures.subscribe(() => {
-		newPictures.set([]);
-	});
+	);
 
 	const latestPictureDate = derived(stopPictures, ($stopPictures) => {
 		if (!$stopPictures || !$stopPictures.length) {
@@ -787,8 +786,9 @@
 	<StopPicsMetaEditor
 		{stops}
 		stop={selectedStop}
-		{stopPictures}
-		{newPictures}
+		on:upload={() => {
+			$stopPicturesNonce = Date.now();
+		}}
 		on:save={() => {
 			editingStopPics = false;
 		}}
