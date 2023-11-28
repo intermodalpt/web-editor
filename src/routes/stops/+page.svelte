@@ -793,6 +793,9 @@
 			$stopPicturesNonce = Date.now();
 			editingStopPics = false;
 		}}
+		on:delete={() => {
+			$stopPicturesNonce = Date.now();
+		}}
 	/>
 {/if}
 

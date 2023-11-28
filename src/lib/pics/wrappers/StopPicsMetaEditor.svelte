@@ -16,7 +16,7 @@
 
 	// Uploader vars
 	let sendingPictures = false;
-	const selectedImageId = writable(null);
+	let selectedImageId = null;
 
 	let currentImageHasChanges = false;
 
@@ -82,7 +82,7 @@
 		}
 
 		currentImageHasChanges = false;
-		$selectedImageId = picture.id;
+		selectedImageId = picture.id;
 	}
 </script>
 
@@ -129,7 +129,7 @@
 							src={picture.url_medium}
 							alt="Miniatura"
 							class="rounded-box transition-all h-24 md:h-auto md:w-40 max-w-xl border-primary cursor-pointer"
-							class:border-b-4={$selectedImageId === picture.id}
+							class:border-b-4={selectedImageId === picture.id}
 							on:click={async () => await gotoPicture(picture)}
 							on:keypress={async () => await gotoPicture(picture)}
 						/>
@@ -141,16 +141,12 @@
 			class="bg-base-100 border-base-300 border-2 rounded-lg shadow-sm flex justify-center md:h-full md:overflow-y-scroll"
 		>
 			<div class="max-w-[100em] p-2">
-				{#if $selectedImageId}
-					{#key $selectedImageId}
+				{#if selectedImageId}
+					{#key selectedImageId}
 						<PicMetaEditor
 							imageId={selectedImageId}
 							{stops}
 							on:save={() => {
-								// HACK - this is a hack to force the stop pics to update
-								// FIXME this might not be needed anymore
-								$stop.modTimestamp = new Date();
-								$stop = $stop;
 								currentImageHasChanges = false;
 								dispatch('save');
 							}}
@@ -158,11 +154,8 @@
 								currentImageHasChanges = e.detail.fromOriginal;
 							}}
 							on:delete={() => {
-								// HACK - this is a hack to force the stop pics to update
-								// $stop.modTimestamp = new Date();
-								// $stop = $stop;
-								// FIXME this might not be needed anymore
 								currentImageHasChanges = false;
+								dispatch('delete');
 							}}
 						/>
 					{/key}

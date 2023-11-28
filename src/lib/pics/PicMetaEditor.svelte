@@ -16,7 +16,7 @@
 	let image = null;
 
 	onMount(async () => {
-		const res = await fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
+		const res = await fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
 			headers: {
 				Authorization: `Bearer ${$token}`
 			}
@@ -216,7 +216,7 @@
 			}
 		}
 
-		fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
+		fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
 			method: 'PATCH',
 			body: JSON.stringify(savedPic),
 			headers: {
@@ -249,7 +249,7 @@
 
 	function deleteImage() {
 		if (confirm('Tem certeza que quer apagar esta imagem?')) {
-			fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
+			fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -258,7 +258,7 @@
 			})
 				.catch(() => alert('Failed to delete the image'))
 				.then(() => {
-					dispatch('delete', { id: $imageId });
+					dispatch('delete', { id: imageId });
 				});
 		}
 	}

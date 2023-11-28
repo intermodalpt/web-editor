@@ -427,7 +427,7 @@
 
 {#if $openPicId}
 	<SinglePicMetaEditor
-		selectedPicId={openPicId}
+		selectedPicId={$openPicId}
 		{stops}
 		on:save={handlePicSave}
 		on:delete={handlePicDelete}
