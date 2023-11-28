@@ -800,20 +800,5 @@
 {/if}
 
 {#if previewedPic}
-	<input type="checkbox" id="pic-preview" class="modal-toggle" checked />
-	<div class="modal">
-		<div class="modal-box w-fit max-w-[100em]">
-			<label
-				for="pic-preview"
-				class="btn btn-sm btn-circle btn-error absolute right-2 top-2 z-20"
-				on:click={() => {
-					previewedPic = undefined;
-				}}
-				on:keypress={() => {
-					previewedPic = undefined;
-				}}>✕</label
-			>
-			<PicDialog picture={previewedPic} />
-		</div>
-	</div>
+	<PicDialog picture={previewedPic} {stops} on:close={() => (previewedPic = undefined)} />
 {/if}
