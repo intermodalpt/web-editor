@@ -1,7 +1,7 @@
 <script>
-	import { createEventDispatcher, tick } from 'svelte';
+	import { onMount, createEventDispatcher, tick } from 'svelte';
 	import { apiServer, movementTreshold } from '$lib/settings.js';
-	import { writable, derived } from 'svelte/store';
+	import { writable } from 'svelte/store';
 	import { token, decodedToken } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import MapLocationPicker from './subcomponents/MapLocationPicker.svelte';
@@ -13,24 +13,42 @@
 	export let imageId;
 	export let stops;
 
-	const image = derived(imageId, ($imageId, set) => {
-		if (!$imageId) {
-			set(null);
-			return;
-		}
-		fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
+	let image = null;
+
+	onMount(async () => {
+		const res = await fetch(`${apiServer}/v1/stop_pics/${$imageId}`, {
 			headers: {
 				Authorization: `Bearer ${$token}`
 			}
-		})
-			.then((r) => r.json())
-			.then((r) => {
-				set(r);
-			});
+		}).then((r) => r.json());
+
+		image = res;
+
+		lon = image.lon;
+		lat = image.lat;
+		notes = image.notes;
+		$stopIds = [...image.tags];
+		$stopRels = deepCopy(image.stops);
+		$stopIds = image.stops.map((rel) => rel.id);
+		isPublic = image.public;
+		isSensitive = image.sensitive;
+		quality = image.quality;
+
+		// Focuses
+		attrHasFlag = (image.attrs || []).includes('flag');
+		attrHasSchedule = (image.attrs || []).includes('schedule');
+		attrHasDefect = (image.attrs || []).includes('defect');
+		attrHasVehicle = (image.attrs || []).includes('vehicle');
+		attrHasInfra = (image.attrs || []).includes('infra');
+		attrIsNocturnal = (image.attrs || []).includes('nocturnal');
+
+		await tick();
+		adjustQualityLabel();
+		locationPicker?.setMarkerPosition(lon, lat);
 	});
 
 	const editable =
-		$image?.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin;
+		image?.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin;
 
 	let qualityLabelElem;
 	let locationPicker;
@@ -55,22 +73,22 @@
 	let attrHasInfra;
 	let attrIsNocturnal;
 
-	$: stopsChanged = !isDeepEqual($stopRels, $image?.stops || []);
-	$: posChanged = lon !== $image?.lon || lat !== $image?.lat;
-	$: notesChanged = trimmedNotes !== $image?.notes;
-	$: tagsChanged = !isDeepEqual(tags, $image?.tags || []);
-	$: sensitiveChanged = isSensitive !== $image?.sensitive;
-	$: publicChanged = isPublic !== $image?.public;
-	$: qualityChanged = quality !== $image?.quality;
+	$: stopsChanged = !isDeepEqual($stopRels, image?.stops || []);
+	$: posChanged = lon !== image?.lon || lat !== image?.lat;
+	$: notesChanged = trimmedNotes !== image?.notes;
+	$: tagsChanged = !isDeepEqual(tags, image?.tags || []);
+	$: sensitiveChanged = isSensitive !== image?.sensitive;
+	$: publicChanged = isPublic !== image?.public;
+	$: qualityChanged = quality !== image?.quality;
 
 	$: globalAttrsChanged =
-		$image &&
-		(attrHasFlag !== $image.attrs.includes('flag') ||
-			attrHasSchedule !== $image.attrs.includes('schedule') ||
-			attrHasDefect !== $image.attrs.includes('defect') ||
-			attrHasVehicle !== $image.attrs.includes('vehicle') ||
-			attrHasInfra !== $image.attrs.includes('infra') ||
-			attrIsNocturnal !== $image.attrs.includes('nocurnal'));
+		image &&
+		(attrHasFlag !== image.attrs.includes('flag') ||
+			attrHasSchedule !== image.attrs.includes('schedule') ||
+			attrHasDefect !== image.attrs.includes('defect') ||
+			attrHasVehicle !== image.attrs.includes('vehicle') ||
+			attrHasInfra !== image.attrs.includes('infra') ||
+			attrIsNocturnal !== image.attrs.includes('nocurnal'));
 
 	$: changed =
 		stopsChanged ||
@@ -93,34 +111,6 @@
 			}
 		});
 		$stopRels = newRels;
-	});
-
-	image.subscribe(async (img) => {
-		if (img == null) {
-			return;
-		} else {
-			lon = img.lon;
-			lat = img.lat;
-			notes = img.notes;
-			$stopIds = [...img.tags];
-			$stopRels = deepCopy(img.stops);
-			$stopIds = img.stops.map((rel) => rel.id);
-			isPublic = img.public;
-			isSensitive = img.sensitive;
-			quality = img.quality;
-
-			// Focuses
-			attrHasFlag = (img.attrs || []).includes('flag');
-			attrHasSchedule = (img.attrs || []).includes('schedule');
-			attrHasDefect = (img.attrs || []).includes('defect');
-			attrHasVehicle = (img.attrs || []).includes('vehicle');
-			attrHasInfra = (img.attrs || []).includes('infra');
-			attrIsNocturnal = (img.attrs || []).includes('nocturnal');
-
-			await tick();
-			adjustQualityLabel();
-			locationPicker?.setMarkerPosition(lon, lat);
-		}
 	});
 
 	function adjustQualityLabel() {
@@ -166,11 +156,6 @@
 		}
 	}
 
-	function removeStop(stopId) {
-		$stopIds.splice($stopIds.indexOf(stopId), 1);
-		$stopIds = $stopIds;
-	}
-
 	function addTag() {
 		let entry = document.getElementById('tag-text');
 		let entryValue = entry.value.trim();
@@ -197,7 +182,7 @@
 	}
 
 	async function saveChanges() {
-		const attrs = $image.attrs.filter((attr) => !managedAttrs.includes(attr));
+		const attrs = image.attrs.filter((attr) => !managedAttrs.includes(attr));
 
 		if (attrHasFlag) attrs.push('flag');
 		if (attrHasSchedule) attrs.push('schedule');
@@ -208,25 +193,25 @@
 
 		const savedPic = {
 			attrs,
-			lat: $image.lat,
-			lon: $image.lon,
+			lat: image.lat,
+			lon: image.lon,
 			stops: [...$stopRels],
 			public: isPublic,
 			sensitive: isSensitive,
 			quality: quality,
 			notes: trimmedNotes,
-			tags: $image.tags,
+			tags: image.tags,
 			tagged: true
 		};
 
 		if (lat != null) {
-			if ($image.lat == null || Math.abs($image.lat - lat) > movementTreshold) {
+			if (image.lat == null || Math.abs(image.lat - lat) > movementTreshold) {
 				savedPic.lat = lat;
 			}
 		}
 
 		if (lon != null) {
-			if ($image.lon == null || Math.abs($image.lon - lon) > movementTreshold) {
+			if (image.lon == null || Math.abs(image.lon - lon) > movementTreshold) {
 				savedPic.lon = lon;
 			}
 		}
@@ -241,24 +226,24 @@
 		})
 			.catch((e) => alert('Failed to save the stop meta. Error: ' + e.message))
 			.then(() => {
-				$image.tagged = true;
-				$image.lon = savedPic.lon;
-				$image.lat = savedPic.lat;
-				$image.stops = savedPic.stops;
-				$image.public = savedPic.public;
-				$image.sensitive = savedPic.sensitive;
-				$image.quality = savedPic.quality;
-				$image.notes = savedPic.notes;
-				$image.tags = savedPic.tags;
+				image.tagged = true;
+				image.lon = savedPic.lon;
+				image.lat = savedPic.lat;
+				image.stops = savedPic.stops;
+				image.public = savedPic.public;
+				image.sensitive = savedPic.sensitive;
+				image.quality = savedPic.quality;
+				image.notes = savedPic.notes;
+				image.tags = savedPic.tags;
 
-				setAttrPresence($image, 'flag', attrHasFlag);
-				setAttrPresence($image, 'schedule', attrHasSchedule);
-				setAttrPresence($image, 'defect', attrHasDefect);
-				setAttrPresence($image, 'vehicle', attrHasVehicle);
-				setAttrPresence($image, 'infra', attrHasInfra);
-				setAttrPresence($image, 'nocturnal', attrIsNocturnal);
+				setAttrPresence(image, 'flag', attrHasFlag);
+				setAttrPresence(image, 'schedule', attrHasSchedule);
+				setAttrPresence(image, 'defect', attrHasDefect);
+				setAttrPresence(image, 'vehicle', attrHasVehicle);
+				setAttrPresence(image, 'infra', attrHasInfra);
+				setAttrPresence(image, 'nocturnal', attrIsNocturnal);
 
-				dispatch('save', { picture: $image });
+				dispatch('save', { picture: image });
 			});
 	}
 
@@ -280,13 +265,13 @@
 </script>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-y-auto">
-	{#if $image}
+	{#if image}
 		<div class="w-fit">
 			<div class="relative w-fit">
-				<img alt="Em análise" src={$image?.url_medium} class="rounded-lg w-full max-h-[100em]" />
+				<img alt="Em análise" src={image?.url_medium} class="rounded-lg w-full max-h-[100em]" />
 				<a
 					target="_blank"
-					href={$image.url_full}
+					href={image.url_full}
 					class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
 					>Ver completa</a
 				>
@@ -476,7 +461,7 @@
 						type="button"
 						class="btn btn-primary my-4"
 						value="Guardar"
-						disabled={$image.tagged && !changed}
+						disabled={image.tagged && !changed}
 						on:mouseup={saveChanges}
 					/>
 				</div>

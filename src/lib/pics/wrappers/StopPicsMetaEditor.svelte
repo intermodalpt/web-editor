@@ -142,28 +142,30 @@
 		>
 			<div class="max-w-[100em] p-2">
 				{#if $selectedImageId}
-					<PicMetaEditor
-						imageId={selectedImageId}
-						{stops}
-						on:save={() => {
-							// HACK - this is a hack to force the stop pics to update
-							// FIXME this might not be needed anymore
-							$stop.modTimestamp = new Date();
-							$stop = $stop;
-							currentImageHasChanges = false;
-							dispatch('save');
-						}}
-						on:change={(e) => {
-							currentImageHasChanges = e.detail.fromOriginal;
-						}}
-						on:delete={() => {
-							// HACK - this is a hack to force the stop pics to update
-							// $stop.modTimestamp = new Date();
-							// $stop = $stop;
-							// FIXME this might not be needed anymore
-							currentImageHasChanges = false;
-						}}
-					/>
+					{#key $selectedImageId}
+						<PicMetaEditor
+							imageId={selectedImageId}
+							{stops}
+							on:save={() => {
+								// HACK - this is a hack to force the stop pics to update
+								// FIXME this might not be needed anymore
+								$stop.modTimestamp = new Date();
+								$stop = $stop;
+								currentImageHasChanges = false;
+								dispatch('save');
+							}}
+							on:change={(e) => {
+								currentImageHasChanges = e.detail.fromOriginal;
+							}}
+							on:delete={() => {
+								// HACK - this is a hack to force the stop pics to update
+								// $stop.modTimestamp = new Date();
+								// $stop = $stop;
+								// FIXME this might not be needed anymore
+								currentImageHasChanges = false;
+							}}
+						/>
+					{/key}
 				{:else if $editedStopPictures && $editedStopPictures.length > 0}
 					<span class="text-xl">Selecione uma fotografia a editar</span>
 				{:else}
