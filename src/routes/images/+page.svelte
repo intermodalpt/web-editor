@@ -195,10 +195,12 @@
 
 				if (isTagged) {
 					untaggedGallery.dropPicture(picture.id);
+					untaggedGallery = untaggedGallery;
 				}
 
 				if (isPositioned) {
 					unpositionedGallery.dropPicture(picture.id);
+					unpositionedGallery = unpositionedGallery;
 				}
 
 				if (isTagged && isPositioned) {
@@ -236,7 +238,7 @@
 	<meta name="description" content="Catalogo de imagens" />
 </svelte:head>
 
-<div class="self-center sm:w-11/12 my-4">
+<div class="self-center w-full sm:w-11/12 my-4">
 	<div class="tabs ml-4">
 		<span
 			class="tab tab-bordered lg:tab-lifted"
@@ -320,9 +322,11 @@
 					{#if taggedGallery.pictures.length === 0}
 						<span class="text-lg">Ainda não foram catalogadas imagens</span>
 					{/if}
-					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
-						{#each taggedGallery.pictures as pic}
-							<div class="p-2 flex justify-center items-center cursor-pointer">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+						{#each taggedGallery.pictures as pic (pic.id)}
+							<div
+								class="p-2 flex justify-center items-center cursor-pointer max-h-72 overflow-y-hidden hover:overflow-y-visible"
+							>
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
@@ -353,9 +357,11 @@
 					{#if untaggedGallery.pictures.length === 0}
 						<span class="text-lg">Sem imagens por catalogar</span>
 					{/if}
-					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
-						{#each untaggedGallery.pictures as pic}
-							<div class="p-2 flex justify-center items-center cursor-pointer">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+						{#each untaggedGallery.pictures as pic (pic.id)}
+							<div
+								class="p-2 flex justify-center items-center cursor-pointer max-h-72 overflow-y-hidden hover:overflow-y-visible"
+							>
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
@@ -382,9 +388,11 @@
 					{#if unpositionedGallery.pictures.length === 0}
 						<span class="text-lg">Sem imagens por posicionar</span>
 					{/if}
-					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
-						{#each unpositionedGallery.pictures as pic}
-							<div class="p-2 flex justify-center items-center cursor-pointer">
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+						{#each unpositionedGallery.pictures as pic (pic.id)}
+							<div
+								class="flex justify-center items-center cursor-pointer max-h-72 overflow-y-hidden hover:overflow-y-visible"
+							>
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-105"

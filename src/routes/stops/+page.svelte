@@ -790,6 +790,7 @@
 			$stopPicturesNonce = Date.now();
 		}}
 		on:save={() => {
+			$stopPicturesNonce = Date.now();
 			editingStopPics = false;
 		}}
 	/>
