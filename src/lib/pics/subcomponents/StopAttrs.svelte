@@ -149,9 +149,9 @@
 		<input
 			class="join-item btn btn-sm h-full"
 			type="checkbox"
-			bind:checked={attrFront}
+			bind:checked={attrBack}
 			disabled={!editable}
-			aria-label="Perfil"
+			aria-label="Traseira"
 		/>
 		<div class="w-full flex justify-center">
 			<svg
@@ -188,9 +188,9 @@
 		<input
 			class="join-item btn btn-sm h-full"
 			type="checkbox"
-			bind:checked={attrBack}
+			bind:checked={attrFront}
 			disabled={!editable}
-			aria-label="Traseira"
+			aria-label="Perfil"
 		/>
 		<span />
 		<input
