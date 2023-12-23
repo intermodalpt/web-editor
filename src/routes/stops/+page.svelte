@@ -1,6 +1,8 @@
 <script>
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
@@ -27,6 +29,32 @@
 	let stopPicsLoaded = false;
 	let mapLoaded = false;
 	$: loading = !stopsLoaded || !stopPicsLoaded || !mapLoaded;
+	let queryStringDataLoaded = false;
+	$: loadQueryStringData(loading);
+
+	function loadQueryStringData(loading) {
+		if (loading || queryStringDataLoaded) {
+			return;
+		}
+		queryStringDataLoaded = true;
+
+		const id = $page.url.searchParams.get('id');
+		if (!id) {
+			return;
+		}
+
+		const parsed = parseInt(id);
+
+		if (parsed != NaN) {
+			const stop = $stops[parsed];
+
+			if (stop) {
+				$selectedStop = stop;
+				map.easeTo({ padding: { bottom: 350 }, duration: 0 });
+				map.flyTo({ center: [stop.lon, stop.lat], zoom: 18 });
+			}
+		}
+	}
 
 	const stops = liveQuery(() => getStops());
 	const userPatches = writable([]);
@@ -95,6 +123,12 @@
 
 	let selectedStop = writable(null);
 	selectedStop.subscribe((stop) => {
+		if (stop) {
+			goto('/stops?id=' + stop.id);
+		} else if (queryStringDataLoaded) {
+			goto('/stops');
+		}
+
 		if (map) {
 			if (stop == null) {
 				map.easeTo({
