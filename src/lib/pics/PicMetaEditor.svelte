@@ -49,6 +49,7 @@
 
 	const editable =
 		image?.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin;
+	let saveInProgress = false;
 
 	let qualityLabelElem;
 	let locationPicker;
@@ -182,6 +183,7 @@
 	}
 
 	async function saveChanges() {
+		saveInProgress = true;
 		const attrs = image.attrs.filter((attr) => !managedAttrs.includes(attr));
 
 		if (attrHasFlag) attrs.push('flag');
@@ -224,7 +226,10 @@
 				authorization: `Bearer ${$token}`
 			}
 		})
-			.catch((e) => alert('Failed to save the stop meta. Error: ' + e.message))
+			.catch((e) => {
+				alert('Failed to save the stop meta. Error: ' + e.message);
+				saveInProgress = false;
+			})
 			.then(() => {
 				image.tagged = true;
 				image.lon = savedPic.lon;
@@ -242,6 +247,7 @@
 				setAttrPresence(image, 'vehicle', attrHasVehicle);
 				setAttrPresence(image, 'infra', attrHasInfra);
 				setAttrPresence(image, 'nocturnal', attrIsNocturnal);
+				saveInProgress = false;
 
 				dispatch('save', { picture: image });
 			});
@@ -461,7 +467,7 @@
 						type="button"
 						class="btn btn-primary my-4"
 						value="Guardar"
-						disabled={image.tagged && !changed}
+						disabled={(image.tagged && !changed) || saveInProgress}
 						on:mouseup={saveChanges}
 					/>
 				</div>
