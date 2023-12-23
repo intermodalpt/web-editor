@@ -14,7 +14,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	// Uploader vars
 	let sendingPictures = false;
 	let selectedImageId = null;
 
@@ -60,6 +59,10 @@
 
 						return pic;
 					});
+					if (selectedImageId && pictureList.find((pic) => pic.id === selectedImageId) == null) {
+						selectedImageId = null;
+						currentImageHasChanges = false;
+					}
 					set(pictureList);
 				});
 		}
@@ -71,10 +74,10 @@
 				return;
 			}
 		}
-		dispatch('save');
+		dispatch('close');
 	}
 
-	async function gotoPicture(picture) {
+	function gotoPicture(picture) {
 		if (currentImageHasChanges) {
 			if (!confirm('Descartar alterações à imagem atual?')) {
 				return;
@@ -130,8 +133,8 @@
 							alt="Miniatura"
 							class="rounded-box transition-all h-24 md:h-auto md:w-40 max-w-xl border-primary cursor-pointer"
 							class:border-b-4={selectedImageId === picture.id}
-							on:click={async () => await gotoPicture(picture)}
-							on:keypress={async () => await gotoPicture(picture)}
+							on:click={() => gotoPicture(picture)}
+							on:keypress={() => gotoPicture(picture)}
 						/>
 					</div>
 				{/each}
@@ -148,6 +151,7 @@
 							{stops}
 							on:save={() => {
 								currentImageHasChanges = false;
+								$stopPicturesNonce = Date.now();
 								dispatch('save');
 							}}
 							on:change={(e) => {

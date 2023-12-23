@@ -230,6 +230,8 @@
 		taggedGallery = taggedGallery;
 		unpositionedGallery = unpositionedGallery;
 		untaggedGallery = untaggedGallery;
+
+		$openPicId = null;
 	}
 </script>
 

@@ -825,10 +825,12 @@
 		}}
 		on:save={() => {
 			$stopPicturesNonce = Date.now();
-			editingStopPics = false;
 		}}
 		on:delete={() => {
 			$stopPicturesNonce = Date.now();
+		}}
+		on:close={() => {
+			editingStopPics = false;
 		}}
 	/>
 {/if}
