@@ -1,5 +1,5 @@
 <script>
-	import { listDifferences } from '$lib/utils.js';
+	import { listDifferences, isDeepEqual } from '$lib/utils.js';
 
 	export let change;
 	let expand = false;
@@ -19,4 +19,21 @@
 			<span class="bg-green-300">{diff.new}</span>
 		</li>
 	{/each}
+	{#if !isDeepEqual(change.original_stops, change.stops)}
+		<li>Paragens:</li>
+		<li class="ml-4">
+			<span class="bg-green-300">
+				{#each change.stops as stop}
+					<span class="bg-green-300">{JSON.stringify(stop)}</span>
+				{/each}
+			</span>
+		</li>
+		<li class="ml-4">
+			<span class="bg-green-300">
+				{#each change.original_stops as stop}
+					<span class="bg-red-300">{JSON.stringify(stop)}</span>
+				{/each}
+			</span>
+		</li>
+	{/if}
 </ul>
