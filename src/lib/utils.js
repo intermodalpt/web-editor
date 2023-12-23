@@ -102,16 +102,15 @@ const WEEKDAYS = [0, 1, 2, 3, 4];
 const WEEKEND = [5, 6];
 
 export function calendarStr(calendar) {
-	if (calendar === { weekdays: WEEKDAYS, except_if: [{ condition: 'Holiday' }] }) {
+	if (isDeepEqual(calendar, { weekdays: WEEKDAYS, except_if: [{ condition: 'Holiday' }] })) {
 		return 'Workdays';
 	}
 	if (
-		calendar ===
-		{
+		isDeepEqual(calendar, {
 			weekdays: WEEKDAYS,
 			except_if: [{ condition: 'Holiday' }],
 			only_if: [{ condition: 'School' }]
-		}
+		})
 	) {
 		return 'School workdays';
 	}
