@@ -1,6 +1,5 @@
-import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
-import { loadToken, loadRoutes } from '$lib/stores.js';
+import { loadRoutes } from '$lib/stores.js';
 
 export const csr = true;
 export const ssr = false;
@@ -11,10 +10,6 @@ export async function load({ params, fetch, depends }) {
 	let routeId = params.route;
 
 	depends('app:subroutes');
-
-	if (browser) {
-		await loadToken(fetch);
-	}
 
 	let routes = await loadRoutes(fetch);
 

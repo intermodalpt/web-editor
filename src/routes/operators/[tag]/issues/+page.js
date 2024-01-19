@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { loadToken, operators } from '$lib/stores.js';
+import { operators } from '$lib/stores.js';
 import { apiServer } from '$lib/settings';
 
 export const csr = true;
@@ -26,9 +26,6 @@ export async function load({ params, fetch }) {
 	if (!browser) {
 		return;
 	}
-
-	let token = await loadToken(fetch);
-
 
 	return {
 		operator: operators[operatorId],

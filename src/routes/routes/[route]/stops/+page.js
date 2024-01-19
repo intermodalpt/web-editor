@@ -1,5 +1,4 @@
 import { browser } from '$app/environment';
-import { loadToken } from '$lib/stores.js';
 import { apiServer } from '$lib/settings';
 
 export const csr = true;
@@ -8,13 +7,8 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch, depends }) {
-	if (!browser) {
-		return;
-	}
 
 	const routeId = params.route;
-
-	await loadToken(fetch);
 
 	depends('app:subroute-stops')
 
