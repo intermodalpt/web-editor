@@ -1,6 +1,27 @@
 <script>
+	import { derived } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { logout, decodedToken } from '$lib/stores.js';
+	import { regionId, getRegions, setRegion } from '$lib/db.js';
+	import { liveQuery } from 'dexie';
+
+	const regions = liveQuery(() => getRegions());
+	const selectedRegion = derived(
+		[regions, regionId],
+		([$regions, $regionId]) => $regions?.[$regionId]
+	);
+
+	const sortedRegions = derived(regions, ($regions) => {
+		return Object.values($regions || {}).sort((a, b) => a.name.localeCompare(b.name));
+	});
+
+	regions.subscribe((regions) => {
+		if (Object.keys(regions || {}).length > 0 && !$regionId) {
+			regionModal.showModal();
+		}
+	});
+
+	let regionModal;
 </script>
 
 <header class="flex justify-center bg-base-100 p-1">
@@ -50,6 +71,9 @@
 			</div>
 		</nav>
 		<div>
+			<button class="btn btn-xs btn-secondary btn-outline" on:click={() => regionModal.showModal()}>
+				{$selectedRegion ? $selectedRegion.name : 'Sem região'}
+			</button>
 			{#if $decodedToken}
 				<div class="bg-base-200 rounded-lg p-1">
 					<a class="font-bold px-1" href="/perfil">{$decodedToken?.uname}</a>
@@ -76,3 +100,21 @@
 		</div>
 	</div>
 </header>
+<dialog bind:this={regionModal} class="modal">
+	<div class="modal-box w-auto max-w-full">
+		<h2 class="text-lg text-center mb-4">Escolha a região a editar</h2>
+		<div class="grid grid-cols-3 gap-2">
+			{#each $sortedRegions as region}
+				<button
+					class="btn btn-ghost"
+					on:click={() => {
+						setRegion(region.id);
+						regionModal.close();
+					}}
+				>
+					{region.name}
+				</button>
+			{/each}
+		</div>
+	</div>
+</dialog>

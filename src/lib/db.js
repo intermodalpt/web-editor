@@ -1,10 +1,16 @@
+import { writable } from 'svelte/store';
 import { Dexie } from 'dexie'
 import { apiServer, cacheRefreshTime, cacheInvalidationTime } from '$lib/settings';
 import { browser } from '$app/environment';
 
-export const db = new Dexie('intermodal');
 
-db.version(4).stores({
+const REGION_KEY = 'editor-region';
+const DB_KEY = 'intermodal-editor';
+
+const db = new Dexie(DB_KEY);
+
+db.version(1).stores({
+    regions: '&id',
     stops: '&id',
     routes: '&id',
     calendars: '&id',
@@ -12,10 +18,47 @@ db.version(4).stores({
     settings: 'key',
 });
 
-export let stopsLoaded = false;
-export let routesLoaded = false;
-export let calendarsLoaded = false;
-export let parishesLoaded = false;
+let _regionsLoaded;
+let _stopsLoaded;
+let _routesLoaded;
+let _calendarsLoaded;
+let _parishesLoaded;
+
+export let regionsLoaded = writable(false);
+export let stopsLoaded = writable(false);
+export let routesLoaded = writable(false);
+export let calendarsLoaded = writable(false);
+export let parishesLoaded = writable(false);
+
+regionsLoaded.subscribe((v) => (_regionsLoaded = v));
+stopsLoaded.subscribe((v) => (_stopsLoaded = v));
+routesLoaded.subscribe((v) => (_routesLoaded = v));
+calendarsLoaded.subscribe((v) => (_calendarsLoaded = v));
+parishesLoaded.subscribe((v) => (_parishesLoaded = v));
+
+export const regionId = writable(browser ? localStorage.getItem(REGION_KEY) : null);
+let _regionId = null;
+regionId.subscribe((id) => {
+    _regionId = id;
+});
+
+
+export async function setRegion(id) {
+    if (!id) {
+        console.error('Attempted to nullify the region id');
+        return;
+    }
+    if (id == _regionId) {
+        // Prevent cache invalidation over nothing
+        console.log('Region id unchanged');
+        return;
+    }
+    console.log('Setting region id', id);
+    await wipeCachedData();
+    localStorage.setItem(REGION_KEY, id);
+    regionId.set(id);
+}
+
 
 function timestampKey(tableName) {
     return `${tableName}_updated`;
@@ -41,8 +84,29 @@ async function invalidateCacheTimestamp(tableName) {
     await db.settings.delete(timestampKey(tableName));
 }
 
-export async function fetchStops(ifMissing = true) {
+export async function fetchRegions(fetcher = fetch) {
     if (!browser) {
+        return;
+    }
+
+    const cacheInvalidated = await isCacheInvalidated('regions');
+    if (!cacheInvalidated) {
+        const count = await db.stops.count();
+        if (count > 0 && ifMissing) {
+            return;
+        }
+    }
+
+    const response = await fetcher(`${apiServer}/v1/regions`);
+    const regions = await response.json();
+    await db.regions.clear();
+    await db.regions.bulkPut(regions);
+    updateCacheTimestamp('regions');
+    regionsLoaded.set(true);
+}
+
+export async function fetchStops(ifMissing = true) {
+    if (!browser || !_regionId) {
         return;
     }
 
@@ -62,18 +126,16 @@ export async function fetchStops(ifMissing = true) {
         }
     }
 
-    console.log('fetching stops');
-    const response = await fetch(`${apiServer}/v1/stops/full`);
+    const response = await fetch(`${apiServer}/v1/regions/${_regionId}/stops/full`);
     const stops = await response.json();
     await db.stops.clear();
     await db.stops.bulkPut(stops);
     updateCacheTimestamp('stops');
-    stopsLoaded = true;
-    console.log('end loadingStops');
+    stopsLoaded.set(true);
 }
 
 export async function fetchRoutes(ifMissing = true) {
-    if (!browser) {
+    if (!browser || !_regionId) {
         return;
     }
 
@@ -91,16 +153,16 @@ export async function fetchRoutes(ifMissing = true) {
         }
     }
 
-    const response = await fetch(`${apiServer}/v1/routes`);
+    const response = await fetch(`${apiServer}/v1/regions/${_regionId}/routes/full`);
     const routes = await response.json();
     await db.routes.clear();
     await db.routes.bulkPut(routes);
     updateCacheTimestamp('routes');
-    routesLoaded = true;
+    routesLoaded.set(true);
 }
 
 export async function fetchCalendars(ifMissing = true) {
-    if (!browser) {
+    if (!browser || !_regionId) {
         return;
     }
 
@@ -123,11 +185,11 @@ export async function fetchCalendars(ifMissing = true) {
     await db.calendars.clear();
     await db.calendars.bulkPut(calendars);
     updateCacheTimestamp('calendars');
-    calendarsLoaded = true;
+    calendarsLoaded.set(true);
 }
 
 export async function fetchParishes(ifMissing = true) {
-    if (!browser) {
+    if (!browser || !_regionId) {
         return;
     }
 
@@ -145,12 +207,18 @@ export async function fetchParishes(ifMissing = true) {
         }
     }
 
-    const response = await fetch(`${apiServer}/v1/parishes`);
+    const response = await fetch(`${apiServer}/v1/regions/${_regionId}/parishes`);
     const parishes = await response.json();
     await db.parishes.clear();
     await db.parishes.bulkPut(parishes);
     updateCacheTimestamp('parishes');
-    parishesLoaded = true;
+    parishesLoaded.set(true);
+}
+
+export async function getRegions() {
+    const regions = await db.regions.toArray();
+    const regionsObject = Object.fromEntries(regions.map((s) => [s.id, s]));
+    return regionsObject;
 }
 
 export async function getStops() {
@@ -181,6 +249,10 @@ export async function softInvalidateStops() {
     await invalidateCacheTimestamp('stops');
 }
 
+export async function softInvalidateRoutes() {
+    await invalidateCacheTimestamp('routes');
+}
+
 export async function patchStop(stop) {
     await db.stops.put(stop, stop.id);
 }
@@ -188,19 +260,19 @@ export async function patchStop(stop) {
 export async function loadMissing() {
     const missing = [];
 
-    if (!stopsLoaded) {
+    if (!_stopsLoaded) {
         missing.push(fetchStops());
     }
 
-    if (!routesLoaded) {
+    if (!_routesLoaded) {
         missing.push(fetchRoutes());
     }
 
-    if (!calendarsLoaded) {
+    if (!_calendarsLoaded) {
         missing.push(fetchCalendars());
     }
 
-    if (!parishesLoaded) {
+    if (!_parishesLoaded) {
         missing.push(fetchParishes());
     }
 
@@ -214,9 +286,9 @@ export async function wipeCachedData() {
         db.calendars.clear(),
         db.parishes.clear()
     ]).then(() => {
-        stopsLoaded = false;
-        routesLoaded = false;
-        calendarsLoaded = false;
-        parishesLoaded = false;
+        stopsLoaded.set(false);
+        routesLoaded.set(false);
+        calendarsLoaded.set(false);
+        parishesLoaded.set(false);
     });
 }
