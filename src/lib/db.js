@@ -92,7 +92,8 @@ export async function fetchRegions(fetcher = fetch) {
     const cacheInvalidated = await isCacheInvalidated('regions');
     if (!cacheInvalidated) {
         const count = await db.stops.count();
-        if (count > 0 && ifMissing) {
+        if (count > 0) {
+            regionsLoaded.set(true);
             return;
         }
     }
@@ -122,6 +123,7 @@ export async function fetchStops(ifMissing = true) {
     if (!cacheInvalidated) {
         const count = await db.stops.count();
         if (count > 0 && ifMissing) {
+            stopsLoaded.set(true);
             return;
         }
     }
@@ -149,6 +151,7 @@ export async function fetchRoutes(ifMissing = true) {
     if (!cacheInvalidated) {
         const count = await db.routes.count();
         if (count > 0 && ifMissing) {
+            routesLoaded.set(true);
             return;
         }
     }
@@ -203,6 +206,7 @@ export async function fetchParishes(ifMissing = true) {
     if (!cacheInvalidated) {
         const count = await db.parishes.count();
         if (count > 0 && ifMissing) {
+            parishesLoaded.set(true);
             return;
         }
     }
