@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { operators } from '$lib/stores.js';
+import { fetchOperators, getOperators } from '$lib/db.js';
 
 export const csr = true;
 export const ssr = false;
@@ -9,23 +9,26 @@ export const prerender = false;
 export async function load({ params, fetch }) {
 	const operatorTag = params.tag;
 
-	let operatorId;
-	for (const [id, operator] of Object.entries(operators)) {
-		if (operator.tag === operatorTag) {
-			operatorId = parseInt(id);
-			break;
-		}
-	}
-
-	if (operatorId === undefined) {
-		error(404, 'Operator not found');
-	}
-
 	if (!browser) {
 		return;
 	}
 
+	await fetchOperators(fetch);
+	let operators = await getOperators();
+
+	let matchedOperator;
+	for (const operator of Object.values(operators)) {
+		if (operator.tag === operatorTag) {
+			matchedOperator = operator;
+			break;
+		}
+	}
+
+	if (!matchedOperator) {
+		error(404, 'Operator not found');
+	}
+
 	return {
-		operatorId: operatorId
+		operator: matchedOperator
 	};
 }

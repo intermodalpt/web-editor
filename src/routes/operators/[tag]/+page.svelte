@@ -1,7 +1,10 @@
 <script>
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { writable, derived } from 'svelte/store';
-	import { operators } from '$lib/stores.js';
+	import { liveQuery } from 'dexie';
+	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import polyline from '@mapbox/polyline';
+	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import {
 		fetchCalendars,
@@ -12,15 +15,11 @@
 		getStops,
 		loadMissing
 	} from '$lib/db';
-	import { liveQuery } from 'dexie';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
-	import polyline from '@mapbox/polyline';
-	import 'maplibre-gl/dist/maplibre-gl.css';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
-	const operatorId = data.operatorId;
-	const operator = operators[operatorId];
+	const operator = data.operator;
+	const operatorId = operator.id;
 
 	const ROUTES_PER_PAGE = 15;
 	const SUBROUTE_COLORS = [
@@ -40,7 +39,7 @@
 		await Promise.all([
 			fetchRoutes(),
 			fetchCalendars(),
-			// fetchStops(),
+			fetchStops(),
 			fetch(`${apiServer}/v1/operators/${operatorId}/issues`)
 				.then((r) => r.json())
 				.then((r) => {
@@ -50,7 +49,6 @@
 	}
 
 	loadData().then(async () => {
-		console.log('data loaded');
 		await loadMissing();
 	});
 
@@ -64,48 +62,26 @@
 
 	const selectedRoute = writable(null);
 
-	selectedRoute.subscribe((route) => {
-		if (!mapLoaded) return;
+	const selectedRouteStops = derived(selectedRoute, ($selectedRoute, set) => {
+		if (!$selectedRoute) return;
 
-		if (!route) {
-			return;
-		}
-
-		let drawnSubroutes = 0;
-		const features = [];
-		const bounds = new LngLatBounds();
-
-		for (const subroute of route.subroutes) {
-			if (!subroute.polyline) {
-				continue;
-			}
-			let color = SUBROUTE_COLORS[-1];
-			if (drawnSubroutes < SUBROUTE_COLORS.length) {
-				color = SUBROUTE_COLORS[drawnSubroutes];
-			}
-			drawnSubroutes++;
-			const coords = polyline.decode(subroute.polyline, 6).map((p) => p.reverse());
-			for (const coord of coords) {
-				bounds.extend(coord);
-			}
-			features.push({
-				type: 'Feature',
-				geometry: {
-					type: 'LineString',
-					coordinates: coords
-				},
-				properties: {
-					color: color
-				}
+		fetch(`${apiServer}/v1/routes/${$selectedRoute.id}/stops`)
+			.then((r) => r.json())
+			.then((r) => {
+				set(r);
 			});
-		}
+	});
 
-		map.getSource('routeline').setData({
-			type: 'FeatureCollection',
-			features: features
-		});
+	selectedRouteStops.subscribe(() => {
+		drawRouteStops();
+	});
 
-		map.fitBounds(bounds, { padding: 50 });
+	stops.subscribe(() => {
+		drawStops();
+	});
+
+	selectedRoute.subscribe(() => {
+		drawRouteLine();
 	});
 
 	const filter = writable('');
@@ -115,7 +91,7 @@
 		$routePage = 0;
 	});
 
-	const sortedRoutes = derived([routes, filter], ([$routes, $filter]) => {
+	const sortedFilteredRoutes = derived([routes, filter], ([$routes, $filter]) => {
 		if (!$routes) return [];
 
 		const filterFunc = $filter
@@ -140,13 +116,13 @@
 		return res;
 	});
 
-	const subrouteCount = derived([sortedRoutes], ([$sortedRoutes]) => {
-		if (!$sortedRoutes) return 0;
-		return $sortedRoutes.reduce((acc, route) => acc + route.subroutes.length, 0);
+	const subrouteCount = derived([sortedFilteredRoutes], ([$sortedFilteredRoutes]) => {
+		if (!$sortedFilteredRoutes) return 0;
+		return $sortedFilteredRoutes.reduce((acc, route) => acc + route.subroutes.length, 0);
 	});
 
-	const routePageCount = derived([sortedRoutes], ([$sortedRoutes]) => {
-		const count = Math.ceil($sortedRoutes.length / ROUTES_PER_PAGE);
+	const routePageCount = derived([sortedFilteredRoutes], ([$sortedFilteredRoutes]) => {
+		const count = Math.ceil($sortedFilteredRoutes.length / ROUTES_PER_PAGE);
 		if ($routePage >= count) {
 			if (count === 0) {
 				$routePage = 0;
@@ -157,9 +133,15 @@
 		return count;
 	});
 
-	const routesInPage = derived([sortedRoutes, routePage], ([$sortedRoutes, $routePage]) => {
-		return $sortedRoutes.slice($routePage * ROUTES_PER_PAGE, ($routePage + 1) * ROUTES_PER_PAGE);
-	});
+	const routesInPage = derived(
+		[sortedFilteredRoutes, routePage],
+		([$sortedFilteredRoutes, $routePage]) => {
+			return $sortedFilteredRoutes.slice(
+				$routePage * ROUTES_PER_PAGE,
+				($routePage + 1) * ROUTES_PER_PAGE
+			);
+		}
+	);
 
 	const range = (start, stop) => Array.from({ length: stop - start + 1 }, (_, i) => start + i);
 
@@ -191,6 +173,89 @@
 		return Object.values($calendars).filter((calendar) => calendar.operator_id === operatorId);
 	});
 
+	function drawStops() {
+		if (!mapLoaded || !$stops) return;
+
+		map.getSource('stops').setData({
+			type: 'FeatureCollection',
+			features: Object.values($stops).map((stop) => ({
+				type: 'Feature',
+				geometry: {
+					type: 'Point',
+					coordinates: [stop.lon, stop.lat]
+				},
+				properties: {
+					id: stop.id
+				}
+			}))
+		});
+	}
+
+	function drawRouteStops() {
+		if (!mapLoaded || !$stops || !$selectedRouteStops) return;
+
+		const stopIds = Array.from(new Set($selectedRouteStops.map((sr) => sr.stops).flat()));
+
+		map.getSource('connected-stops').setData({
+			type: 'FeatureCollection',
+			features: stopIds
+				.map((stopId) => $stops[stopId])
+				.filter((s) => s)
+				.map((stop) => {
+					return {
+						type: 'Feature',
+						geometry: {
+							type: 'Point',
+							coordinates: [stop.lon, stop.lat]
+						},
+						properties: {
+							id: stop.id
+						}
+					};
+				})
+		});
+	}
+
+	function drawRouteLine() {
+		if (!mapLoaded || !$selectedRoute) return;
+
+		let drawnSubroutes = 0;
+		const features = [];
+		const bounds = new LngLatBounds();
+
+		for (const subroute of $selectedRoute.subroutes) {
+			if (!subroute.polyline) {
+				continue;
+			}
+			let color = SUBROUTE_COLORS[-1];
+			if (drawnSubroutes < SUBROUTE_COLORS.length) {
+				color = SUBROUTE_COLORS[drawnSubroutes];
+			}
+			drawnSubroutes++;
+			const coords = polyline.decode(subroute.polyline, 6).map((p) => p.reverse());
+			for (const coord of coords) {
+				bounds.extend(coord);
+			}
+			features.push({
+				type: 'Feature',
+				geometry: {
+					type: 'LineString',
+					coordinates: coords
+				},
+				properties: {
+					color: color
+				}
+			});
+		}
+
+		map.getSource('routeline').setData({
+			type: 'FeatureCollection',
+			features: features
+		});
+
+		map.fitBounds(bounds, { padding: 50 });
+	}
+
 	function addSourcesAndLayers() {
 		map.addSource('routeline', {
 			type: 'geojson',
@@ -210,6 +275,57 @@
 			paint: {
 				'line-color': ['get', 'color'],
 				'line-width': 5
+			}
+		});
+		// ################################
+		// Display every stop
+		map.addSource('stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+		map.addLayer({
+			id: 'stops',
+			type: 'circle',
+			source: 'stops',
+			paint: {
+				'circle-color': 'rgb(40, 100, 150)',
+				'circle-radius': {
+					stops: [
+						[12, 0],
+						[14, 5]
+					]
+				}
+			}
+		});
+		// ################################
+		// Highlight stops over the regular stops
+		map.addSource('connected-stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+		map.addLayer({
+			id: 'connected-stops',
+			type: 'circle',
+			source: 'connected-stops',
+			paint: {
+				'circle-color': 'rgb(50, 150, 220)',
+				'circle-radius': {
+					stops: [
+						[12, 3],
+						[14, 4],
+						[16, 11],
+						[17, 20],
+						[20, 25]
+					]
+				},
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
 			}
 		});
 	}
@@ -232,6 +348,9 @@
 			// addEvents();
 
 			mapLoaded = true;
+			drawStops();
+			drawRouteStops();
+			drawRouteLine();
 		});
 	});
 
@@ -246,7 +365,7 @@
 	<meta name="description" content="Informações sobre o operador {operator.name}" />
 </svelte:head>
 
-<div class="flex flex-col gap-4 max-w-[100em] w-full self-center my-4">
+<div class="flex flex-col gap-4 max-w-[100em] w-full sm:px-4 self-center my-4">
 	<div class="breadcrumbs">
 		<ul>
 			<li><a class="link" href="/operators">Operadores</a></li>
@@ -261,7 +380,7 @@
 		<div class="stats stats-vertical lg:stats-horizontal">
 			<div class="stat">
 				<div class="stat-title">Linhas</div>
-				<div class="stat-value">{$sortedRoutes?.length || '?'}</div>
+				<div class="stat-value">{$sortedFilteredRoutes?.length || '?'}</div>
 			</div>
 			<div class="stat">
 				<div class="stat-title">Variantes</div>
@@ -292,14 +411,13 @@
 				<h2 class="card-title p-2">Escolha uma linha</h2>
 			{/if}
 
-			<div bind:this={mapElem} class="h-[500px]" />
-			{#if $selectedRoute}
-				<div class="flex gap-6 p-2">
-					<a class="btn btn-primary" href={`/routes/${$selectedRoute.id}/subroutes`}>Subrotas</a>
-					<a class="btn btn-primary" href={`/routes/${$selectedRoute.id}/departures`}>Partidas</a>
-					<a class="btn btn-primary" href={`/routes/${$selectedRoute.id}/stops`}>Paragens</a>
-				</div>
-			{/if}
+			<div bind:this={mapElem} class="h-[500px] relative">
+				{#if $selectedRoute}
+					<div class="absolute lg:right-4 lg:top-4 top-2 right-2 z-10">
+						<a class="btn btn-primary shadow-md" href={`/routes/${$selectedRoute.id}`}>Editar</a>
+					</div>
+				{/if}
+			</div>
 		</div>
 		<div class="flex flex-col gap-2 m-2">
 			<div>
