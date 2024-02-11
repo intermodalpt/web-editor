@@ -375,12 +375,15 @@
 
 	<div class="card self-center bg-base-100 shadow-sm w-full">
 		<div class="card-body">
-			<h2 class="card-title text-3xl">{operator.name}<span class="text-sm">#{operatorId}</span></h2>
+			<h2 class="card-title text-3xl">
+				{#if operator.logo_url}<img class="h-12" src={operator.logo_url} alt={operator.name} />{/if}
+				{operator.name}
+			</h2>
 		</div>
 		<div class="stats stats-vertical lg:stats-horizontal">
 			<div class="stat">
 				<div class="stat-title">Linhas</div>
-				<div class="stat-value">{$sortedFilteredRoutes?.length || '?'}</div>
+				<div class="stat-value">{$sortedFilteredRoutes?.length ?? '?'}</div>
 			</div>
 			<div class="stat">
 				<div class="stat-title">Variantes</div>

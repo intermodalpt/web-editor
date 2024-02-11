@@ -31,7 +31,9 @@
 					class="border-[2px] pointer-cursor rounded-lg hover:bg-base-200 p-1 flex items-start"
 					href="/operators/{operator.tag}"
 				>
-					<span class="text-xs font-light">#{id}</span>
+					{#if operator.logo_url}
+						<img class="h-12" src={operator.logo_url} alt={operator.name} />
+					{/if}
 					<span class="text-lg lg:text-xl font-bold p-3">{operator.name}</span>
 				</a>
 			{/each}
