@@ -7,15 +7,15 @@
 	import { liveQuery } from 'dexie';
 	import { fetchStops, getStops, softInvalidateStops } from '$lib/db';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { decodedToken, token, operators } from '$lib/stores.js';
+	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
 	/** @type {import('./$types').PageData} */
 	export let data;
-	const operatorId = data.operatorId;
-	const operator = operators[operatorId];
+	const operator = data.operator;
+	const operatorId = operator.id;
 
 	let map;
 
@@ -26,15 +26,17 @@
 	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
 
 	const stops = liveQuery(() => getStops());
+
 	const gtfsStops = writable(null);
 	const gtfsRoutes = writable(null);
 
 	const linkedStops = derived([stops, gtfsStops], ([$stops, $gtfsStops]) => {
-		if (!$stops || !$gtfsStops) return;
+		if (!$stops || !$gtfsStops) return {};
 
 		return Object.fromEntries(
 			Object.values($stops).map((stop) => {
 				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
+				console.log('rel', rel);
 				if (!rel) return [stop.id, stop];
 				return [
 					stop.id,
@@ -256,6 +258,9 @@
 		let verStops = Object.values($linkedStops).filter(
 			(stop) => stop.source && credibleSources.includes(stop.source)
 		);
+
+		console.log('unv', unvStops);
+		console.log('ver', verStops);
 
 		const matchToFeature = (stop) => {
 			return {
@@ -536,7 +541,7 @@
 						[0, 1.5],
 						[11, 2],
 						[17, 7],
-						[18, 15],
+						[18, 15]
 					]
 				},
 				'circle-stroke-width': 1,
@@ -990,7 +995,7 @@
 			{#if $decodedToken?.permissions?.is_admin}
 				<div class="flex justify-center">
 					{#if $selectedGtfsStop && $selectedStop}
-						{#if !$hasMutualLink || !credibleSources.includes($operatorRel?.source)}
+						{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($operatorRel?.source))}
 							<button
 								class="btn btn-primary btn-sm"
 								on:click={() => {

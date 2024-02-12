@@ -6,17 +6,18 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
-	const operatorTag = params.tag;
+	const operatorId = params.opId;
 
-	let operatorId;
-	for (const [id, operator] of Object.entries(operators)) {
-		if (operator.tag === operatorTag) {
-			operatorId = parseInt(id);
-			break;
-		}
+	if (!browser) {
+		return;
 	}
 
-	if (operatorId === undefined) {
+	await fetchOperators(fetch);
+	let operators = await getOperators();
+
+	const operator = operators[operatorId];
+
+	if (!operator) {
 		error(404, 'Operator not found');
 	}
 

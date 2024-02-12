@@ -1,25 +1,42 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { operators } from '$lib/stores.js';
-	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
+	import {
+		fetchOperators,
+		getOperators,
+		fetchStops,
+		fetchRoutes,
+		getStops,
+		getRoutes,
+		loadMissing
+	} from '$lib/db';
 	import { Map as Maplibre } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
+	import { derived } from 'svelte/store';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
-	const operator = data.operator;
+	const operatorTag = data.operatorTag;
 	const issue = data.issue;
 
 	const stops = liveQuery(() => getStops());
 	const routes = liveQuery(() => getRoutes());
+	const operators = liveQuery(() => getOperators());
+
+	const operator = derived([operators], ([$operators]) => {
+		if (!$operators) {
+			return;
+		}
+
+		return Object.values($operators).find((op) => op.tag == operatorTag);
+	});
 
 	issue.creation = new Date(issue.creation);
 
 	async function loadData() {
-		await Promise.all([fetchStops(), fetchRoutes()]);
+		await Promise.all([fetchOperators(), fetchStops(), fetchRoutes()]);
 	}
 
 	loadData().then(async () => {
@@ -90,24 +107,24 @@
 </script>
 
 <svelte:head>
-	<title>Problemas em {operator.name} - {issue.title}</title>
-	<meta name="description" content="Problemas em {operator.name} - {issue.title}" />
+	<title>Problemas em {$operator?.name} - {issue.title}</title>
+	<meta name="description" content="Problemas em {$operator?.name} - {issue.title}" />
 </svelte:head>
 
 <div class="w-full max-w-[900px] self-center">
 	<div class="breadcrumbs">
 		<ul>
 			<li><a class="link" href="/operators">Operadores</a></li>
-			<li><a class="link" href="/operators/{operator.tag}">{operator.name}</a></li>
-			<li><a class="link" href="/operators/{operator.tag}/issues">Problemas</a></li>
-			<li><a class="link" href="/operators/{operator.tag}/issues/{issue.id}">#{issue.id}</a></li>
+			<li><a class="link" href="/operators/{$operator?.tag}">{$operator?.name}</a></li>
+			<li><a class="link" href="/operators/{$operator?.tag}/issues">Problemas</a></li>
+			<li><a class="link" href="/operators/{$operator?.tag}/issues/{issue.id}">#{issue.id}</a></li>
 		</ul>
 	</div>
 
 	<div class="card self-center bg-base-100 shadow-md w-full my-4">
 		<div class="card-body">
 			<h2 class="card-title">
-				<a href="/operators/{operator.tag}/issues/{issue.id}">{issue.title}</a>
+				<a href="/operators/{$operator?.tag}/issues/{issue.id}">{issue.title}</a>
 			</h2>
 			<p>
 				{issue.message}
@@ -172,14 +189,18 @@
 			{/if}
 			<hr />
 			<span class="label-text">
-				Criado a {issue.creation.toLocaleString('pt-pt',{day: 'numeric', month:'long', year:'numeric'})}
+				Criado a {issue.creation.toLocaleString('pt-pt', {
+					day: 'numeric',
+					month: 'long',
+					year: 'numeric'
+				})}
 			</span>
 			<div class="flex gap-1">
 				<span>Afecto a</span>
 				<div class="flex">
 					{#each issue.operator_ids as id}
 						<a class="badge badge-secondary" href="/operators/{operator.tag}"
-							>{operators[id].name}</a
+							>{$operators[id]?.name}</a
 						>
 					{/each}
 				</div>

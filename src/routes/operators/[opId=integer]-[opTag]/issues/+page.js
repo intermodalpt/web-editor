@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
-import { operators } from '$lib/stores.js';
 import { apiServer } from '$lib/settings';
+import { fetchOperators, getOperators } from '$lib/db.js';
 
 export const csr = true;
 export const ssr = false;
@@ -8,27 +8,23 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
-	const operatorTag = params.tag;
-
-	let operatorId;
-	for (const [id, operator] of Object.entries(operators)) {
-		if (operator.tag === operatorTag) {
-			operatorId = id;
-			break;
-		}
-	}
-
-	if (operatorId === undefined) {
-		error(404, 'Operator not found');
-	}
-
+	const operatorId = params.opId;
 
 	if (!browser) {
 		return;
 	}
 
+	await fetchOperators(fetch);
+	let operators = await getOperators();
+
+	const operator = operators[operatorId];
+
+	if (!operator) {
+		error(404, 'Operator not found');
+	}
+
 	return {
-		operator: operators[operatorId],
+		operator: operator,
 		issues: fetch(`${apiServer}/v1/operators/${operatorId}/issues`).then((r) => r.json())
 	};
 }

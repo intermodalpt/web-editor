@@ -2,16 +2,18 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import { Map as Maplibre, LngLatBounds } from 'maplibre-gl';
 	import polyline from '@mapbox/polyline';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import {
+		fetchOperators,
+		getOperators,
 		fetchCalendars,
-		fetchRoutes,
-		fetchStops,
 		getCalendars,
+		fetchRoutes,
 		getRoutes,
+		fetchStops,
 		getStops,
 		loadMissing
 	} from '$lib/db';
@@ -19,7 +21,6 @@
 	/** @type {import('./$types').PageData} */
 	export let data;
 	const operator = data.operator;
-	const operatorId = operator.id;
 
 	const ROUTES_PER_PAGE = 15;
 	const SUBROUTE_COLORS = [
@@ -40,7 +41,7 @@
 			fetchRoutes(),
 			fetchCalendars(),
 			fetchStops(),
-			fetch(`${apiServer}/v1/operators/${operatorId}/issues`)
+			fetch(`${apiServer}/v1/operators/${operator.id}/issues`)
 				.then((r) => r.json())
 				.then((r) => {
 					issues = r;
@@ -52,6 +53,7 @@
 		await loadMissing();
 	});
 
+	const operators = liveQuery(() => getOperators());
 	const calendars = liveQuery(() => getCalendars());
 	const routes = liveQuery(() => getRoutes());
 	const stops = liveQuery(() => getStops());
@@ -101,7 +103,7 @@
 			: () => true;
 
 		let res = Object.values($routes)
-			.filter((r) => r.operator === operatorId)
+			.filter((r) => r.operator === operator.id)
 			.filter(filterFunc)
 			.sort((ra, rb) => {
 				if (!ra.code) {
@@ -170,7 +172,7 @@
 		if (!$calendars) {
 			return [];
 		}
-		return Object.values($calendars).filter((calendar) => calendar.operator_id === operatorId);
+		return Object.values($calendars).filter((calendar) => calendar.operator_id === operator.id);
 	});
 
 	function drawStops() {
@@ -369,7 +371,7 @@
 	<div class="breadcrumbs">
 		<ul>
 			<li><a class="link" href="/operators">Operadores</a></li>
-			<li><a class="link" href="/operators/{operator.tag}">{operator.name}</a></li>
+			<li><a class="link" href="/operators/{operator.id}-{operator.tag}">{operator.name}</a></li>
 		</ul>
 	</div>
 
@@ -577,7 +579,9 @@
 
 	<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
 		<div class="card-body">
-			<h2 class="card-title"><a href="/operators/{operator.tag}/issues">Problemas</a></h2>
+			<h2 class="card-title">
+				<a href="/operators/{operator.id}-{operator.tag}/issues">Problemas</a>
+			</h2>
 			<div class="grid p-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
 				{#if issues.length == 0}
 					<span>Sem problemas anexos a este operador.</span>
@@ -589,12 +593,13 @@
 								<span>Afecto a</span>
 								<div class="flex">
 									{#each issue.operator_ids as id}
-										<span class="badge badge-secondary">{operators[id].name}</span>
+										<span class="badge badge-secondary">{$operators[id].name}</span>
 									{/each}
 								</div>
 							</div>
 							<h2 class="card-title">
-								<a href="/operators/{operator.tag}/issues/{issue.id}">{issue.title}</a>
+								<a href="/operators/{operator.id}-{operator.tag}/issues/{issue.id}">{issue.title}</a
+								>
 							</h2>
 							<div class="flex gap-2">
 								<span>Linhas</span>
@@ -636,10 +641,10 @@
 		<div class="card-body">
 			<h2 class="card-title">Ferramentas</h2>
 			<div class="flex gap-4">
-				<a class="btn btn-primary" href="/operators/{operator.tag}/matcher">
+				<a class="btn btn-primary" href="/operators/{operator.id}-{operator.tag}/matcher">
 					Emparelhamento paragens
 				</a>
-				<a class="btn btn-primary" href="/operators/{operator.tag}/matcher/routes">
+				<a class="btn btn-primary" href="/operators/{operator.id}-{operator.tag}/matcher/routes">
 					Validação de rotas
 				</a>
 			</div>

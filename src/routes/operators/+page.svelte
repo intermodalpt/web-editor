@@ -29,7 +29,7 @@
 			{#each Object.values($sortedOperators || {}) as [id, operator]}
 				<a
 					class="border-[2px] pointer-cursor rounded-lg hover:bg-base-200 p-1 flex items-start"
-					href="/operators/{operator.tag}"
+					href="/operators/{operator.id}-{operator.tag}"
 				>
 					{#if operator.logo_url}
 						<img class="h-12" src={operator.logo_url} alt={operator.name} />
