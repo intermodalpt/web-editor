@@ -1,12 +1,21 @@
 <script>
 	import { derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { loadMissing, fetchOperators, getOperators } from '$lib/db';
+	import { loadMissing, fetchOperators, getOperators, regionId } from '$lib/db';
 
 	const operators = liveQuery(() => getOperators());
 
-	const sortedOperators = derived(operators, ($operators) => {
-		return Object.entries($operators || []).sort(([, a], [, b]) => {
+	const regionOperators = derived([operators, regionId], ([$operators, $regionId]) => {
+		if (!$operators || !$regionId) {
+			return [];
+		}
+		return Object.values($operators).filter((operator) => {
+			return operator.regions.includes($regionId);
+		});
+	});
+
+	const sortedOperators = derived(regionOperators, ($regionOperators) => {
+		return Object.entries($regionOperators || []).sort(([, a], [, b]) => {
 			return a.name.localeCompare(b.name);
 		});
 	});
