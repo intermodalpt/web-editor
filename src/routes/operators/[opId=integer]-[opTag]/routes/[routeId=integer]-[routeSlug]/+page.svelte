@@ -17,15 +17,15 @@
 		loadMissing
 	} from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
-	import { annotateSubroute, subrouteTitle } from './aux.js';
-	import RouteForm from './RouteForm.svelte';
+	import { annotateSubroute, subrouteTitle } from '../aux.js';
+	import RouteForm from '../form/RouteForm.svelte';
 	import DepartureEditor from './DepartureEditor.svelte';
 
 	export let data;
 	const routeId = data.route.id;
 	const operatorId = data.route.operator;
 
-	let isAdmin = $decodedToken?.permissions?.is_admin || false;
+	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 
 	// Stores and reactive variables
 

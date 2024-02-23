@@ -2,7 +2,7 @@
 	import { derived } from 'svelte/store';
 	import { token, toast } from '$lib/stores.js';
 	import { timeToTimestamp, timestampToTime } from '$lib/utils.js';
-	import { getDeparturesAndCalendars } from './aux.js';
+	import { getDeparturesAndCalendars } from '../aux.js';
 
 	export let canEdit = false;
 	export let selectedSubroute;

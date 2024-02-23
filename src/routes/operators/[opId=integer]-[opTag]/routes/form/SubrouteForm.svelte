@@ -1,7 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import SubrouteGroup from './SubrouteGroup.svelte';
-	import { annotateSubroute } from './aux.js';
+	import { annotateSubroute } from '../aux.js';
 
 	export let route;
 	export let stops;

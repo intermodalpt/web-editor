@@ -5,9 +5,9 @@
 	import { softInvalidateRoutes } from '$lib/db.js';
 
 	export let route;
-	export let stops;
-	export let routeStops;
-	export let canEdit;
+	export let stops = {};
+	export let routeStops = {};
+	export let canEdit = false;
 
 	let isSaving = false;
 
@@ -285,7 +285,13 @@
 		on:subroute-delete={handleChange}
 	/>
 	<div class="flex gap-1 justify-between items-end">
-		<button class="btn btn-error btn-xs" class:hidden={!canEdit} on:mouseup={deleteRoute}> Apagar linha </button>
+		<button
+			class="btn btn-error btn-xs"
+			class:hidden={!canEdit || !route.id}
+			on:mouseup={deleteRoute}
+			>Apagar linha
+		</button>
+		<span />
 		<div class="flex gap-4">
 			<!-- <div class="form-control">
 				<label class="input-group hidden sm:flex">
@@ -293,7 +299,12 @@
 					<input type="checkbox" class="checkbox" />
 				</label>
 			</div> -->
-			<button class="btn btn-primary" class:hidden={!canEdit} on:mouseup={save} disabled={!route._modified}>
+			<button
+				class="btn btn-primary"
+				class:hidden={!canEdit}
+				on:mouseup={save}
+				disabled={!route._modified}
+			>
 				Guardar
 			</button>
 		</div>
