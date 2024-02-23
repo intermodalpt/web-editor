@@ -419,7 +419,10 @@
 			<div bind:this={mapElem} class="h-[500px] relative">
 				{#if $selectedRoute}
 					<div class="absolute lg:right-4 lg:top-4 top-2 right-2 z-10">
-						<a class="btn btn-primary shadow-md" href={`/routes/${$selectedRoute.id}`}>Editar</a>
+						<a
+							class="btn btn-primary shadow-md"
+							href="/operators/{operator.id}-{operator.tag}/routes/{$selectedRoute.id}-{$selectedRoute.code || ''}">Editar</a
+						>
 					</div>
 				{/if}
 			</div>

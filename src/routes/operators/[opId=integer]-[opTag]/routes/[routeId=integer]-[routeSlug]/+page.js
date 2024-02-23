@@ -12,7 +12,7 @@ export async function load({ params }) {
 		return;
 	}
 
-	const routeId = params.route;
+	const routeId = params.routeId;
 
 	await fetchRoutes();
 	let routes = await getRoutes();
