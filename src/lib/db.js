@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { Dexie } from 'dexie';
 import { apiServer, cacheRefreshTime, cacheInvalidationTime } from '$lib/settings';
 import { browser } from '$app/environment';
@@ -60,6 +60,20 @@ export async function setRegion(id) {
     localStorage.setItem(REGION_KEY, id);
     regionId.set(id);
 }
+
+export const selectedRegion = derived([regionId], ([$regionId], set) => {
+    if (!$regionId) {
+        return null;
+    }
+
+    let regionIdInt = parseInt($regionId);
+    if (!regionIdInt) {
+        console.error('Invalid region id', $regionId);
+        return;
+    }
+
+    db.regions.get(regionIdInt).then((r) => set(r));
+});
 
 function timestampKey(tableName) {
     return `${tableName}_updated`;
@@ -164,7 +178,7 @@ export async function fetchStops(ifMissing = true) {
     stopsLoaded.set(true);
 }
 
-export async function fetchRoutes(ifMissing = true) {
+export async function fetchRoutes(fetcher = fetch, ifMissing = true) {
     if (!browser || !_regionId) {
         return;
     }
@@ -259,6 +273,10 @@ export async function getOperators() {
     return operatorsObject;
 }
 
+export async function getOperator(id) {
+    return await db.operators.get(id);
+}
+
 export async function getStops() {
     const stops = await db.stops.toArray();
     const stopsObject = Object.fromEntries(stops.map((s) => [s.id, s]));
@@ -269,6 +287,10 @@ export async function getRoutes() {
     const routes = await db.routes.toArray();
     const routesObject = Object.fromEntries(routes.map((r) => [r.id, r]));
     return routesObject;
+}
+
+export async function getRoute(id) {
+    return await db.routes.get(id);
 }
 
 export async function getCalendars() {

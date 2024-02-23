@@ -1,5 +1,5 @@
-import { loadRoutes, loadCalendars } from '$lib/stores.js';
 import { apiServer } from '$lib/settings.js';
+import { getRoutes, getCalendars } from '$lib/db';
 
 export const csr = true;
 export const ssr = false;
@@ -9,8 +9,8 @@ export const prerender = false;
 export async function load({ params, fetch, depends }) {
 	const routeId = params.route;
 
-	let routes = await loadRoutes(fetch);
-	let calendars = await loadCalendars(fetch);
+	let routes = await getRoutes(fetch);
+	let calendars = await getCalendars(fetch);
 
 	depends('app:departures');
 

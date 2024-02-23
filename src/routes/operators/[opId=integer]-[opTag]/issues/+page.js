@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { apiServer } from '$lib/settings';
-import { fetchOperators, getOperators } from '$lib/db.js';
+import { fetchOperators, getOperator } from '$lib/db.js';
 
 export const csr = true;
 export const ssr = false;
@@ -8,19 +8,17 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
-	const operatorId = params.opId;
+	const operatorId = parseInt(params.opId);
 
 	if (!browser) {
 		return;
 	}
 
 	await fetchOperators(fetch);
-	let operators = await getOperators();
-
-	const operator = operators[operatorId];
+	const operator = await getOperator(operatorId);
 
 	if (!operator) {
-		error(404, 'Operator not found');
+		throw error(404, 'Operator not found');
 	}
 
 	return {

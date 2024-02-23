@@ -2,14 +2,10 @@
 	import { derived } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { logout, decodedToken } from '$lib/stores.js';
-	import { regionId, getRegions, setRegion } from '$lib/db.js';
+	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.js';
 	import { liveQuery } from 'dexie';
 
 	const regions = liveQuery(() => getRegions());
-	const selectedRegion = derived(
-		[regions, regionId],
-		([$regions, $regionId]) => $regions?.[$regionId]
-	);
 
 	const sortedRegions = derived(regions, ($regions) => {
 		return Object.values($regions || {}).sort((a, b) => a.name.localeCompare(b.name));
