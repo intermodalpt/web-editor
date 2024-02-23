@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { apiServer } from '$lib/settings.js';
 import { fetchOperators, getOperators } from '$lib/db.js';
 
 export const csr = true;
@@ -22,7 +23,18 @@ export async function load({ params, fetch }) {
         throw error(404, 'Operator not found');
     }
 
+
+    const routeTypesRes = await fetch(`${apiServer}/v1/operators/${operatorId}/routes/types`);
+
+    if (!routeTypesRes.ok) {
+        throw error(500, 'Failed to fetch route types');
+    }
+
+    const routeTypes = await routeTypesRes.json();
+
+
     return {
-        operator: operator
+        operator: operator,
+        routeTypes: routeTypes
     };
 }

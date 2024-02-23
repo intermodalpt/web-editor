@@ -6,6 +6,7 @@
 	import polyline from '@mapbox/polyline';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { apiServer, tileStyle } from '$lib/settings.js';
+	import { decodedToken } from '$lib/stores.js';
 	import {
 		fetchOperators,
 		getOperators,
@@ -33,6 +34,8 @@
 		'#dd7878',
 		'#4c4f69'
 	];
+
+	const canEdit = $decodedToken?.permissions?.is_admin || false;
 
 	let issues = [];
 
@@ -413,15 +416,22 @@
 					<span>{$selectedRoute.name}</span>
 				</h2>
 			{:else}
-				<h2 class="card-title p-2">Escolha uma linha</h2>
+				<div class="flex justify-between items-center">
+					<h2 class="card-title p-2">Escolha uma linha</h2>
+					<a
+						class="btn btn-xs btn-success"
+						class:hidden={!canEdit}
+						href="/operators/{operator.id}-{operator.tag}/routes/new">+</a
+					>
+				</div>
 			{/if}
-
 			<div bind:this={mapElem} class="h-[500px] relative">
 				{#if $selectedRoute}
 					<div class="absolute lg:right-4 lg:top-4 top-2 right-2 z-10">
 						<a
 							class="btn btn-primary shadow-md"
-							href="/operators/{operator.id}-{operator.tag}/routes/{$selectedRoute.id}-{$selectedRoute.code || ''}">Editar</a
+							href="/operators/{operator.id}-{operator.tag}/routes/{$selectedRoute.id}-{$selectedRoute.code ||
+								''}">Editar</a
 						>
 					</div>
 				{/if}

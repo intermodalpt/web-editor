@@ -1,12 +1,16 @@
 <script>
+	import { createEventDispatcher } from 'svelte';
 	import { token, toast } from '$lib/stores.js';
 	import SubrouteForm from './SubrouteForm.svelte';
 	import { apiServer } from '$lib/settings.js';
 	import { softInvalidateRoutes } from '$lib/db.js';
 
+	const dispatch = createEventDispatcher();
+
 	export let route;
 	export let stops = {};
 	export let routeStops = {};
+	export let routeTypes = [];
 	export let canEdit = false;
 
 	let isSaving = false;
@@ -26,6 +30,17 @@
 
 	async function save() {
 		isSaving = true;
+		const newRoute = route.id == null;
+
+		if (newRoute) {
+			const id = await createRoute();
+			if (!id) {
+				isSaving = false;
+				return;
+			}
+			route.id = id;
+			route._original.id = id;
+		}
 		await softInvalidateRoutes();
 		for (const subroute of route.subroutes) {
 			let successful = true;
@@ -41,10 +56,48 @@
 
 		// Trigger this call to check if there are any updates to the route itself
 		handleChange();
-		if (route._modified) {
+		if (route._modified && !newRoute) {
 			await patchRoute();
 		}
 		isSaving = false;
+
+		if (newRoute) {
+			dispatch('route-created', {
+				id: id,
+				route: route
+			});
+		}
+	}
+
+	async function createRoute() {
+		let res = await fetch(`${apiServer}/v1/routes`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${$token}`
+			},
+			body: JSON.stringify({
+				operator_id: route._original.operator_id,
+				main_subroute: route._original.main_subroute,
+				code: route.code,
+				name: route.name,
+				type_id: route.type_id,
+				circular: route.circular,
+				active: route.active
+			})
+		});
+		if (res.ok) {
+			toast('Linha criada com sucesso', 'success');
+			return await res.json().then((newRoute) => newRoute.id);
+		} else {
+			try {
+				let error = await res.text();
+				toast(`Erro a atualizar:\n${error}`, 'error');
+			} catch (e) {
+				toast('Erro a atualizar', 'error');
+			}
+			return;
+		}
 	}
 
 	async function patchRoute() {
@@ -56,16 +109,16 @@
 			},
 			body: JSON.stringify({
 				operator_id: route._original.operator_id,
-				type_id: route._original.type_id,
 				main_subroute: route._original.main_subroute,
 				code: route.code,
 				name: route.name,
+				type_id: route.type_id,
 				circular: route.circular,
 				active: route.active
 			})
 		});
 		if (res.ok) {
-			toast('Carreira alterada com sucesso', 'success');
+			toast('Linha alterada com sucesso', 'success');
 			return true;
 		} else {
 			try {
@@ -231,7 +284,7 @@
 				<input
 					type="text"
 					bind:value={route.code}
-					class="input input-bordered w-24 input-sm"
+					class="input input-bordered w-20 input-sm"
 					disabled={!canEdit}
 					on:change={handleChange}
 				/>
@@ -247,6 +300,21 @@
 					disabled={!canEdit}
 					on:change={handleChange}
 				/>
+			</label>
+		</div>
+		<div class="form-control">
+			<label class="input-group">
+				<span>Tipo</span>
+				<select
+					class="input input-sm input-bordered"
+					disabled={!canEdit}
+					on:change={handleChange}
+					bind:value={route.type_id}
+				>
+					{#each routeTypes as type}
+						<option value={type.id}>{type.name}</option>
+					{/each}
+				</select>
 			</label>
 		</div>
 		<div class="flex gap-2">
