@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
 import { fetchRoutes, getRoute, fetchOperators, getOperator } from '$lib/db';
+import { apiServer } from '$lib/settings';
 
 export const csr = true;
 export const ssr = false;
@@ -29,8 +30,17 @@ export async function load({ params }) {
 		throw error(404, 'Operator not found');
 	}
 
+    const routeTypesRes = await fetch(`${apiServer}/v1/operators/${operatorId}/routes/types`);
+
+    if (!routeTypesRes.ok) {
+        throw error(500, 'Failed to fetch route types');
+    }
+
+    const routeTypes = await routeTypesRes.json();
+
 	return {
 		operator: operator,
 		route: route,
+        routeTypes: routeTypes
 	};
 }

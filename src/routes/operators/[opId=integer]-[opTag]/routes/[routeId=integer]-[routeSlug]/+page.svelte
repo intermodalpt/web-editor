@@ -7,15 +7,7 @@
 	import { liveQuery } from 'dexie';
 	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	import {
-		fetchStops,
-		fetchRoutes,
-		fetchCalendars,
-		getStops,
-		getRoutes,
-		getCalendars,
-		loadMissing
-	} from '$lib/db';
+	import { fetchStops, fetchCalendars, getStops, getCalendars, loadMissing } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
 	import { annotateSubroute, subrouteTitle } from '../aux.js';
 	import RouteForm from '../form/RouteForm.svelte';
@@ -24,14 +16,12 @@
 	export let data;
 	const routeId = data.route.id;
 	const operatorId = data.route.operator;
+	const routeTypes = data.routeTypes;
 
 	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 
 	// Stores and reactive variables
-
 	const stops = liveQuery(() => getStops());
-	const routes = liveQuery(() => getRoutes());
-
 	const route = writable(data.route);
 
 	const stagedRoute = derived(route, ($route) => {
@@ -43,11 +33,6 @@
 			_modified: false
 		};
 	});
-
-	/*const route = derived(routes, ($routes) => {
-		if (!$routes) return;
-		return $routes[routeId];
-	});*/
 
 	const calendars = liveQuery(() => getCalendars());
 	const operatorCalendars = derived(calendars, ($calendars) => {
@@ -64,13 +49,11 @@
 
 	let mapLoaded = false;
 	let stopsLoaded = false;
-	let routesLoaded = false;
 	let calendarsLoaded = false;
 	let routeStopsLoaded = false;
 	let routeSchedulesLoaded = false;
 
-	$: isRequiredLoading = !stopsLoaded || !routesLoaded || !mapLoaded;
-	$: isExtraLoading = !calendarsLoaded || !routeStopsLoaded || !routeSchedulesLoaded;
+	$: isRequiredLoading = !stopsLoaded || !mapLoaded;
 
 	const selectedSubrouteId = writable(null);
 	const selectedSubroute = derived([selectedSubrouteId, route], ([$selectedSubrouteId, $route]) => {
@@ -130,18 +113,12 @@
 	let dragMode = 'move';
 
 	async function loadRequiredData() {
-		Promise.all([
-			// Ensure that stops are available in indexedDB
-			fetchStops().then((r) => {
+		// Ensure that stops are available in indexedDB
+		fetchStops()
+			.then((r) => {
 				stopsLoaded = true;
 				return r;
-			}),
-			// Ensure that routes are available in indexedDB
-			fetchRoutes().then((r) => {
-				routesLoaded = true;
-				return r;
 			})
-		])
 			.catch((e) => {
 				toast('Failed to load data', 'error');
 				console.log(e);
@@ -725,13 +702,6 @@
 						max="100"
 					/>
 				</span>
-				<span>
-					Linhas:<progress
-						class="progress progress-primary w-full"
-						value={routesLoaded ? 100 : 0}
-						max="100"
-					/>
-				</span>
 			</div>
 		</div>
 	{/if}
@@ -801,7 +771,13 @@
 		</div>
 		{#if tab == tabs.meta && $stops}
 			<div class="flex gap-4 rounded-xl shadow-lg p-2 bg-base-100 self-center overflow-y-auto">
-				<RouteForm route={$stagedRoute} stops={$stops} routeStops={$routeStops} canEdit={isAdmin} />
+				<RouteForm
+					route={$stagedRoute}
+					stops={$stops}
+					routeStops={$routeStops}
+					{routeTypes}
+					canEdit={isAdmin}
+				/>
 			</div>
 		{:else if tab == tabs.departures && $selectedSubroute}
 			<div
