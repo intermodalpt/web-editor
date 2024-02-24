@@ -706,7 +706,10 @@
 		</div>
 	{/if}
 	<div
-		class="absolute lg:left-4 lg:top-4 top-2 left-2 right-2 bottom-2 z-10 flex flex-col gap-4 items-start"
+		class="absolute lg:left-4 lg:top-4 top-2 left-2 z-10 flex flex-col gap-4 items-start"
+		class:right-2={tab == tabs.meta || tab == tabs.departures}
+		class:bottom-2={tab == tabs.meta || tab == tabs.departures}
+
 	>
 		<div class="rounded-xl shadow-lg flex flex-col gap-1 p-2 bg-base-100">
 			<div class="flex flex-row w-full gap-2 items-center">
@@ -829,7 +832,7 @@
 		</div>
 		<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-2 transition w-[40em]">
 			<div class="bg-base-100 h-full rounded-xl shadow-lg flex flex-col">
-				<div class="px-4 overflow-y-auto hide-scrollbar">
+				<div class="pt-2 px-4 overflow-y-auto hide-scrollbar grow">
 					{#key $selectedSubrouteId}
 						<DraggableList
 							bind:data={$uniqueSubrouteStopIds}
