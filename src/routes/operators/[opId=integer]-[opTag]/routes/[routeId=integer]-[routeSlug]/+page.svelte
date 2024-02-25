@@ -12,6 +12,7 @@
 	import { annotateSubroute, subrouteTitle } from '../aux.js';
 	import RouteForm from '../form/RouteForm.svelte';
 	import DepartureEditor from './DepartureEditor.svelte';
+	import GtfsValidator from './GtfsValidator.svelte';
 
 	export let data;
 	const routeId = data.route.id;
@@ -99,12 +100,15 @@
 		$subrouteStopIds.every((id, i) => id === initialSubrouteStopIds[i])
 	);
 
+	// Validation tab
+
 	// UX vars
 	const tabs = {
 		view: 0,
 		meta: 1,
 		stops: 2,
-		departures: 3
+		departures: 3,
+		validation: 4
 	};
 	let tab = tabs.view;
 
@@ -709,7 +713,6 @@
 		class="absolute lg:left-4 lg:top-4 top-2 left-2 z-10 flex flex-col gap-4 items-start"
 		class:right-2={tab == tabs.meta || tab == tabs.departures}
 		class:bottom-2={tab == tabs.meta || tab == tabs.departures}
-
 	>
 		<div class="rounded-xl shadow-lg flex flex-col gap-1 p-2 bg-base-100">
 			<div class="flex flex-row w-full gap-2 items-center">
@@ -753,6 +756,13 @@
 						tab = tabs.departures;
 					}}>Horários</button
 				>
+				<button
+					class="tab"
+					class:tab-active={tab == tabs.validation}
+					on:click={() => {
+						tab = tabs.validation;
+					}}>Validação</button
+				>
 			</div>
 			{#if tab == tabs.view || tab == tabs.stops || tab == tabs.departures}
 				<div class="flex flex-row w-full gap-2">
@@ -792,6 +802,10 @@
 					{operatorCalendars}
 					canEdit={isAdmin}
 				/>
+			</div>
+		{:else if tab == tabs.validation}
+			<div class="flex flex-col gap-4 rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto max-w-6xl">
+				<GtfsValidator {route} {routeStops}/>
 			</div>
 		{/if}
 	</div>
