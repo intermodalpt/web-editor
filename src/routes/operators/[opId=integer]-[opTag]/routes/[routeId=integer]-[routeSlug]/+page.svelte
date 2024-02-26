@@ -25,6 +25,15 @@
 	const stops = liveQuery(() => getStops());
 	const route = writable(data.route);
 
+	const operatorStops = derived(stops, ($stops) => {
+		if (!$stops) return;
+		return Object.fromEntries(
+			Object.values($stops)
+				.filter((stop) => stop.operators.some((rel) => rel.operator_id == operatorId))
+				.map((stop) => [stop.id, stop])
+		);
+	});
+
 	const stagedRoute = derived(route, ($route) => {
 		let subroutes = $route.subroutes.map((sr) => annotateSubroute(sr));
 		return {
@@ -229,7 +238,7 @@
 	function drawStops() {
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values($stops).map((stop) => ({
+			features: Object.values($operatorStops).map((stop) => ({
 				type: 'Feature',
 				geometry: {
 					type: 'Point',
@@ -684,7 +693,7 @@
 </script>
 
 <div bind:this={mapElem} class="h-full relative">
-	{#if tab == tabs.meta || tab == tabs.departures}
+	{#if tab == tabs.meta || tab == tabs.departures || tab == tabs.validation}
 		<div style="background-color: #33336699" class="z-[10] absolute inset-0 backdrop-blur-sm" />
 	{/if}
 	{#if isRequiredLoading}
@@ -711,8 +720,8 @@
 	{/if}
 	<div
 		class="absolute lg:left-4 lg:top-4 top-2 left-2 z-10 flex flex-col gap-4 items-start"
-		class:right-2={tab == tabs.meta || tab == tabs.departures}
-		class:bottom-2={tab == tabs.meta || tab == tabs.departures}
+		class:right-2={tab != tabs.view && tab != tabs.stops}
+		class:bottom-2={tab != tabs.view && tab != tabs.stops}
 	>
 		<div class="rounded-xl shadow-lg flex flex-col gap-1 p-2 bg-base-100">
 			<div class="flex flex-row w-full gap-2 items-center">
@@ -804,8 +813,8 @@
 				/>
 			</div>
 		{:else if tab == tabs.validation}
-			<div class="flex flex-col gap-4 rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto max-w-6xl">
-				<GtfsValidator {route} {routeStops}/>
+			<div class="flex flex-col rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto">
+				<GtfsValidator {route} {stops} {routeStops} {operatorId} />
 			</div>
 		{/if}
 	</div>

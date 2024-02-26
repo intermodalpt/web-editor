@@ -1,157 +1,121 @@
 <script>
 	import { derived } from 'svelte/store';
 	import { isDeepEqual, isEmpty, needlemanWunsch } from '$lib/utils.js';
-	import { subrouteTitle } from '../aux.js';
+	import Matched from './gtfscmp/Matched.svelte';
+	import UnmatchedIml from './gtfscmp/UnmatchedIml.svelte';
+	import UnmatchedGtfs from './gtfscmp/UnmatchedGtfs.svelte';
 
 	export let route;
+	export let stops;
 	export let routeStops;
+	export let operatorId;
 
-	const validationInfo = derived([route, routeStops], ([$route, $routeStops]) => {
-		if (!route || !$routeStops) return;
+	let showName = false;
+	let idType = 1;
 
-		const pairedSubroutes = [];
-		const unpairedSubroutes = [];
-		const unpairedGtfs = $route.validation?.unmatched.map((gtfs) => {
-			return {
-				stops: gtfs.stops ?? [],
-				headsigns: gtfs.headsigns ?? [],
-				patterns: gtfs.pattern_ids ?? []
-			};
-		});
-
-		for (const subroute of $route.subroutes) {
-			const currentImlStops = $routeStops[subroute.id] || [];
-
-			if (subroute.validation && !isEmpty(subroute.validation)) {
-				let [imlSeq, gtfsSeq] = needlemanWunsch(currentImlStops, subroute.validation.iml_stops);
-
-				pairedSubroutes.push({
-					subroute: subroute,
-					imlStops: currentImlStops,
-					gtfsImlStops: subroute.validation.iml_stops,
-					gtfsHeadsigns: subroute.validation.gtfs_headsigns,
-					gtfsPatterns: subroute.validation.gtfs_pattern_ids,
-					// Sequence aligned to match
-					alignedIml: imlSeq,
-					alignedGtfs: gtfsSeq,
-					sameImlStops: isDeepEqual(subroute.validation.iml_stops, currentImlStops)
-				});
-			} else {
-				unpairedSubroutes.push({
-					subroute: subroute,
-					imlStops: currentImlStops
-				});
-			}
-		}
-
-		return {
-			paired: pairedSubroutes,
-			unpairedSubroutes: unpairedSubroutes,
-			unpairedGtfs: unpairedGtfs
-		};
+	const stopsByRef = derived(stops, ($stops) => {
+		if (!$stops) return;
+		return Object.fromEntries(
+			Object.values($stops).map((stop) => {
+				const opStop = stop.operators.find((op) => op.operator_id == operatorId);
+				return [opStop?.stop_ref, stop];
+			})
+		);
 	});
+
+	const validationInfo = derived(
+		[route, stopsByRef, routeStops],
+		([$route, $stopsByRef, $routeStops]) => {
+			if (!$route || !$routeStops || !$stopsByRef) return;
+
+			const pairedSubroutes = [];
+			const unpairedSubroutes = [];
+			const unpairedGtfs = $route.validation?.unmatched.map((gtfs) => {
+				return {
+					stops: gtfs.stops ?? [],
+					headsigns: gtfs.headsigns ?? [],
+					patterns: gtfs.patterns ?? []
+				};
+			});
+
+			for (const subroute of $route.subroutes) {
+				const currentImlStops = $routeStops[subroute.id] || [];
+				const currentGtfsStops = currentImlStops.map(
+					(stopId) =>
+						$stops[stopId]?.operators?.find((op) => op.operator_id == operatorId)?.stop_ref || '?'
+				);
+
+				if (subroute.validation && !isEmpty(subroute.validation)) {
+					let [imlSeq, gtfsSeq] = needlemanWunsch(currentImlStops, subroute.validation.iml_stops);
+
+					pairedSubroutes.push({
+						subroute: subroute,
+						imlStops: currentImlStops,
+						gtfsStops: currentGtfsStops,
+						gtfsImlStops: subroute.validation.iml_stops,
+						gtfsHeadsigns: subroute.validation.gtfs_headsigns,
+						gtfsPatterns: subroute.validation.gtfs_pattern_ids,
+						// Sequence aligned to match
+						alignedIml: imlSeq,
+						alignedGtfs: gtfsSeq,
+						matches: isDeepEqual(subroute.validation.iml_stops, currentImlStops)
+					});
+				} else {
+					unpairedSubroutes.push({
+						subroute: subroute,
+						imlStops: currentImlStops,
+						gtfsStops: currentGtfsStops
+					});
+				}
+			}
+
+			return {
+				paired: pairedSubroutes,
+				unpairedSubroutes: unpairedSubroutes,
+				unpairedGtfs: unpairedGtfs
+			};
+		}
+	);
 </script>
 
+<div class="flex gap-2 items-center">
+	<div class="form-control">
+		<label class="input-group">
+			<span>Nomes</span>
+			<input type="checkbox" bind:checked={showName} class="checkbox" />
+		</label>
+	</div>
+
+	<div class="form-control">
+		<label class="label cursor-pointer">
+			<span class="label-text">IML</span>
+			<input type="radio" name="id-type" value={1} class="radio" bind:group={idType} />
+		</label>
+	</div>
+	<div class="form-control">
+		<label class="label cursor-pointer">
+			<span class="label-text">GTFS</span>
+			<input type="radio" name="id-type" value={2} class="radio" bind:group={idType} />
+		</label>
+	</div>
+</div>
 {#if $validationInfo}
-	{#each $validationInfo.paired as pairing}
-		<div class="flex flex-col rounded-md border-[1px] p-1 bg-green-50">
-			<div class="flex flex-row w-full gap-2 items-center">
-				<div
-					class="h-6 w-12 rounded-xl flex items-center justify-center font-bold bg-blue-500 text-white"
-				>
-					{pairing.subroute.id}
-				</div>
-				<span>
-					{subrouteTitle(pairing.subroute)}
-				</span>
-				<div class="h-6 w-6 rounded-xl flex items-center justify-center font-bold bg-base-300">
-					»
-				</div>
-				<div class="flex flex-wrap gap-1">
-					{#each pairing.gtfsPatterns as pattern}
-						<div class="badge bg-orange-300">pat: {pattern}</div>
-					{/each}
-					{#each pairing.gtfsHeadsigns as headsign}
-						<div class="badge bg-orange-400">{headsign}</div>
-					{/each}
-				</div>
-			</div>
-			<table>
-				<tbody>
-					<tr>
-						{#each pairing.alignedIml as stopId, i}
-							<td
-								class="badge badge-sm border-2 border-blue-500 text-white font-bold"
-								class:badge-success={pairing.alignedGtfs[i] == stopId}
-								class:badge-warning={pairing.alignedGtfs[i] == null}
-								class:badge-error={pairing.alignedGtfs[i] != stopId &&
-									pairing.alignedGtfs[i] != null}>{stopId}</td
-							>
-						{/each}
-					</tr>
-					<tr>
-						{#each pairing.alignedGtfs as stopId, i}
-							<td
-								class="badge badge-sm border-2 border-orange-500 text-white font-bold"
-								class:badge-success={pairing.alignedIml[i] == stopId}
-								class:badge-warning={pairing.alignedIml[i] == null}
-								class:badge-error={pairing.alignedIml[i] != stopId && pairing.alignedIml[i] != null}
-								>{stopId}</td
-							>
-						{/each}
-					</tr>
-				</tbody>
-			</table>
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+		<div class="flex flex-col gap-2">
+			<h2 class="text-lg">Emparelhadas com GTFS</h2>
+			{#each $validationInfo.paired as pairing}
+				<Matched {pairing} {stops} {showName} {idType} />
+			{/each}
 		</div>
-	{/each}
-	{#each $validationInfo.unpairedSubroutes as unpaired}
-		<div class="flex flex-col rounded-md border-[1px] p-1 bg-blue-50">
-			<div class="flex flex-row w-full gap-2 items-center">
-				<div
-					class="h-6 w-12 rounded-xl flex items-center justify-center font-bold bg-blue-500 text-white"
-				>
-					{unpaired.subroute.id}
-				</div>
-				<span>
-					{subrouteTitle(unpaired.subroute)}
-				</span>
-			</div>
-			<table>
-				<tbody>
-					<tr>
-						{#each unpaired.imlStops as stopId}
-							<td class="badge badge-sm border-y-2 bg-blue-200 font-bold">
-								{stopId}
-							</td>
-						{/each}
-					</tr>
-				</tbody>
-			</table>
+		<div class="flex flex-col gap-2">
+			<h2 class="text-lg">Intermodal sem correspondente</h2>
+			{#each $validationInfo.unpairedSubroutes as unpaired}
+				<UnmatchedIml {unpaired} {stops} {showName} {idType} />
+			{/each}
+			<h2 class="text-lg">GTFS sem correspondente</h2>
+			{#each $validationInfo.unpairedGtfs as unpaired}
+				<UnmatchedGtfs {unpaired} {stops} {stopsByRef} {showName} {idType} />
+			{/each}
 		</div>
-	{/each}
-	{#each $validationInfo.unpairedGtfs as gtfs}
-		<div class="flex flex-col rounded-md border-[1px] p-1 bg-orange-50">
-			<div class="flex flex-row w-full gap-2 items-center">
-				<div class="flex flex-wrap gap-1">
-					{#each gtfs.patterns as pattern}
-						<div class="badge bg-orange-300">pat:{pattern}</div>
-					{/each}
-					{#each gtfs.headsigns as headsign}
-						<div class="badge bg-orange-400">hs:{headsign}</div>
-					{/each}
-				</div>
-			</div>
-			<table>
-				<tbody>
-					<tr>
-						{#each gtfs.stops as stopId}
-							<td class="badge badge-sm border-y-2 bg-orange-200 font-bold">
-								{stopId}
-							</td>
-						{/each}
-					</tr>
-				</tbody>
-			</table>
-		</div>
-	{/each}
+	</div>
 {/if}
