@@ -1,5 +1,5 @@
 <script>
-	import OperatorForm from './OperatorForm.svelte';
+	import OperatorForm from '../OperatorForm.svelte';
 </script>
 
 <svelte:head>
