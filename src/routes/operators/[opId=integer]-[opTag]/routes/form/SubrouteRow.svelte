@@ -72,18 +72,6 @@
 		</div>
 	</div>
 	<div class="flex flex-wrap gap-2">
-		<label class="form-control">
-			<div class="label py-0">
-				<span class="label-text-alt">Bandeira</span>
-			</div>
-			<input
-				type="text"
-				class="input input-bordered input-sm w-64"
-				bind:value={subroute.headsign}
-				on:change={handleChange}
-				disabled={!canEdit}
-			/>
-		</label>
 		<label class="form-control grow-0">
 			<div class="label py-0">
 				<span class="label-text-alt">De</span>
@@ -104,6 +92,18 @@
 				type="text"
 				class="input input-bordered input-sm w-64"
 				bind:value={subroute.destination}
+				on:change={handleChange}
+				disabled={!canEdit}
+			/>
+		</label>
+		<label class="form-control">
+			<div class="label py-0">
+				<span class="label-text-alt">Bandeira</span>
+			</div>
+			<input
+				type="text"
+				class="input input-bordered input-sm w-64"
+				bind:value={subroute.headsign}
 				on:change={handleChange}
 				disabled={!canEdit}
 			/>

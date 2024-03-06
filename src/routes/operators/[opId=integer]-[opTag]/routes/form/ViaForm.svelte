@@ -61,10 +61,10 @@
 	}
 
 	function handleSave() {
-		let rangePair = [];
-		if (sortedInitialSelectionIndex != null && sortedFinalSelectionIndex != null) {
-			rangePair = [sortedInitialSelectionIndex, sortedFinalSelectionIndex];
-		}
+		const rangePair =
+			sortedInitialSelectionIndex != null && sortedFinalSelectionIndex != null
+				? [sortedInitialSelectionIndex, sortedFinalSelectionIndex]
+				: null;
 
 		dispatch('save', {
 			index: viaIndex,

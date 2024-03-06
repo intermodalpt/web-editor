@@ -161,6 +161,20 @@
 		}
 	}
 
+	function deriveFlag(subroute) {
+		if (subroute.via.length > 0) {
+			const viaStr = subroute.via
+				.map((v) => {
+					return v.name;
+				})
+				.join(', ');
+
+			return `${subroute.origin} - ${subroute.destination} via ${viaStr}`;
+		}
+
+		return `${subroute.origin} - ${subroute.destination}`;
+	}
+
 	async function createSubroute(subroute) {
 		await fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
 			method: 'POST',
@@ -170,7 +184,7 @@
 			},
 			body: JSON.stringify({
 				group: subroute.group,
-				flag: subroute._original.flag,
+				flag: deriveFlag(subroute),
 				headsign: subroute.headsign,
 				origin: subroute.origin,
 				destination: subroute.destination,

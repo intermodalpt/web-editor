@@ -583,6 +583,7 @@
 	}
 
 	document.addEventListener('paste', (event) => {
+		if (tab !== tabs.stops) return;
 		let data = event.clipboardData.getData('text');
 		try {
 			data = JSON.parse(data);
@@ -726,7 +727,7 @@
 		<div class="rounded-xl shadow-lg flex flex-col gap-1 p-2 bg-base-100">
 			<div class="flex flex-row w-full gap-2 items-center">
 				<div
-					class="h-8 w-12 rounded-xl flex items-center justify-center font-bold"
+					class="h-8 min-w-12 px-1 rounded-xl flex items-center justify-center font-bold"
 					style:background-color={$route?.badge_bg}
 					style:color={$route?.badge_text}
 				>
@@ -814,7 +815,7 @@
 			</div>
 		{:else if tab == tabs.validation}
 			<div class="flex flex-col rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto">
-				<GtfsValidator {route} {stops} {routeStops} {operatorId} />
+				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={isAdmin} />
 			</div>
 		{/if}
 	</div>
