@@ -9,6 +9,7 @@
 	export let stops;
 	export let routeStops;
 	export let operatorId;
+	export let canEdit = false;
 
 	let showName = false;
 	let idType = 1;
@@ -72,7 +73,7 @@
 			return {
 				paired: pairedSubroutes,
 				unpairedSubroutes: unpairedSubroutes,
-				unpairedGtfs: unpairedGtfs
+				unpairedGtfs: unpairedGtfs || []
 			};
 		}
 	);
@@ -110,7 +111,7 @@
 		<div class="flex flex-col gap-2">
 			<h2 class="text-lg">Intermodal sem correspondente</h2>
 			{#each $validationInfo.unpairedSubroutes as unpaired}
-				<UnmatchedIml {unpaired} {stops} {showName} {idType} />
+				<UnmatchedIml {unpaired} unpairedGtfs={$validationInfo.unpairedGtfs} {stops} {showName} {idType} {canEdit} />
 			{/each}
 			<h2 class="text-lg">GTFS sem correspondente</h2>
 			{#each $validationInfo.unpairedGtfs as unpaired}

@@ -45,6 +45,8 @@
 	}
 
 	function zoomToFeatures(features) {
+		if (features.length === 0) return;
+
 		let bounds = features.reduce((bounds, feature) => {
 			return feature.geometry.coordinates.reduce((bounds, coord) => {
 				return bounds.extend(coord);
