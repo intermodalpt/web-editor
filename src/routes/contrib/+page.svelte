@@ -173,7 +173,7 @@
 			}}>Alterações</a
 		>
 	</div>
-	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-md self-start">
+	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-sm self-start">
 		<div class="card-body">
 			{#if $tab === mapTabs.undecided}
 				<div class="flex flex-wrap gap-2 justify-between">

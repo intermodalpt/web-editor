@@ -20,7 +20,7 @@
 </svelte:head>
 
 <div class="flex flex-col gap-4 py-4">
-	<div class="card card-compact self-center bg-base-100 shadow-xl w-full max-w-[900px]">
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
 		<div class="card-body">
 			<h2 class="card-title">
 				{$decodedToken.uname}<span class="text-xs">(#{$decodedToken.uid})</span>
@@ -67,7 +67,7 @@
 		</div>
 	</div>
 
-	<div class="card card-compact self-center bg-base-100 shadow-xl w-full max-w-[900px]">
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
 		<div class="card-body">
 			<h2 class="card-title">Alterações pendentes</h2>
 			{#await data.undecidedContributions}
@@ -96,7 +96,7 @@
 			{/await}
 		</div>
 	</div>
-	<div class="card card-compact self-center bg-base-100 shadow-xl w-full max-w-[900px]">
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
 		<div class="card-body">
 			<h2 class="card-title">Contribuições aceites</h2>
 			{#await data.decidedContributions}
