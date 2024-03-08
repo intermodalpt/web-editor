@@ -41,7 +41,11 @@
 
 	async function loadData() {
 		await Promise.all([
-			fetchRoutes(),
+			fetch(`${apiServer}/v1/operators/${operator.id}/routes/full`)
+				.then((r) => r.json())
+				.then((r) => {
+					$routes = r;
+				}),
 			fetchCalendars(),
 			fetchStops(),
 			fetch(`${apiServer}/v1/operators/${operator.id}/issues`)
@@ -58,7 +62,7 @@
 
 	const operators = liveQuery(() => getOperators());
 	const calendars = liveQuery(() => getCalendars());
-	const routes = liveQuery(() => getRoutes());
+	const routes = writable(null);
 	const stops = liveQuery(() => getStops());
 
 	let mapElem;
@@ -258,7 +262,9 @@
 			features: features
 		});
 
-		map.fitBounds(bounds, { padding: 50 });
+		if (features.length > 0) {
+			map.fitBounds(bounds, { padding: 50 });
+		}
 	}
 
 	function addSourcesAndLayers() {
