@@ -2,14 +2,16 @@
 	import Select from 'svelte-select';
 	import { apiServer } from '$lib/settings.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
-	import { token, decodedToken, operators } from '$lib/stores.js';
+	import { token, decodedToken } from '$lib/stores.js';
 	import { liveQuery } from 'dexie';
-	import { fetchCalendars, getCalendars, loadMissing } from '$lib/db';
+	import { fetchOperators, getOperators, fetchCalendars, getCalendars, loadMissing } from '$lib/db';
+	import { derived } from 'svelte/store';
 
 	const calendars = liveQuery(() => getCalendars());
+	const operators = liveQuery(() => getOperators());
 
 	async function loadData() {
-		await fetchCalendars();
+		await Promise.all([fetchOperators(), fetchCalendars()]);
 	}
 
 	loadData().then(async () => {
@@ -86,11 +88,17 @@
 		selectedOperatorId = parseInt(event.detail.value);
 	}
 
-	let operatorOptions = Object.entries(operators).map(([key, value]) => {
-		return {
-			value: key,
-			label: value.name
-		};
+	const operatorOptions = derived([operators], ([$operators]) => {
+		if (!$operators) {
+			return [];
+		}
+
+		return Object.entries($operators).map(([key, value]) => {
+			return {
+				value: key,
+				label: value.name
+			};
+		});
 	});
 
 	function createCalendar() {
@@ -153,7 +161,7 @@
 		<div class="card-body">
 			<h2 class="card-title">Calendários existentes</h2>
 			<Select
-				items={operatorOptions}
+				items={$operatorOptions}
 				on:select={handleSelect}
 				isClearable={false}
 				placeholder="Operador"
