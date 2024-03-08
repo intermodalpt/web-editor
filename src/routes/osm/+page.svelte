@@ -16,6 +16,9 @@
 	let stopsLoaded = false;
 	let osmStopsLoaded = false;
 	let mapLoaded = false;
+
+	const isAdmin = $decodedToken?.permissions?.is_admin || false;
+
 	$: loading = !stopsLoaded || !osmStopsLoaded || !mapLoaded;
 
 	const stops = liveQuery(() => getStops());
@@ -347,11 +350,10 @@
 		class:translate-y-[350px]={!$selectedOsmStop}
 	>
 		<div
-			class="h-[350px] w-full bg-base-100 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl shadow-md"
-			style="grid-template-rows: auto 1fr;"
+			class="h-[350px] w-full bg-base-100 lg:w-[95%] lg:rounded-t-xl shadow-md"
 		>
 			{#if $selectedOsmStop}
-				<OsmStopData osmStop={selectedOsmStop} />
+				<OsmStopData osmStop={selectedOsmStop} {isAdmin} />
 			{/if}
 		</div>
 	</div>

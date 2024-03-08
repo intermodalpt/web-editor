@@ -6,7 +6,9 @@
 
 	export let osmStop;
 
-	export let readOnly = true;
+	export let isAdmin = true;
+
+	let isCreating = false;
 
 	const stopHistory = derived(osmStop, ($osmStop, set) => {
 		if (!$osmStop) return [];
@@ -18,6 +20,13 @@
 			});
 	});
 
+	const derivedStop = derived(osmStop, async ($osmStop, set) => {
+		if (!$osmStop) return;
+		let res = await fetch(`${apiServer}/v1/osm/stops/${$osmStop.id}/paired`);
+		if (!res.ok) return;
+		set(await res.json());
+	});
+
 	const versionIndex = writable(1);
 	const selectedVersion = derived(
 		[stopHistory, versionIndex],
@@ -26,20 +35,22 @@
 			set($stopHistory[$versionIndex]);
 		}
 	);
+
+	function handleCreate() {
+		isCreating = true;
+
+		isCreating = false;
+	}
 </script>
 
-<div class="flex gap-1 justify-between flex-wrap-reverse p-2">
-	<div class="flex gap-2 flex-grow justify-end">
-		<input
-			type="button"
-			class="btn btn-error btn-xs"
-			on:click={() => ($osmStop = null)}
-			on:keypress={() => ($osmStop = null)}
-			value="X"
-		/>
-	</div>
-</div>
-<div class="w-full overflow-y-auto p-2 pt-0 bg-base-100">
+<div class="w-full overflow-y-auto p-4 relative">
+	<input
+		type="button"
+		class="btn btn-error btn-xs absolute right-2 top-2"
+		on:click={() => ($osmStop = null)}
+		on:keypress={() => ($osmStop = null)}
+		value="X"
+	/>
 	<div class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 		<div class="flex flex-col gap-1 items-start">
 			<div class="flex gap-2 items-center">
@@ -110,7 +121,7 @@
 		</div>
 		<div class="flex flex-col gap-2">
 			<div class="flex gap-2">
-				<h2 class="text-xl">Versão</h2>
+				<h2 class="text-lg">Versão</h2>
 				<Paginator
 					bind:page={$versionIndex}
 					pageSize={1}
@@ -150,7 +161,7 @@
 					</div>
 				</div>
 				<div class="flex-grow p-1 bg-base-200 rounded-lg">
-					<table class="w-full table table-zebra table-xs max-h-32 overflow-scroll">
+					<table class="w-full table table-zebra table-xs">
 						<thead>
 							<tr>
 								<th colspan="2">Atributos</th>
@@ -166,6 +177,43 @@
 					</table>
 				</div>
 			</div>
+		</div>
+		<div class="flex flex-col gap-2">
+			<h2 class="text-xl">Emparelhamento</h2>
+			{#if $derivedStop}
+				<textarea>{JSON.stringify($derivedStop)}</textarea>
+				<div class="flex flex-col flex-grow gap-2">
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Id</span>
+							<input
+								type="text"
+								value={$derivedStop?.id}
+								class="input input-bordered w-full input-sm"
+								disabled="true"
+							/>
+						</label>
+					</div>
+					<div class="form-control w-full">
+						<label class="input-group">
+							<span class="label-text w-24">Name</span>
+							<input
+								type="text"
+								value={$derivedStop?.name}
+								class="input input-bordered w-full input-sm"
+								disabled="true"
+							/>
+						</label>
+					</div>
+				</div>
+			{:else}
+				<span>Sem equivalente</span>
+				{#if isAdmin}
+					<button class="btn btn-primary" on:click={handleCreate} disabled={isCreating}
+						>Criar</button
+					>
+				{/if}
+			{/if}
 		</div>
 	</div>
 </div>
