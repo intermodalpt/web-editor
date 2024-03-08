@@ -880,29 +880,6 @@
 				{/if}
 			</div>
 		</div>
-	{:else if tab == tabs.view}
-		<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-2 transition w-[40em]">
-			<div class="bg-base-100 h-full rounded-xl shadow-lg flex flex-col">
-				<span>$route</span>
-				<textarea class="w-full rounded-2xl border-2">{JSON.stringify($route)}</textarea>
-				<span>$selectedSubrouteId</span>
-				<textarea class="w-full rounded-2xl border-2"
-					>{JSON.stringify($selectedSubrouteId)}</textarea
-				>
-				<span>$routeStops</span>
-				<textarea class="w-full rounded-2xl border-2">{JSON.stringify($routeStops)}</textarea>
-				<span>$initialSubrouteStopIds</span>
-				<textarea class="w-full rounded-2xl border-2"
-					>{JSON.stringify($initialSubrouteStopIds)}</textarea
-				>
-				<span>$subrouteStopIds</span>
-				<textarea class="w-full rounded-2xl border-2">{JSON.stringify($subrouteStopIds)}</textarea>
-				<span>$subrouteStops</span>
-				<textarea class="w-full rounded-2xl border-2">{JSON.stringify($subrouteStops)}</textarea>
-				<span>$calendars</span>
-				<textarea class="w-full rounded-2xl border-2">{JSON.stringify($calendars)}</textarea>
-			</div>
-		</div>
 	{/if}
 </div>
 
