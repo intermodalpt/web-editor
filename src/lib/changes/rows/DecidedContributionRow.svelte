@@ -13,7 +13,7 @@
 </script>
 
 <li
-	class="p-2 border-2 rounded-lg cursor-pointer bg-base-200 hover:bg-base-300"
+	class="p-2 border-2 rounded-lg cursor-pointer bg-base-100 hover:bg-base-200"
 	on:click={onClick}
 	on:keypress={onClick}
 >
