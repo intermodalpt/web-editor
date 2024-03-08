@@ -1,4 +1,8 @@
 export class SearchControl {
+	constructor(callback) {
+		this._callback = callback;
+	}
+
 	onAdd(map) {
 		this._map = map;
 		this._container = document.createElement('div');
@@ -16,7 +20,11 @@ export class SearchControl {
 
 		// When the button is clicked, show the modal
 		this._button.addEventListener('click', () => {
-			this._modal.checked = true;
+			if (this._callback) {
+				this._callback();
+			} else {
+				this._modal.checked = true;
+			}
 		});
 
 		return this._container;
