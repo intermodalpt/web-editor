@@ -12,15 +12,15 @@
 </h3>
 
 {#if expand}
-<ul>
-	{#each diffs as diff}
-		<li>
-			{diff.key}:
-			{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
-			-> <span class="bg-green-300">{diff.new}</span>
-		</li>
-	{/each}
-</ul>
+	<ul>
+		{#each diffs as diff}
+			<li>
+				{diff.key}:
+				{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
+				-> <span class="bg-green-300">{diff.new}</span>
+			</li>
+		{/each}
+	</ul>
 {:else}
 	<span
 		class="link"

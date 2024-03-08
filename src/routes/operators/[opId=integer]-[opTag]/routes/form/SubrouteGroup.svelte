@@ -12,7 +12,6 @@
 
 	let hoveredIndex;
 
-
 	function drop(event) {
 		event.preventDefault();
 		const json = event.dataTransfer.getData('text/plain');

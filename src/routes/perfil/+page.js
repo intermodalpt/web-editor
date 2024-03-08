@@ -26,15 +26,9 @@ export async function load({ params, fetch }) {
 		}
 	};
 
-	const [decidedContributions, undecidedContributions, ] = await Promise.all([
-		fetch(
-			`${apiServer}/v1/contrib/contributions/own/undecided?p=0`,
-			headers
-		).then((r) => r.json()),
-		fetch(
-			`${apiServer}/v1/contrib/contributions/own/decided?p=0`,
-			headers
-		).then((r) => r.json()),
+	const [decidedContributions, undecidedContributions] = await Promise.all([
+		fetch(`${apiServer}/v1/contrib/contributions/own/undecided?p=0`, headers).then((r) => r.json()),
+		fetch(`${apiServer}/v1/contrib/contributions/own/decided?p=0`, headers).then((r) => r.json()),
 		fetchStops()
 	]);
 

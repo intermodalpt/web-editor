@@ -107,9 +107,9 @@
 			polyline: null,
 			via: [],
 			_deleted: false,
-			_modified: true,
+			_modified: true
 		};
-		
+
 		route.subroutes.push(annotateSubroute(sr));
 		route = route;
 		dispatch('subroute-change', { id: sr.id });

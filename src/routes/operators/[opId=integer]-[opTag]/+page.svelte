@@ -383,9 +383,7 @@
 			<h2 class="card-title text-3xl">
 				{#if operator.logo_url}<img class="h-12" src={operator.logo_url} alt={operator.name} />{/if}
 				{operator.name}
-				<a class="btn btn-xs" href="/operators/{operator.id}-{operator.tag}/edit"
-					>Editar</a
-				>
+				<a class="btn btn-xs" href="/operators/{operator.id}-{operator.tag}/edit">Editar</a>
 			</h2>
 		</div>
 		<div class="stats stats-vertical lg:stats-horizontal">

@@ -44,7 +44,7 @@ export async function load({ params, fetch }) {
 				stop.id,
 				Object.assign(stop, {
 					gtfsId: gtfsId,
-					gtfsStop: gtfsId ? gtfsStops[gtfsId] : null,
+					gtfsStop: gtfsId ? gtfsStops[gtfsId] : null
 				})
 			];
 		})

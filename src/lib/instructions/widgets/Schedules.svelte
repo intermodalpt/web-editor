@@ -18,7 +18,7 @@
 						type="text"
 						class="w-10 input input-xs input-bordered px-0"
 						bind:value={schedule.code}
-                        disabled
+						disabled
 					/>
 				</td>
 				<td class="p-0">

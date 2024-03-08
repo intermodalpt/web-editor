@@ -10,7 +10,7 @@ export const prerender = false;
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch, depends }) {
 	if (!browser) {
-		return { };
+		return {};
 	}
 
 	const token = await loadToken(fetch);

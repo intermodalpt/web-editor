@@ -56,8 +56,8 @@
 		Vegetação excessiva <span class="font-mono text-xs ml-1">weeds</span>
 	</h3>
 	<p class="ml-1">
-		Se existe mata ou outras plantas em proporções que afetem o funcionamento da paragem ou dos
-		seus acessos.
+		Se existe mata ou outras plantas em proporções que afetem o funcionamento da paragem ou dos seus
+		acessos.
 	</p>
 	<h3 class="text-md font-semibold">
 		Informação obsoleta <span class="font-mono text-xs ml-1">obsolete</span>

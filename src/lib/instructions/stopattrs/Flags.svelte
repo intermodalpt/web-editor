@@ -87,6 +87,4 @@
 	</div>
 {/if}
 
-<p class="pl-2 border-info border-l-2">
-    A ordem de inserção não importa.
-</p>
+<p class="pl-2 border-info border-l-2">A ordem de inserção não importa.</p>

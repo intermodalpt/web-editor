@@ -31,7 +31,6 @@
 	encontre fundida.
 </p>
 
-
 <h3 class="text-lg font-semibold">Exemplos</h3>
 <div class="ml-2">
 	<h4 class="text-md font-semibold">Iluminação própria</h4>

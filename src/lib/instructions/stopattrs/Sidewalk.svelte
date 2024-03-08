@@ -27,7 +27,8 @@
 
 <p class="pl-2 border-error border-l-2">
 	Passeios danificados por falta de manutenção (ex. calçada arrancada por raízes) tais que são
-	desconfortáveis ou não formam caminhos viáveis, chegando inclusive a criar risco à integridade física do passageiro, deverão de ser desconsiderados.
+	desconfortáveis ou não formam caminhos viáveis, chegando inclusive a criar risco à integridade
+	física do passageiro, deverão de ser desconsiderados.
 </p>
 
 <p>
@@ -51,8 +52,8 @@
 
 <p class="pl-2 border-info border-l-2">
 	Espaços de via pública onde o piso é adequado e onde o peão se encontra inerentemente seguro (tais
-	como zona de coexistência ou espaços por trás de barreiras físicas que manifestam a detenção do espaço
-	pelo peão) são considerados passeios.
+	como zona de coexistência ou espaços por trás de barreiras físicas que manifestam a detenção do
+	espaço pelo peão) são considerados passeios.
 </p>
 <img class="h-40" src={SidewalkPhysical} alt="Barreiras físicas" />
 <img class="h-40" src={SharedStreet} alt="Via partilhada" />

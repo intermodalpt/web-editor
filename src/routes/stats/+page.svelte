@@ -97,7 +97,10 @@
 				let pictureCount = 0;
 
 				stops.forEach((stop) => {
-					if (stop.operators.length > 0 && stop.operators.every((rel) => credibleSources.includes(rel.source))) {
+					if (
+						stop.operators.length > 0 &&
+						stop.operators.every((rel) => credibleSources.includes(rel.source))
+					) {
 						idCount++;
 					}
 					if ($stopsByPic[stop.id]) {

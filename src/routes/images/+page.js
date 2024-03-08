@@ -1,4 +1,4 @@
-import { loadToken, } from '$lib/stores.js';
+import { loadToken } from '$lib/stores.js';
 
 export const csr = true;
 export const ssr = false;

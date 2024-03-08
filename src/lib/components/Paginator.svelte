@@ -10,9 +10,8 @@
 
 	$: pageCount = Math.ceil(itemCount / pageSize);
 
-
 	const range = (start, stop) => Array.from({ length: stop - start + 1 }, (_, i) => start + i);
-    
+
 	$: prePageShortcuts = page < 1 ? [] : range(Math.max(0, page - PAGE_SHORTCUTS), page - 1);
 	$: postPageShortcuts =
 		page >= pageCount - 1 ? [] : range(page + 1, Math.min(pageCount - 1, page + PAGE_SHORTCUTS));

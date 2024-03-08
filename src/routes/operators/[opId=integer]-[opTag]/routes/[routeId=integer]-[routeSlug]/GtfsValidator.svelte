@@ -111,7 +111,14 @@
 		<div class="flex flex-col gap-2">
 			<h2 class="text-lg">Intermodal sem correspondente</h2>
 			{#each $validationInfo.unpairedSubroutes as unpaired}
-				<UnmatchedIml {unpaired} unpairedGtfs={$validationInfo.unpairedGtfs} {stops} {showName} {idType} {canEdit} />
+				<UnmatchedIml
+					{unpaired}
+					unpairedGtfs={$validationInfo.unpairedGtfs}
+					{stops}
+					{showName}
+					{idType}
+					{canEdit}
+				/>
 			{/each}
 			<h2 class="text-lg">GTFS sem correspondente</h2>
 			{#each $validationInfo.unpairedGtfs as unpaired}
