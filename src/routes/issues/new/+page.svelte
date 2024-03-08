@@ -1,20 +1,26 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { token, operators } from '$lib/stores.js';
-	import { fetchStops, fetchRoutes, getStops, getRoutes, loadMissing } from '$lib/db';
-	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { Map, Marker } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
+	import { token } from '$lib/stores.js';
+	import {
+		fetchOperators,
+		getOperators,
+		fetchStops,
+		getStops,
+		fetchRoutes,
+		getRoutes,
+		loadMissing
+	} from '$lib/db';
+	import { apiServer, tileStyle } from '$lib/settings.js';
 
-	/** @type {import('./$types').PageData} */
-	export let data;
-
+	const operators = liveQuery(() => getOperators());
 	const stops = liveQuery(() => getStops());
 	const routes = liveQuery(() => getRoutes());
 
 	async function loadData() {
-		await Promise.all([fetchStops(), fetchRoutes()]);
+		await Promise.all([fetchOperators(), fetchStops(), fetchRoutes()]);
 	}
 
 	loadData().then(async () => {
@@ -120,7 +126,6 @@
 			let lngLat = e.lngLat;
 			lat = lngLat.lat;
 			lon = lngLat.lng;
-			console.log('Selected coordinates:', lngLat);
 			pointPickerMarker.setLngLat(lngLat).addTo(pointPickerMap);
 		});
 
@@ -166,12 +171,12 @@
 </script>
 
 <svelte:head>
-	<title>Problemas em [...]</title>
-	<meta name="description" content="Problemas em [...]" />
+	<title>Novo problema</title>
+	<meta name="description" content="Novo problema" />
 </svelte:head>
 
 <div class="flex flex-col gap-4 py-4">
-	<div class="card card-compact self-center bg-base-100 shadow-xl w-full max-w-[900px]">
+	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
 		<div class="card-body">
 			<h2 class="card-title">Novo problema</h2>
 
@@ -226,7 +231,6 @@
 					on:change={() => {
 						try {
 							let parsed = JSON.parse(geojson);
-							console.log(geojson);
 							if (geojsonMap) {
 								geojsonMap.getSource('geojson').setData(parsed);
 							}
@@ -346,7 +350,7 @@
 					<div>
 						{#each issueOperators as operatorId}
 							<div class="badge badge-outline badge-lg">
-								{operatorId} - {operators[operatorId].name}
+								{operatorId} - {$operators[operatorId]?.name ?? '?'}
 								<div
 									class="btn btn-error btn-circle btn-xs"
 									on:click={() => removeOperator(operatorId)}
