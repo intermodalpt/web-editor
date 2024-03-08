@@ -205,6 +205,16 @@ export function deepCopy(object) {
 	return JSON.parse(JSON.stringify(object));
 }
 
+export function isEmpty(obj) {
+	for (const prop in obj) {
+		if (Object.hasOwn(obj, prop)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 export function parseJwt(token) {
 	var base64Url = token.split('.')[1];
 	var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -253,7 +263,7 @@ export function getNearestStops(stopList, lat, lon, n = 30) {
 	return stopList.slice(0, n);
 }
 
-function needlemanWunsch(seq1, seq2) {
+export function needlemanWunsch(seq1, seq2) {
 	const n = seq1.length;
 	const m = seq2.length;
 	const gapPenalty = -1;
