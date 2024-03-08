@@ -55,7 +55,7 @@
 					},
 					properties: {
 						id: stop.id,
-						label: `${stop.id} - ${stop.name || stop.osm_name}`
+						label: `${stop.id} - ${stop.name}`
 					}
 				};
 			})

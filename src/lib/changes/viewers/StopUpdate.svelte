@@ -127,13 +127,13 @@
 </script>
 
 <h3 class="font-bold">
-	Alteração paragem {change.original.id}; {change.original.name || change.original.osm_name}
+	Alteração paragem {change.original.id}; {change.original.name}
 	{originalStop ? '' : '(⚠️Apagada)'}
 	<a
 		class="btn btn-xs btn-info"
 		rel="noreferrer"
 		target="_blank"
-		href={`https://www.openstreetmap.org/node/${change.original.external_id}`}>OSM</a
+		href={`https://www.openstreetmap.org/node/${change.original.osm_id}`}>OSM</a
 	>
 	<a
 		class="btn btn-xs btn-info"

@@ -93,7 +93,7 @@
 	class="fixed top-0 bottom-0 left-0 right-0 z-20 grid grid-cols-1 gap-1 bg-base-300 grid-rows-[auto_1fr]"
 >
 	<div class="flex justify-between bg-base-100 p-1 shadow-sm">
-		<span class="px-2 font-semibold text-lg">{$stop?.name || $stop?.osm_name}</span>
+		<span class="px-2 font-semibold text-lg">{$stop?.name}</span>
 		<div class="flex gap-3">
 			<input
 				type="button"

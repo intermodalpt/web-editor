@@ -245,8 +245,7 @@
 					coordinates: [stop.lon, stop.lat]
 				},
 				properties: {
-					id: stop.id,
-					osm_name: stop.osm_name
+					id: stop.id
 				},
 				id: stop.id
 			}))

@@ -13,5 +13,5 @@
 	>
 		Alteração paragem {change.original.id}
 	</h3>
-	<span>➥ {change.original.name || change.original.osm_name}</span>
+	<span>➥ {change.original.name}</span>
 </div>

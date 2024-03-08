@@ -66,8 +66,7 @@
 		<span>OpenStreetMap</span>
 		<a
 			class="link link-neutral ml-2 text-base border rounded-lg p-2"
-			href="https://www.openstreetmap.org/node/{$selectedStop?.external_id}"
-			>{$selectedStop?.osm_name}</a
+			href="https://www.openstreetmap.org/node/{$selectedStop?.osm_id}">{$selectedStop?.osm_name}</a
 		>
 		<span>Operadores</span>
 		<table class="table table-xs table-zebra">

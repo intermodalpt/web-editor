@@ -307,12 +307,11 @@
 					return (stops) => {
 						return stops.filter((s) => {
 							if (!filter.nameExp) {
-								return s.name === null || s.osm_name === null;
+								return s.name === null;
 							}
 
 							return (
 								(s.name && filter.nameExp.test(s.name)) ||
-								(s.osm_name && filter.nameExp.test(s.osm_name)) ||
 								s.operators.some((rel) => {
 									filter.nameExp.test(rel.name);
 								})
@@ -441,7 +440,7 @@
 					},
 					properties: {
 						stopId: stop.id,
-						label: `${stop.id} - ${stop.name || stop.osm_name}`,
+						label: `${stop.id} - ${stop.name}`,
 						score: stopScore(stop)
 					}
 				};
@@ -775,7 +774,7 @@
 								<div class="card-body">
 									<h2 class="text-md font-semibold">
 										<span class="text-md border-b-2 border-blue-500">{result.id}</span>
-										{result.name || result.osm_name}
+										{result.name}
 									</h2>
 									{#each result.operators as operator}
 										<div class="ml-2">

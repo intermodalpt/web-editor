@@ -38,7 +38,7 @@
 			}
 			// TODO Show operator name first
 
-			return [stopId, stop.name || stops[stopId].osm_name];
+			return [stopId, stop.name];
 		})
 	);
 

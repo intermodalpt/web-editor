@@ -163,7 +163,7 @@
 				{#each $osmStops.slice(page * pageSize, (page + 1) * pageSize) as stop}
 					<tr>
 						<td> {stop.id}</td>
-						<td> {stop.osm_name}</td>
+						<td> {stop.name}</td>
 						<td>
 							<input
 								type="text"

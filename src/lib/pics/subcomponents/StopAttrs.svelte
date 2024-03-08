@@ -96,7 +96,7 @@
 
 <div class="w-full border-2 rounded-md p-2 relative flex flex-col gap-2">
 	<div class="font-semibold">
-		{stop?.id} - {stop?.short_name || stop?.name || stop?.osm_name}
+		{stop?.id} - {stop?.short_name || stop?.name}
 		{stop ? '' : '(⚠️)'}
 	</div>
 	{#if editable}

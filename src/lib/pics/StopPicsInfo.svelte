@@ -36,9 +36,7 @@
 				dispatch('select-stop', { id: $selectedStop.id });
 			}}
 		>
-			{$selectedStop?.id}: {$selectedStop?.short_name ||
-				$selectedStop?.name ||
-				$selectedStop?.osm_name}
+			{$selectedStop?.id}: {$selectedStop?.short_name || $selectedStop?.name}
 		</span></span
 	>
 	{#if $stopPics.length === 0}

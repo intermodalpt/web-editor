@@ -126,7 +126,7 @@
 						id: stop.id,
 						stopRef: stop.operators.find((op) => op.operator_id === operatorId)?.stop_ref,
 						type: 'iml',
-						name: stop.name || stop.official_name || stop.osm_name,
+						name: stop.name,
 						lat: stop.lat,
 						lon: stop.lon
 					};
@@ -337,8 +337,7 @@
 						coordinates: [stop.lon, stop.lat]
 					},
 					properties: {
-						id: stop.id,
-						osm_name: stop.osm_name
+						id: stop.id
 					}
 				};
 			})
@@ -1045,7 +1044,7 @@
 						>
 							{$selectedStop?.id}
 						</div>
-						<span class="font-bold">{$selectedStop?.osm_name}</span>
+						<span class="font-bold">{$selectedStop?.name}</span>
 					</div>
 					<div class="flex gap-2">
 						<div class="flex">
