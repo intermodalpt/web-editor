@@ -39,10 +39,15 @@
 				</svg>
 			</label>
 		</div>
-		<a href="/" class="font-bold text-xl flex items-center gap-2">
-			<img src="/logo.svg" alt="logo" class="h-8" />
-			<span>Editor</span>
-		</a>
+		<div class="flex gap-2 items-center">
+			<a href="/" class="font-bold text-xl flex items-center gap-2">
+				<img src="/logo.svg" alt="logo" class="h-8" />
+				<span class="hidden sm:inline">Editor</span>
+			</a>
+			<button class="btn btn-xs btn-secondary btn-outline" on:click={() => regionModal.showModal()}>
+				{$selectedRegion ? $selectedRegion.name : 'Sem região'}
+			</button>
+		</div>
 		<nav class="hidden lg:block">
 			<div class="tabs tabs-boxed mx-auto justify-around">
 				<a href="/stops" class="tab" class:tab-active={$page.url.pathname.startsWith('/stops')}>
@@ -64,15 +69,28 @@
 				<a href="/stats" class="tab" class:tab-active={$page.url.pathname.startsWith('/stats')}>
 					Estado
 				</a>
+				<a href="/osm" class="tab" class:tab-active={$page.url.pathname.startsWith('/osm')}>
+					OSM
+				</a>
 			</div>
 		</nav>
 		<div>
-			<button class="btn btn-xs btn-secondary btn-outline" on:click={() => regionModal.showModal()}>
-				{$selectedRegion ? $selectedRegion.name : 'Sem região'}
-			</button>
 			{#if $decodedToken}
-				<div class="bg-base-200 rounded-lg p-1">
-					<a class="font-bold px-1" href="/perfil">{$decodedToken?.uname}</a>
+				<div class="bg-base-200 rounded-lg p-1 flex gap-2">
+					<a class="btn btn-info btn-xs h-8 p-1 hidden sm:flex" href="/perfil"
+						>{$decodedToken?.uname}</a
+					>
+					<a class="btn btn-info btn-xs h-8 w-8 p-1 sm:hidden" href="/perfil">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+							<!-- Font Awesome Free 6.4.0 https://fontawesome.com/license/free (Free License). -->
+							<path
+								d="M304 128a80 80 0 1 0 -160 0 80 80 0 1 0 160 0zM96 128a128 128 0 1 1 256 0A128 128
+								0 1 1 96 128zM49.3 464H398.7c-8.9-63.3-63.3-112-129-112H178.3c-65.7 0-120.1 48.7-129
+								112zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3
+								29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3z"
+							/>
+						</svg>
+					</a>
 					<svg
 						class="btn btn-error btn-xs fill-error-content h-8 w-8 p-1"
 						on:click={logout}
@@ -99,10 +117,11 @@
 <dialog bind:this={regionModal} class="modal">
 	<div class="modal-box w-auto max-w-full">
 		<h2 class="text-lg text-center mb-4">Escolha a região a editar</h2>
-		<div class="grid grid-cols-3 gap-2">
+		<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
 			{#each $sortedRegions as region}
 				<button
-					class="btn btn-ghost"
+					class="btn btn-secondary"
+					class:btn-ghost={$regionId != region.id}
 					on:click={() => {
 						setRegion(region.id);
 						regionModal.close();

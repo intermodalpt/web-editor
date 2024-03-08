@@ -45,6 +45,9 @@
 			<li>
 				<a href="/stats" class:active={$page.url.pathname.startsWith('/stats')}>Estado</a>
 			</li>
+			<li>
+				<a href="/osm" class:active={$page.url.pathname.startsWith('/osm')}>OSM</a>
+			</li>
 		</ul>
 	</div>
 </div>
