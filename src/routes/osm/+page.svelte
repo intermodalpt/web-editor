@@ -5,9 +5,9 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { decodedToken, token, toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { fetchStops, getStops, loadMissing } from '$lib/db';
+	import { fetchRegions, getRegions, fetchStops, getStops, loadMissing } from '$lib/db';
 	import OsmStopData from './OsmStopData.svelte';
 
 	let map;
@@ -17,15 +17,15 @@
 	let osmStopsLoaded = false;
 	let mapLoaded = false;
 
-	const isAdmin = $decodedToken?.permissions?.is_admin || false;
-
 	$: loading = !stopsLoaded || !osmStopsLoaded || !mapLoaded;
 
+	const regions = liveQuery(() => getRegions());
 	const stops = liveQuery(() => getStops());
 	const osmStops = writable({});
 
 	async function loadData() {
 		Promise.all([
+			fetchRegions(),
 			// Ensure that stops are available in indexedDB
 			fetchStops().then((r) => {
 				stopsLoaded = true;
@@ -349,11 +349,9 @@
 		class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750"
 		class:translate-y-[350px]={!$selectedOsmStop}
 	>
-		<div
-			class="h-[350px] w-full bg-base-100 lg:w-[95%] lg:rounded-t-xl shadow-md"
-		>
+		<div class="h-[350px] w-full bg-base-100 lg:w-[95%] lg:rounded-t-xl shadow-md">
 			{#if $selectedOsmStop}
-				<OsmStopData osmStop={selectedOsmStop} {isAdmin} />
+				<OsmStopData {regions} osmStop={selectedOsmStop} />
 			{/if}
 		</div>
 	</div>

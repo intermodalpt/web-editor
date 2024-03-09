@@ -1,14 +1,22 @@
 <script>
 	import { writable, derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
+	import { decodedToken, token, toast } from '$lib/stores.js';
+	import { distance } from '$lib/utils.js';
+	import { regionId } from '$lib/db.js';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
 	export let osmStop;
-
-	export let isAdmin = true;
+	export let regions;
 
 	let isCreating = false;
+	let creationDialog;
+
+	let newStopName;
+	let newStopRegions = $regionId ? [$regionId] : [];
+
+	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 
 	const stopHistory = derived(osmStop, ($osmStop, set) => {
 		if (!$osmStop) return [];
@@ -20,11 +28,21 @@
 			});
 	});
 
-	const derivedStop = derived(osmStop, async ($osmStop, set) => {
+	const nounce = writable(0);
+
+	const derivedStop = derived([osmStop, nounce], async ([$osmStop, $nounce], set) => {
 		if (!$osmStop) return;
 		let res = await fetch(`${apiServer}/v1/osm/stops/${$osmStop.id}/paired`);
-		if (!res.ok) return;
-		set(await res.json());
+		if (res.ok) {
+			set(await res.json());
+		} else {
+			set(null);
+		}
+	});
+
+	const derivedStopDistance = derived([derivedStop, osmStop], ([$derivedStop, $osmStop]) => {
+		if (!$derivedStop || !$osmStop) return;
+		return distance($derivedStop.lat, $derivedStop.lon, $osmStop.lat, $osmStop.lon);
 	});
 
 	const versionIndex = writable(1);
@@ -36,8 +54,64 @@
 		}
 	);
 
-	function handleCreate() {
+	function handlePrecreate() {
+		newStopName = $osmStop.name;
+		creationDialog.showModal();
+	}
+
+	async function handleCreate() {
 		isCreating = true;
+		newStopName = newStopName.trim();
+
+		const newStop = {
+			lat: $osmStop.lat,
+			lon: $osmStop.lon,
+			osm_id: $osmStop.id,
+			name: newStopName
+		};
+		let res = await fetch(`${apiServer}/v1/stops`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			},
+			body: JSON.stringify(newStop)
+		});
+
+		if (!res.ok) {
+			res
+				.json()
+				.catch((e) => {
+					toast('Falha ao criar paragem', 'error');
+					console.error(e);
+				})
+				.then((data) => {
+					toast('Falha ao criar paragem:' + data.message, 'error');
+				});
+			console.error(res);
+			isCreating = false;
+			return;
+		}
+		$nounce++;
+		creationDialog.close();
+
+		let newStopId = await res.json().id;
+
+		for (const newRegionId of newStopRegions) {
+			res = await fetch(`${apiServer}/v1/regions/${newRegionId}/stops/${newStopId}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$token}`
+				}
+			});
+			if (!res.ok) {
+				toast('Falha ao associar paragem à região', 'error');
+				console.error(res);
+				isCreating = false;
+				return;
+			}
+		}
 
 		isCreating = false;
 	}
@@ -181,7 +255,6 @@
 		<div class="flex flex-col gap-2">
 			<h2 class="text-xl">Emparelhamento</h2>
 			{#if $derivedStop}
-				<textarea>{JSON.stringify($derivedStop)}</textarea>
 				<div class="flex flex-col flex-grow gap-2">
 					<div class="form-control w-full">
 						<label class="input-group">
@@ -196,7 +269,7 @@
 					</div>
 					<div class="form-control w-full">
 						<label class="input-group">
-							<span class="label-text w-24">Name</span>
+							<span class="label-text w-24">Nome</span>
 							<input
 								type="text"
 								value={$derivedStop?.name}
@@ -205,11 +278,15 @@
 							/>
 						</label>
 					</div>
+					<div class="flex gap-2">
+						<CoordViewer lat={$derivedStop?.lat} lon={$derivedStop?.lon} />
+						<span>({$derivedStopDistance} metros)</span>
+					</div>
 				</div>
 			{:else}
 				<span>Sem equivalente</span>
 				{#if isAdmin}
-					<button class="btn btn-primary" on:click={handleCreate} disabled={isCreating}
+					<button class="btn btn-primary" on:click={handlePrecreate} disabled={isCreating}
 						>Criar</button
 					>
 				{/if}
@@ -217,3 +294,40 @@
 		</div>
 	</div>
 </div>
+
+<dialog bind:this={creationDialog} class="modal modal-bottom sm:modal-middle z-30">
+	<div class="modal-box z-30 max-w-5xl grid grid-cols-1" style="grid-template-rows: auto 1fr;">
+		<form method="dialog">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+		</form>
+		<div class="flex flex-col gap-1 mt-2 overflow-y-scroll">
+			<div class="form-control w-full">
+				<label class="input-group">
+					<span class="label-text w-24">Nome</span>
+					<input type="text" value={newStopName} class="input input-bordered w-full input-sm" />
+				</label>
+			</div>
+			<span class="text-xs">Regiões</span>
+			<select class="w-full select select-bordered" multiple bind:value={newStopRegions}>
+				{#each Object.values($regions || {}) as region}
+					<option value={region.id}>{region.name}</option>
+				{/each}
+			</select>
+			<div class="flex justify-end">
+				<button
+					class="btn btn-primary"
+					on:click={handleCreate}
+					disabled={isCreating || newStopRegions.length == 0}
+				>
+					{#if isCreating}
+						<span class="loading loading-spinner loading-xs" />
+					{/if}
+					Criar
+				</button>
+			</div>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>Fechar</button>
+	</form>
+</dialog>
