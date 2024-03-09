@@ -179,7 +179,7 @@
 					<span class="label-text w-24">Criação</span>
 					<input
 						type="text"
-						value={new Date($osmStop.creation).toDateString()}
+						value={new Date($osmStop.creation).toUTCString()}
 						class="input input-bordered w-full input-sm"
 						disabled="true"
 					/>
@@ -190,7 +190,7 @@
 					<span class="label-text w-24">Edição</span>
 					<input
 						type="text"
-						value={new Date($osmStop.modification).toDateString()}
+						value={new Date($osmStop.modification).toUTCString()}
 						class="input input-bordered w-full input-sm"
 						disabled="true"
 					/>
@@ -253,7 +253,7 @@
 							<span class="label-text w-24">Data</span>
 							<input
 								type="text"
-								value={new Date($selectedVersion?.timestamp).toDateString()}
+								value={new Date($selectedVersion?.timestamp).toUTCString()}
 								class="input input-bordered w-full input-sm"
 								disabled="true"
 							/>
