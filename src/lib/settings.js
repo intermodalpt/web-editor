@@ -1,4 +1,4 @@
-export const version = '23.11.0';
+export const version = '24.03.0';
 
 export const apiServer = 'https://api.intermodal.pt';
 
