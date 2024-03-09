@@ -1,6 +1,6 @@
 <script>
 	import { writable, derived } from 'svelte/store';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer, movementTreshold } from '$lib/settings.js';
 	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { distance } from '$lib/utils.js';
 	import { regionId } from '$lib/db.js';
@@ -115,19 +115,40 @@
 
 		isCreating = false;
 	}
+
+	function handleSyncPosition() {
+		fetch(`${apiServer}/v1/stops/${$derivedStop.id}/position`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			}
+		})
+			.then((res) => {
+				if (res.ok) {
+					toast('Posição sincronizada', 'success');
+				} else {
+					toast('Falha ao sincronizar posição', 'error');
+				}
+			})
+			.catch((e) => {
+				toast('Falha ao sincronizar posição', 'error');
+				console.error(e);
+			});
+	}
 </script>
 
-<div class="w-full overflow-y-auto p-4 relative">
+<div class="w-full h-full p-4 relative">
 	<input
 		type="button"
-		class="btn btn-error btn-xs absolute right-2 top-2"
+		class="btn btn-error btn-xs absolute right-2 top-2 z-50"
 		on:click={() => ($osmStop = null)}
 		on:keypress={() => ($osmStop = null)}
 		value="X"
 	/>
-	<div class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+	<div class="w-full h-full overflow-y-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 		<div class="flex flex-col gap-1 items-start">
-			<div class="flex gap-2 items-center">
+			<div class="flex flex-wrap gap-2 items-center">
 				{#if $osmStop.deleted}
 					<span class="text-error border-error px-2 border-l-2 border-r-2">Apagada</span>
 				{/if}
@@ -194,7 +215,7 @@
 			</div>
 		</div>
 		<div class="flex flex-col gap-2">
-			<div class="flex gap-2">
+			<div class="flex flex-wrap gap-2">
 				<h2 class="text-lg">Versão</h2>
 				<Paginator
 					bind:page={$versionIndex}
@@ -234,7 +255,7 @@
 						</label>
 					</div>
 				</div>
-				<div class="flex-grow p-1 bg-base-200 rounded-lg">
+				<div class="flex-grow p-1 bg-base-200 rounded-lg h-64 overflow-scroll">
 					<table class="w-full table table-zebra table-xs">
 						<thead>
 							<tr>
@@ -281,6 +302,18 @@
 					<div class="flex gap-2">
 						<CoordViewer lat={$derivedStop?.lat} lon={$derivedStop?.lon} />
 						<span>({$derivedStopDistance} metros)</span>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<button
+							class="btn grow btn-primary"
+							on:click={handleSyncPosition}
+							disabled={!isAdmin ||
+								!$derivedStopDistance ||
+								Math.abs($derivedStopDistance) < movementTreshold}
+						>
+							Sincronizar posição
+						</button>
+						<button class="btn grow btn-primary" disabled> Submeter dados </button>
 					</div>
 				</div>
 			{:else}
