@@ -7,7 +7,7 @@
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { toast } from '$lib/stores.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { fetchRegions, getRegions, fetchStops, getStops, loadMissing } from '$lib/db';
+	import { fetchRegions, getRegions, loadMissing } from '$lib/db';
 	import OsmStopData from './OsmStopData.svelte';
 
 	let map;
@@ -20,17 +20,23 @@
 	$: loading = !stopsLoaded || !osmStopsLoaded || !mapLoaded;
 
 	const regions = liveQuery(() => getRegions());
-	const stops = liveQuery(() => getStops());
+	const stops = writable({});
 	const osmStops = writable({});
+
+	async function fetchStops() {
+		return await fetch(`${apiServer}/v1/stops`)
+			.then((r) => r.json())
+			.then((r) => {
+				$stops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
+				stopsLoaded = true;
+				return r;
+			});
+	}
 
 	async function loadData() {
 		Promise.all([
 			fetchRegions(),
-			// Ensure that stops are available in indexedDB
-			fetchStops().then((r) => {
-				stopsLoaded = true;
-				return r;
-			}),
+			fetchStops(),
 			fetch(`${apiServer}/v1/osm/stops`)
 				.then((r) => r.json())
 				.then((r) => {
@@ -38,7 +44,7 @@
 					osmStopsLoaded = true;
 				})
 		])
-			.then(async ([stops, osmStops]) => {
+			.then(async ([regions, stops, osmStops]) => {
 				await tick();
 				if (mapLoaded) {
 					loadStops();
@@ -90,13 +96,12 @@
 				.filter(([score, result]) => score > 0)
 				.sort((a, b) => a[0] - b[0])
 				.map(([, result]) => result);
-			console.log(result);
 			return result;
 		}
 	);
 
 	export function selectStop(stopId) {
-		$selectedOsmStop = $stops[stopId];
+		$selectedOsmStop = $osmStops[stopId];
 	}
 
 	function loadStops() {
@@ -150,6 +155,53 @@
 	}
 
 	function addSourcesAndLayers() {
+		map.addSource('stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			},
+			clusterRadius: 40,
+			clusterMinPoints: 3
+		});
+
+		map.addLayer({
+			id: 'stop-labels',
+			type: 'symbol',
+			source: 'stops',
+			layout: {
+				'text-field': ['get', 'label'],
+				'text-font': ['Open Sans', 'Arial Unicode MS'],
+				'text-size': 10,
+				'text-offset': [2, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+			},
+			minzoom: 16
+		});
+
+		map.addLayer({
+			id: 'stop-points',
+			type: 'circle',
+			source: 'stops',
+			filter: ['!', ['has', 'point_count']],
+			paint: {
+				'circle-color': 'rgba(0, 0, 0, 0.0)',
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 0],
+						[11, 0],
+						[16, 8],
+						[18, 18]
+					]
+				},
+				'circle-stroke-width': 2,
+				'circle-stroke-color': '#f00'
+			}
+		});
+
 		map.addSource('osm-stops', {
 			type: 'geojson',
 			data: {
@@ -190,53 +242,6 @@
 						[11, 2],
 						[17, 7],
 						[18, 15]
-					]
-				},
-				'circle-stroke-width': 1,
-				'circle-stroke-color': '#fff'
-			}
-		});
-
-		map.addSource('stops', {
-			type: 'geojson',
-			data: {
-				type: 'FeatureCollection',
-				features: []
-			},
-			clusterRadius: 40,
-			clusterMinPoints: 3
-		});
-
-		map.addLayer({
-			id: 'stop-labels',
-			type: 'symbol',
-			source: 'stops',
-			layout: {
-				'text-field': ['get', 'label'],
-				'text-font': ['Open Sans', 'Arial Unicode MS'],
-				'text-size': 10,
-				'text-offset': [2, 0],
-				'text-anchor': 'left',
-				'text-max-width': 150,
-				'text-allow-overlap': false
-			},
-			minzoom: 16
-		});
-
-		map.addLayer({
-			id: 'stop-points',
-			type: 'circle',
-			source: 'stops',
-			filter: ['!', ['has', 'point_count']],
-			paint: {
-				'circle-color': 'rgba(50, 150, 220, 0.6)',
-				'circle-radius': {
-					base: 1.75,
-					stops: [
-						[0, 1.5],
-						[11, 2],
-						[17, 8],
-						[18, 18]
 					]
 				},
 				'circle-stroke-width': 1,
@@ -351,7 +356,14 @@
 	>
 		<div class="h-[350px] w-full bg-base-100 lg:w-[95%] lg:rounded-t-xl shadow-md">
 			{#if $selectedOsmStop}
-				<OsmStopData {regions} osmStop={selectedOsmStop} />
+				<OsmStopData
+					{regions}
+					osmStop={selectedOsmStop}
+					on:stopcreated={async () => {
+						await fetchStops();
+						loadStops();
+					}}
+				/>
 			{/if}
 		</div>
 	</div>

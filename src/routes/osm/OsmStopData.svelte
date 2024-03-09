@@ -1,4 +1,5 @@
 <script>
+	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { apiServer, movementTreshold } from '$lib/settings.js';
 	import { decodedToken, token, toast } from '$lib/stores.js';
@@ -6,6 +7,8 @@
 	import { regionId } from '$lib/db.js';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
+
+	const dispatch = createEventDispatcher();
 
 	export let osmStop;
 	export let regions;
@@ -92,10 +95,12 @@
 			isCreating = false;
 			return;
 		}
+		let newStopId = await res.json().id;
+
 		$nounce++;
 		creationDialog.close();
 
-		let newStopId = await res.json().id;
+		dispatch('stopcreated', { id: newStopId });
 
 		for (const newRegionId of newStopRegions) {
 			res = await fetch(`${apiServer}/v1/regions/${newRegionId}/stops/${newStopId}`, {
