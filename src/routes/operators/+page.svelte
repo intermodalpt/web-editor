@@ -1,9 +1,11 @@
 <script>
 	import { derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { loadMissing, fetchOperators, getOperators, regionId } from '$lib/db';
+	import { loadMissing, fetchOperators, getOperators, getRegions, regionId } from '$lib/db';
+	import OperatorCard from './OperatorCard.svelte';
 
 	const operators = liveQuery(() => getOperators());
+	const regions = liveQuery(() => getRegions());
 
 	const sortedOperators = derived(operators, ($operators) => {
 		if (!$operators) return [];
@@ -37,34 +39,18 @@
 	<meta name="description" content="Editor Intermodal - Operadores" />
 </svelte:head>
 
-<div class="card max-w-[100em] self-center shadow-md my-4 bg-base-100">
+<div class="card max-w-[100em] self-center shadow-sm my-4 bg-base-100">
 	<div class="card-body">
 		<h2 class="card-title">Operadores</h2>
-		<div class="grid p-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+		<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 			{#each $regionOperators as operator}
-				<a
-					class="border-[2px] pointer-cursor rounded-lg hover:bg-base-200 p-1 flex items-start"
-					href="/operators/{operator.id}-{operator.tag}"
-				>
-					{#if operator.logo_url}
-						<img class="h-12" src={operator.logo_url} alt={operator.name} />
-					{/if}
-					<span class="text-lg lg:text-xl font-bold p-3">{operator.name}</span>
-				</a>
+				<OperatorCard {operator} regions={$regions} />
 			{/each}
 		</div>
-		<div class="divider">Outros</div>
-		<div class="grid p-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+		<div class="divider">Em outras regiões</div>
+		<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 			{#each $otherOperators as operator}
-				<a
-					class="border-[2px] pointer-cursor rounded-lg hover:bg-base-200 p-1 flex items-start"
-					href="/operators/{operator.id}-{operator.tag}"
-				>
-					{#if operator.logo_url}
-						<img class="h-12" src={operator.logo_url} alt={operator.name} />
-					{/if}
-					<span class="text-lg lg:text-xl font-bold p-3">{operator.name}</span>
-				</a>
+				<OperatorCard {operator} regions={$regions} />
 			{/each}
 		</div>
 	</div>
