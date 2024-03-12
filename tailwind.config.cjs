@@ -7,6 +7,13 @@ module.exports = {
 	},
 	plugins: [require('daisyui')],
 
+	safelist: [
+		'alert-info',
+		'alert-success',
+		'alert-warning',
+		'alert-error'
+	],
+
 	daisyui: {
 		themes: [
 			{
