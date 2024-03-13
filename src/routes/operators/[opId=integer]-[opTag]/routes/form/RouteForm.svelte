@@ -198,7 +198,7 @@
 	}
 
 	async function createSubroute(subroute) {
-		await fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
+		return await fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -226,6 +226,9 @@
 					subroute._original.circular = subroute.circular = data.circular;
 					subroute._updateModified();
 				});
+
+				toast(`Variante criada com sucesso`, 'success');
+				return true;
 			} else {
 				res
 					.text()
@@ -235,12 +238,14 @@
 					.catch(() => {
 						alert('Erro a criar variante');
 					});
+
+				return false;
 			}
 		});
 	}
 
 	async function patchSubroute(subroute) {
-		await fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
+		return await fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
@@ -266,6 +271,9 @@
 				subroute._original.via = subroute.via;
 				subroute._original.circular = subroute.circular;
 				subroute._updateModified();
+
+				toast(`Variante ${subroute.id} alterada com sucesso`, 'success');
+				return true;
 			} else {
 				res
 					.text()
@@ -275,6 +283,8 @@
 					.catch(() => {
 						toast('Erro a alterar variante', 'error');
 					});
+
+				return false;
 			}
 		});
 	}
@@ -296,6 +306,8 @@
 				} else {
 					if (res.ok) {
 						routeChanged = false;
+						toast(`Variante apagada com sucesso`);
+						return true;
 					} else {
 						res
 							.text()
@@ -305,6 +317,7 @@
 							.catch(() => {
 								toast('Erro a apagar variante', 'error');
 							});
+						return false;
 					}
 				}
 			});
