@@ -57,7 +57,7 @@ export function subrouteTitle(sr) {
 	let hasVia = sr.via != null && sr.via.length > 0;
 
 	if (hasOrigin && hasDestination) {
-		let viaStr = `via ${sr.via.join(', ')}`;
+		let viaStr = `via ${sr.via.map((place) => place.name).join(', ')}`;
 		return hasVia
 			? `${sr.origin} - ${sr.destination} ${viaStr}`
 			: `${sr.origin} - ${sr.destination}`;
