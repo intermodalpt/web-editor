@@ -11,11 +11,25 @@
 	export let stops = {};
 	export let routeStops = {};
 	export let routeTypes = [];
+
 	export let canEdit = false;
 
 	let isSaving = false;
+	let inherit_colors =
+		(route.badge_text_color ?? null) == null || (route.badge_bg_color ?? null) == null;
+	let badge_text_color = route.badge_text_color ?? '#000000';
+	let badge_bg_color = route.badge_bg_color ?? '#ffffff';
+
+	let isValid = false;
 
 	function handleChange() {
+		if (inherit_colors) {
+			route.badge_text_color = null;
+			route.badge_bg_color = null;
+		} else {
+			route.badge_text_color = badge_text_color;
+			route.badge_bg_color = badge_bg_color;
+		}
 		route._modified =
 			route._original.code != route.code ||
 			route._original.name != route.name ||
@@ -24,8 +38,12 @@
 			// route._original.operator_id != route.operator ||
 			// route._original.type_id != route.type_id ||
 			route._original.main_subroute != route.main_subroute ||
+			route._original.badge_text_color != (inherit_colors ? null : route.badge_text_color) ||
+			route._original.badge_bg_color != (inherit_colors ? null : route.badge_bg_color) ||
 			route.subroutes.some((sr) => sr._modified === true) ||
 			route.subroutes.some((sr) => sr.id < 0);
+
+		isValid = route.code != null && route.name != null && route.type_id != null;
 	}
 
 	async function save() {
@@ -83,7 +101,9 @@
 				name: route.name,
 				type_id: route.type_id,
 				circular: route.circular,
-				active: route.active
+				active: route.active,
+				badge_text_color: inherit_colors ? null : route.badge_text_color,
+				badge_bg_color: inherit_colors ? null : route.badge_bg_color
 			})
 		});
 		if (res.ok) {
@@ -114,7 +134,9 @@
 				name: route.name,
 				type_id: route.type_id,
 				circular: route.circular,
-				active: route.active
+				active: route.active,
+				badge_text_color: inherit_colors ? null : route.badge_text_color,
+				badge_bg_color: inherit_colors ? null : route.badge_bg_color
 			})
 		});
 		if (res.ok) {
@@ -299,6 +321,7 @@
 					type="text"
 					bind:value={route.code}
 					class="input input-bordered w-20 input-sm"
+					class:input-error={!route.code || route.code.trim() === ''}
 					disabled={!canEdit}
 					on:change={handleChange}
 				/>
@@ -311,6 +334,7 @@
 					type="text"
 					bind:value={route.name}
 					class="input input-bordered grow input-sm"
+					class:input-error={!route.name || route.name.trim() === ''}
 					disabled={!canEdit}
 					on:change={handleChange}
 				/>
@@ -321,6 +345,7 @@
 				<span>Tipo</span>
 				<select
 					class="input input-sm input-bordered"
+					class:input-error={!route.type_id}
 					disabled={!canEdit}
 					on:change={handleChange}
 					bind:value={route.type_id}
@@ -331,7 +356,7 @@
 				</select>
 			</label>
 		</div>
-		<div class="flex gap-2">
+		<div class="flex gap-1">
 			<div class="form-control">
 				<label class="input-group">
 					<span>Circular</span>
@@ -356,6 +381,43 @@
 					/>
 				</label>
 			</div>
+			<div class="form-control">
+				<label class="input-group">
+					<span>Herdar cores</span>
+					<input
+						type="checkbox"
+						bind:checked={inherit_colors}
+						on:change={handleChange}
+						class="checkbox"
+						disabled={!canEdit}
+					/>
+				</label>
+			</div>
+		</div>
+
+		<div class="form-control" class:hidden={inherit_colors}>
+			<label class="input-group">
+				<span>Primária</span>
+				<input
+					type="color"
+					bind:value={badge_text_color}
+					on:change={handleChange}
+					class="input input-bordered input-xs"
+					disabled={!canEdit}
+				/>
+			</label>
+		</div>
+		<div class="form-control" class:hidden={inherit_colors}>
+			<label class="input-group">
+				<span>Fundo</span>
+				<input
+					type="color"
+					bind:value={badge_bg_color}
+					on:change={handleChange}
+					class="input input-bordered input-xs"
+					disabled={!canEdit}
+				/>
+			</label>
 		</div>
 	</div>
 	<SubrouteForm
@@ -385,7 +447,7 @@
 				class="btn btn-primary"
 				class:hidden={!canEdit}
 				on:mouseup={save}
-				disabled={!route._modified}
+				disabled={!route._modified || !isValid || isSaving}
 			>
 				Guardar
 			</button>

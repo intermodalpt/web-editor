@@ -24,7 +24,7 @@
 		...structuredClone(blankRoute),
 		subroutes: [],
 		_original: blankRoute,
-		_modified: true
+		_modified: false
 	};
 
 	function handleRouteCreated(event) {
