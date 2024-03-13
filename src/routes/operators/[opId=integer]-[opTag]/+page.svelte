@@ -8,12 +8,10 @@
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { decodedToken } from '$lib/stores.js';
 	import {
-		fetchOperators,
+		getRegions,
 		getOperators,
 		fetchCalendars,
 		getCalendars,
-		fetchRoutes,
-		getRoutes,
 		fetchStops,
 		getStops,
 		loadMissing
@@ -60,6 +58,7 @@
 		await loadMissing();
 	});
 
+	const regions = liveQuery(() => getRegions());
 	const operators = liveQuery(() => getOperators());
 	const calendars = liveQuery(() => getCalendars());
 	const routes = writable(null);
@@ -391,7 +390,16 @@
 				{operator.name}
 				<a class="btn btn-xs" href="/operators/{operator.id}-{operator.tag}/edit">Editar</a>
 			</h2>
+			{#if $regions}
+				<div class="flex flex-wrap gap-2 mt-1 -mb-8">
+					<div>Presença em</div>
+					{#each operator.regions as regionId}
+						<div class="border-b-2 border-sky-300">{$regions[regionId]?.name ?? '?'}</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
+
 		<div class="stats stats-vertical lg:stats-horizontal">
 			<div class="stat">
 				<div class="stat-title">Linhas</div>
