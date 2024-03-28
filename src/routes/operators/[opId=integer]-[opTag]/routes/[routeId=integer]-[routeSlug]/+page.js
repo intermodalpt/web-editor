@@ -8,7 +8,7 @@ export const ssr = false;
 export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
-export async function load({ params }) {
+export async function load({ params, fetch }) {
 	const routeId = parseInt(params.routeId);
 	const operatorId = parseInt(params.opId);
 
@@ -23,11 +23,20 @@ export async function load({ params }) {
 		throw error(404, 'Operator not found');
 	}
 
-	const [routeRes, routeTypesRes] = await Promise.all([
+	const [stopsRes, routeRes, routeTypesRes] = await Promise.all([
+		fetch(`${apiServer}/v1/operators/${operatorId}/stops/full`),
 		fetch(`${apiServer}/v1/routes/${routeId}/full`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/routes/types`)
 	]);
 
+
+	if (!stopsRes.ok) {
+		if (stopsRes.status === 0) {
+			throw error(500, 'Failed to connect to server');
+		} else {
+			throw error(500, 'Failed to fetch stops');
+		}
+	}
 	if (!routeRes.ok) {
 		if (routeRes.status === 0) {
 			throw error(500, 'Failed to connect to server');
@@ -47,11 +56,13 @@ export async function load({ params }) {
 		}
 	}
 
+	const stops = Object.fromEntries((await stopsRes.json()).map((stop) => [stop.id, stop]));
 	const route = await routeRes.json();
 	const routeTypes = await routeTypesRes.json();
 
 	return {
 		operator: operator,
+		stops: stops,
 		route: route,
 		routeTypes: routeTypes
 	};

@@ -7,14 +7,17 @@
 	import { liveQuery } from 'dexie';
 	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { fetchStops, fetchCalendars, getStops, getCalendars, loadMissing } from '$lib/db';
+	import { regionMapParams } from '$lib/utils.js';
+	import { fetchCalendars, getCalendars, loadMissing, selectedRegion } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
 	import { annotateSubroute, subrouteTitle } from '../aux.js';
 	import RouteForm from '../form/RouteForm.svelte';
 	import DepartureEditor from './DepartureEditor.svelte';
 	import GtfsValidator from './GtfsValidator.svelte';
 
+	/** @type {import('./$types').PageData} */
 	export let data;
+
 	const routeId = data.route.id;
 	const operatorId = data.route.operator;
 	const routeTypes = data.routeTypes;
@@ -22,17 +25,9 @@
 	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 
 	// Stores and reactive variables
-	const stops = liveQuery(() => getStops());
+	// PS: We might not need stores as these are now coming from load()
+	const stops = writable(data.stops);
 	const route = writable(data.route);
-
-	const operatorStops = derived(stops, ($stops) => {
-		if (!$stops) return;
-		return Object.fromEntries(
-			Object.values($stops)
-				.filter((stop) => stop.operators.some((rel) => rel.operator_id == operatorId))
-				.map((stop) => [stop.id, stop])
-		);
-	});
 
 	const stagedRoute = derived(route, ($route) => {
 		let subroutes = $route.subroutes.map((sr) => annotateSubroute(sr));
@@ -58,10 +53,11 @@
 	const routeSchedules = writable();
 
 	let mapLoaded = false;
-	let stopsLoaded = false;
+	let stopsLoaded = true;
 	let calendarsLoaded = false;
 	let routeStopsLoaded = false;
 	let routeSchedulesLoaded = false;
+	let centeredOnRoute = false;
 
 	$: isRequiredLoading = !stopsLoaded || !mapLoaded;
 
@@ -126,20 +122,8 @@
 	let dragMode = 'move';
 
 	async function loadRequiredData() {
-		// Ensure that stops are available in indexedDB
-		fetchStops()
-			.then((r) => {
-				stopsLoaded = true;
-				return r;
-			})
-			.catch((e) => {
-				toast('Failed to load data', 'error');
-				console.log(e);
-			})
-			.then(async () => {
-				console.log('data loaded');
-				await loadMissing();
-			});
+		// Nothing is required.
+		// Get rid of this function if it stays like this
 	}
 
 	async function loadExtraData() {
@@ -235,10 +219,18 @@
 		}
 	});
 
+	selectedRegion.subscribe((region) => {
+		if (!map || !region || centeredOnRoute) return;
+		const mapParams = regionMapParams(region);
+		map.setCenter(mapParams.center);
+		map.setZoom(mapParams.zoom);
+	});
+
 	function drawStops() {
+		console.log('Draw call');
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values($operatorStops).map((stop) => ({
+			features: Object.values($stops).map((stop) => ({
 				type: 'Feature',
 				geometry: {
 					type: 'Point',
@@ -604,6 +596,7 @@
 		const coords = $subrouteStops.map((s) => [s.lon, s.lat]);
 		if (coords.length === 0) return;
 
+		centeredOnRoute = true;
 		if (coords.length === 1) {
 			map.setCenter(coords[0]);
 			map.setZoom(16);
