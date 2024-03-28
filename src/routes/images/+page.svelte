@@ -11,18 +11,14 @@
 	import StopPicsInfo from '$lib/pics/StopPicsInfo.svelte';
 	import PicInfo from '$lib/pics/PicInfo.svelte';
 
-	const basePictures = writable([]);
+	/** @type {import('./$types').PageData} */
+	export let data;
+
+	const basePics = writable(data.basePics);
 	const stops = liveQuery(() => getStops());
 
 	async function loadData() {
-		await Promise.all([
-			fetchStops(),
-			fetch(`${apiServer}/v1/stop_pics/map`)
-				.then((r) => r.json())
-				.then((r) => {
-					$basePictures = r;
-				})
-		]);
+		await fetchStops();
 	}
 
 	loadData().then(async () => {
@@ -282,7 +278,7 @@
 		{#if $tab === tabs.map}
 			<div class="card-body">
 				<PicMapViewer
-					pictures={basePictures}
+					pictures={basePics}
 					{stops}
 					on:selectStop={selectStopHandler}
 					on:selectPic={selectPicHandler}
