@@ -5,7 +5,8 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
-	import { fetchStops, getStops, softInvalidateStops } from '$lib/db';
+	import { fetchStops, getStops, softInvalidateStops, selectedRegion } from '$lib/db';
+	import { regionMapParams } from '$lib/utils.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
@@ -14,29 +15,95 @@
 
 	/** @type {import('./$types').PageData} */
 	export let data;
+
 	const operator = data.operator;
 	const operatorId = operator.id;
+	//const operatorStops = data.operatorStops;
 
 	let map;
 
 	let stopsLoaded = false;
-	let gtfsStopsLoaded = false;
-	let gtfsTripsLoaded = false;
+	let gtfsStopsLoaded = true;
+	let gtfsTripsLoaded = true;
 	let mapLoaded = false;
 	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
 
-	const stops = liveQuery(() => getStops());
+	const regionStops = liveQuery(() => getStops());
 
-	const gtfsStops = writable(null);
-	const gtfsRoutes = writable(null);
+	const genericNames = derived(regionStops, ($regionStops) => {
+		if (!$regionStops) return {};
+		return Object.fromEntries(Object.values($regionStops).map((stop) => [stop.name, stop]));
+	});
 
-	const linkedStops = derived([stops, gtfsStops], ([$stops, $gtfsStops]) => {
+	const gtfsStops = writable(data.gtfsStops);
+	const gtfsRoutes = writable(data.gtfsRoutes);
+	// const operatorStops = writable(Object.fromEntries(data.operatorStops.map((stop) => [stop.id, stop])));
+
+	const knownGtfsIds = new Set(Object.values(data.gtfsStops).map((stop) => stop.stop_id));
+	const usedGtfsIds = new Set(
+		data.operatorStops
+			.filter((stop) => knownGtfsIds.has(stop.stop_ref))
+			.map((stop) => stop.stop_ref)
+	);
+	const danglingGtfsIds = new Set(
+		data.operatorStops
+			.filter((stop) => knownGtfsIds.has(stop.stop_ref))
+			.map((stop) => stop.stop_ref)
+	);
+
+	// Every stop ID that is matched with a GTFS stop
+	const usedStopIds = new Set(data.operatorStops.map((stop) => stop.id));
+	// const usedStopIds = new Set(
+	// 	knownGtfsIds.length > 0
+	// 		? data.operatorStops.filter((stop) => knownGtfsIds.has(stop.stop_ref)).map((stop) => stop.id)
+	// 		: data.operatorStops.map((stop) => stop.id)
+	// );
+
+	// IML stops that are linked
+	const operatorStops = writable(data.operatorStops);
+
+	const stopIndex = derived([regionStops, operatorStops], ([$regionStops, $operatorStops]) => {
+		if (!$regionStops || !$operatorStops) return {};
+
+		const opStops = $operatorStops.map((stop) => {
+			return {
+				id: stop.id,
+				name: stop.official_name || genericNames[stop.id] || '{?}',
+				stop_ref: stop.stop_ref,
+				source: stop.source,
+				lat: stop.lat,
+				lon: stop.lon
+			};
+		});
+
+		const regStops = Object.values($regionStops).map((stop) => {
+			return {
+				id: stop.id,
+				name: stop.name,
+				lat: stop.lat,
+				lon: stop.lon,
+				stop_ref: null,
+				source: null
+			};
+		});
+
+		// Merge them into a single object where the operatorStops have precedence
+		return Object.fromEntries([...opStops, ...regStops].map((stop) => [stop.id, stop]));
+	});
+
+	// IML stops that are not linked
+	const unusedRegionStops = derived(regionStops, ($regionStops) => {
+		if (!$regionStops) return [];
+
+		return Object.values($regionStops).filter((stop) => !usedStopIds.has(stop.id));
+	});
+
+	const linkedStops = derived([regionStops, gtfsStops], ([$stops, $gtfsStops]) => {
 		if (!$stops || !$gtfsStops) return {};
 
 		return Object.fromEntries(
 			Object.values($stops).map((stop) => {
 				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
-				console.log('rel', rel);
 				if (!rel) return [stop.id, stop];
 				return [
 					stop.id,
@@ -50,24 +117,32 @@
 		);
 	});
 
-	const selectedStop = writable(null);
+	const selectedOperatorStop = writable(null);
+	const selectedUnusedtop = writable(null);
 	const selectedGtfsStop = writable(null);
 
-	const operatorRel = derived(selectedStop, ($selectedStop) => {
-		if (!$selectedStop) {
-			return null;
-		}
-		return $selectedStop.operators.find((stopOpRel) => stopOpRel.operator_id === operatorId);
-	});
-
-	const hasMutualLink = derived(
-		[operatorRel, selectedGtfsStop],
-		([$operatorRel, $selectedGtfsStop]) => {
-			if (!$operatorRel || !$selectedGtfsStop) {
-				return false;
+	const selectedImlStop = derived(
+		[selectedOperatorStop, selectedUnusedtop],
+		([$selectedOperatorStop, $selectedUnrelatedStop]) => {
+			if ($selectedOperatorStop) {
+				return {
+					id: $selectedOperatorStop.id,
+					name: $selectedOperatorStop.official_name,
+					lat: $selectedOperatorStop.lat,
+					lon: $selectedOperatorStop.lon,
+					layer: 'operator'
+				};
 			}
-
-			return $operatorRel.stop_ref === $selectedGtfsStop.stop_id;
+			if ($selectedUnrelatedStop) {
+				return {
+					id: $selectedUnrelatedStop.id,
+					name: $selectedUnrelatedStop.name,
+					lat: $selectedUnrelatedStop.lat,
+					lon: $selectedUnrelatedStop.lon,
+					layer: 'region'
+				};
+			}
+			return null;
 		}
 	);
 
@@ -84,18 +159,72 @@
 			});
 	});
 
-	const selectedStopRoutes = derived(selectedStop, ($selectedStop, set) => {
-		if (!$selectedStop) return null;
+	const hasMutualLink = derived(
+		[selectedOperatorStop, selectedGtfsStop],
+		([$selectedOperatorStop, $selectedGtfsStop]) => {
+			if (!$selectedOperatorStop || !$selectedGtfsStop) {
+				return false;
+			}
+			return $selectedOperatorStop.stop_ref === $selectedGtfsStop.stop_id;
+		}
+	);
 
-		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/spider`)
-			.then((r) => r.json())
-			.then((r) => {
-				set(
-					Object.values(r.routes).sort(
-						(a, b) => parseInt(a.code) - parseInt(b.code) || a.code.localeCompare(b.code)
-					)
-				);
-			});
+	const selectedStopRoutes = derived(
+		[selectedOperatorStop, selectedUnusedtop],
+		([$selectedOperatorStop, $selectedUnrelatedStop], set) => {
+			const selectedStopId = $selectedOperatorStop?.id ?? $selectedUnrelatedStop?.id;
+
+			if (!selectedStopId) return null;
+
+			fetch(`${apiServer}/v1/stops/${selectedStopId}/spider`)
+				.then((r) => r.json())
+				.then((r) => {
+					set(
+						Object.values(r.routes).sort(
+							(a, b) => parseInt(a.code) - parseInt(b.code) || a.code.localeCompare(b.code)
+						)
+					);
+				});
+		}
+	);
+
+	const previewedTrip = writable(null);
+
+	selectedGtfsStop.subscribe((gtfsStop) => {
+		previewedTrip.set(null);
+		if (!map) return;
+
+		map.easeTo({
+			padding: { left: gtfsStop || $selectedOperatorStop || $selectedUnusedtop ? 300 : 0 },
+			duration: 750
+		});
+		return;
+	});
+
+	selectedOperatorStop.subscribe((selectedOperatorStop) => {
+		if (selectedOperatorStop) {
+			$selectedUnusedtop = null;
+		}
+		if (!map) return;
+
+		map.easeTo({
+			padding: { left: $selectedGtfsStop || selectedOperatorStop || $selectedUnusedtop ? 300 : 0 },
+			duration: 750
+		});
+		return;
+	});
+
+	selectedUnusedtop.subscribe((selectedUnusedtop) => {
+		if (selectedUnusedtop) {
+			$selectedOperatorStop = null;
+		}
+		if (!map) return;
+
+		map.easeTo({
+			padding: { left: $selectedGtfsStop || $selectedOperatorStop || selectedUnusedtop ? 300 : 0 },
+			duration: 750
+		});
+		return;
 	});
 
 	const stopSearchInput = writable(null);
@@ -156,29 +285,6 @@
 		}
 	);
 
-	const previewedTrip = writable(null);
-
-	selectedGtfsStop.subscribe((gtfsStop) => {
-		previewedTrip.set(null);
-		if (!map) return;
-
-		map.easeTo({
-			padding: { left: gtfsStop ? 300 : 0, right: $selectedStop ? 300 : 0 },
-			duration: 750
-		});
-		return;
-	});
-
-	selectedStop.subscribe((stop) => {
-		if (!map) return;
-
-		map.easeTo({
-			padding: { left: $selectedGtfsStop ? 300 : 0, right: stop ? 300 : 0 },
-			duration: 750
-		});
-		return;
-	});
-
 	previewedTrip.subscribe((trip) => {
 		if (!map) return;
 		if (!trip) {
@@ -195,68 +301,23 @@
 		});
 	});
 
-	Promise.all([
-		fetchStops().then(async () => {
+	async function loadData() {
+		await fetchStops().then(async () => {
 			await tick();
 			stopsLoaded = true;
-		}),
-		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/stops`)
-			.then((r) => r.json())
-			.then((r) => {
-				gtfsStopsLoaded = true;
-				return r;
-			}),
-		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/routes`)
-			.then((r) => r.json())
-			.then((r) => {
-				gtfsTripsLoaded = true;
-				return r;
-			})
-	]).then(([, resGtfsStops, resGtfsRoutes]) => {
-		const seenGtfsIds = new Set();
-
-		Object.values($stops).forEach((stop) => {
-			stop.operators.forEach((rel) => {
-				if (rel.operator_id === operatorId) {
-					seenGtfsIds.add(rel.stop_ref);
-				}
-			});
 		});
+	}
 
-		$gtfsStops = Object.fromEntries(
-			resGtfsStops.map((stop) => [
-				stop.stop_id,
-				Object.assign(stop, {
-					lat: stop.stop_lat,
-					lon: stop.stop_lon,
-					id: stop.stop_id,
-					routes: new Set(),
-					seen: seenGtfsIds.has(stop.stop_id)
-				})
-			])
-		);
-
-		resGtfsRoutes.forEach((route) => {
-			route.trips.forEach((trip) => {
-				trip.stops.forEach((gtfsId) => {
-					$gtfsStops[gtfsId].routes.add(route);
-				});
-			});
-		});
-
-		$gtfsRoutes = resGtfsRoutes;
-
-		if (!loading) {
-			refreshStops();
-		}
+	loadData().then(() => {
+		console.log('Data loaded');
 	});
 
 	function refreshMatches() {
-		let unvStops = Object.values($linkedStops).filter(
-			(stop) => stop.source && !credibleSources.includes(stop.source)
+		let unvStops = $operatorStops.filter(
+			(stop) => stop.source && !credibleSources.includes(stop.source) && stop.gtfsStop
 		);
-		let verStops = Object.values($linkedStops).filter(
-			(stop) => stop.source && credibleSources.includes(stop.source)
+		let verStops = $operatorStops.filter(
+			(stop) => stop.source && credibleSources.includes(stop.source) && stop.gtfsStop
 		);
 
 		console.log('unv', unvStops);
@@ -269,7 +330,7 @@
 					type: 'LineString',
 					coordinates: [
 						[stop.lon, stop.lat],
-						stop.gtfsStop ? [stop.gtfsStop.lon, stop.gtfsStop.lat] : [0.0, 90.0]
+						[stop.gtfsStop.lon, stop.gtfsStop.lat]
 					]
 				}
 			};
@@ -327,9 +388,26 @@
 	function refreshStops() {
 		refreshMatches();
 
-		map.getSource('stops').setData({
+		map.getSource('used-stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values($linkedStops).map((stop) => {
+			features: Object.values($operatorStops).map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {
+						id: stop.id,
+						missing: !knownGtfsIds.has(stop.stop_ref)
+					}
+				};
+			})
+		});
+
+		map.getSource('unused-stops').setData({
+			type: 'FeatureCollection',
+			features: $unusedRegionStops.map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -342,6 +420,7 @@
 				};
 			})
 		});
+
 		map.getSource('gtfs').setData({
 			type: 'FeatureCollection',
 			features: Object.values($gtfsStops).map((stop) => {
@@ -411,7 +490,7 @@
 			return;
 		}
 
-		const beingUsed = Object.values(stops).some((s) => s != stop && s.gtfsStop == gtfsStop);
+		const beingUsed = Object.values(regionStops).some((s) => s != stop && s.gtfsStop == gtfsStop);
 
 		if (beingUsed && !confirm('Paragem GTFS já está ligada a outra paragem. Continuar?')) {
 			return;
@@ -445,7 +524,7 @@
 				refreshStops();
 				// Force data refresh
 				$selectedGtfsStop = $selectedGtfsStop;
-				$selectedStop = $selectedStop;
+				$selectedOperatorStop = $selectedOperatorStop;
 			} else {
 				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
 			}
@@ -479,7 +558,7 @@
 				refreshStops();
 				// Force data refresh
 				$selectedGtfsStop = $selectedGtfsStop;
-				$selectedStop = $selectedStop;
+				$selectedOperatorStop = $selectedOperatorStop;
 			} else {
 				alert('Erro a desligar paragens.\nRecarregue e tente novamente.');
 			}
@@ -487,6 +566,7 @@
 	}
 
 	function addSourcesAndLayers() {
+		// The UNVERIFIED matches between operator stops and GTFS stops
 		map.addSource('stopmatches-unv', {
 			type: 'geojson',
 			data: {
@@ -504,6 +584,7 @@
 			}
 		});
 
+		// The VERIFIED matches between operator stops and GTFS stops
 		map.addSource('stopmatches-ver', {
 			type: 'geojson',
 			data: {
@@ -521,6 +602,7 @@
 			}
 		});
 
+		// THE GTFS stops
 		map.addSource('gtfs', {
 			type: 'geojson',
 			data: {
@@ -564,7 +646,8 @@
 			minzoom: 18
 		});
 
-		map.addSource('stops', {
+		// The used IML stops (both within and outside the region)
+		map.addSource('used-stops', {
 			type: 'geojson',
 			data: {
 				type: 'FeatureCollection',
@@ -573,11 +656,11 @@
 		});
 
 		map.addLayer({
-			id: 'stops',
+			id: 'used-stops',
 			type: 'circle',
-			source: 'stops',
+			source: 'used-stops',
 			paint: {
-				'circle-color': 'rgba(50, 150, 220, 0.6)',
+				'circle-color': 'rgba(50, 150, 220, 0.7)',
 				'circle-radius': {
 					base: 1.75,
 					stops: [
@@ -587,7 +670,37 @@
 						[18, 15]
 					]
 				},
-				'circle-stroke-width': 1,
+				'circle-stroke-width': ['case', ['get', 'missing'], 2, 1],
+				// Depends on the property "missing"
+				'circle-stroke-color': ['case', ['get', 'missing'], 'red', 'white']
+			}
+		});
+
+		// The unused region IML stops
+		map.addSource('unused-stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+
+		map.addLayer({
+			id: 'unused-stops',
+			type: 'circle',
+			source: 'unused-stops',
+			paint: {
+				'circle-color': 'rgba(50, 150, 220, 0.3)',
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 1.5],
+						[11, 2],
+						[17, 7],
+						[18, 15]
+					]
+				},
+				'circle-stroke-width': 0.5,
 				'circle-stroke-color': '#fff'
 			}
 		});
@@ -674,9 +787,14 @@
 			canvas.style.cursor = '';
 		});
 
-		map.on('click', 'stops', (e) => {
-			let stop = $linkedStops[e.features[0].properties.id];
-			$selectedStop = stop;
+		map.on('click', 'used-stops', (e) => {
+			let stop = $stopIndex[e.features[0].properties.id];
+			$selectedOperatorStop = stop;
+		});
+
+		map.on('click', 'unused-stops', (e) => {
+			let stop = $stopIndex[e.features[0].properties.id];
+			$selectedUnusedtop = stop;
 		});
 
 		map.on('click', 'gtfs', (e) => {
@@ -811,25 +929,35 @@
 		});
 
 		map.on('mouseenter', 'stops', (e) => {
-			hoveredStop = stops[e.features[0].properties.id];
+			hoveredStop = regionStops[e.features[0].properties.id];
 		});
 		map.on('mouseleave', 'stops', (e) => {
 			hoveredStop = null;
 		});
 	}
 
+	selectedRegion.subscribe((region) => {
+		if (!map || !region) return;
+		console.log('Centering on', region);
+		const mapParams = regionMapParams(region);
+		map.setCenter(mapParams.center);
+		map.setZoom(mapParams.zoom);
+	});
+
 	onMount(() => {
+		const mapParams = regionMapParams($selectedRegion);
+		console.log('Mounting', $selectedRegion);
 		map = new Maplibre({
 			container: 'map',
 			style: tileStyle,
-			center: [-9.0, 38.605],
-			zoom: 11,
+			center: mapParams.center,
+			zoom: mapParams.zoom,
 			minZoom: 8,
-			maxZoom: 20,
-			maxBounds: [
+			maxZoom: 20
+			/* maxBounds: [
 				[-10.0, 38.3],
 				[-8.0, 39.35]
-			]
+			]*/
 		});
 
 		map.addControl(new NavigationControl(), 'top-right');
@@ -993,19 +1121,19 @@
 
 			{#if $decodedToken?.permissions?.is_admin}
 				<div class="flex justify-center">
-					{#if $selectedGtfsStop && $selectedStop}
-						{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($operatorRel?.source))}
+					{#if $selectedGtfsStop && $selectedOperatorStop}
+						{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($selectedOperatorStop?.source))}
 							<button
 								class="btn btn-primary btn-sm"
 								on:click={() => {
-									connectStops($selectedStop, $selectedGtfsStop);
+									connectStops($selectedOperatorStop, $selectedGtfsStop);
 								}}>↑ Ligar paragens ↓</button
 							>
 						{:else if $hasMutualLink}
 							<button
 								class="btn btn-error btn-sm"
 								on:click={() => {
-									disconnectStops($selectedStop, $selectedGtfsStop);
+									disconnectStops($selectedOperatorStop, $selectedGtfsStop);
 								}}>↑ Apagar ligação ↓</button
 							>
 						{/if}
@@ -1013,10 +1141,13 @@
 				</div>
 			{/if}
 			<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-blue-500 relative">
-				{#if $selectedStop}
+				{#if $selectedImlStop}
 					<button
 						class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
-						on:click={() => ($selectedStop = null)}
+						on:click={() => {
+							$selectedOperatorStop = null;
+							$selectedUnusedtop = null;
+						}}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -1036,32 +1167,32 @@
 						<div
 							class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
 							on:click={() => {
-								flyToStop($selectedStop);
+								flyToStop($selectedImlStop);
 							}}
 							on:keypress={() => {
-								flyToStop($selectedStop);
+								flyToStop($selectedImlStop);
 							}}
 						>
-							{$selectedStop?.id}
+							{$selectedImlStop?.id}
 						</div>
-						<span class="font-bold">{$selectedStop?.name}</span>
+						<span class="font-bold">{$selectedImlStop?.name}</span>
 					</div>
 					<div class="flex gap-2">
 						<div class="flex">
 							<input
 								class="btn btn-secondary btn-xs rounded-r-none"
 								type="button"
-								value={$selectedStop?.lat.toFixed(6)}
+								value={$selectedImlStop?.lat.toFixed(6)}
 								on:click={() => {
-									navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
+									navigator.clipboard.writeText($selectedImlStop?.lat.toFixed(6));
 								}}
 							/>
 							<input
 								class="btn btn-secondary btn-xs rounded-l-none"
 								type="button"
-								value={$selectedStop?.lon.toFixed(6)}
+								value={$selectedImlStop?.lon.toFixed(6)}
 								on:click={() => {
-									navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
+									navigator.clipboard.writeText($selectedImlStop?.lon.toFixed(6));
 								}}
 							/>
 						</div>
@@ -1071,29 +1202,29 @@
 							value="Copiar"
 							on:click={() => {
 								navigator.clipboard.writeText(
-									$selectedStop?.lat.toFixed(6) + '\t' + $selectedStop?.lon.toFixed(6)
+									$selectedImlStop?.lat.toFixed(6) + '\t' + $selectedImlStop?.lon.toFixed(6)
 								);
 							}}
 						/>
 					</div>
-					{#if $operatorRel && !$hasMutualLink}
+					{#if $selectedOperatorStop && !$hasMutualLink}
 						<div class="flex gap-1">
 							<h1 class="text-xs font-bold">Ligada a</h1>
-							{#if $selectedStop.gtfsStop}
+							{#if $selectedOperatorStop.gtfsStop}
 								<button
 									class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
 									on:click={() => {
-										$selectedGtfsStop = $selectedStop.gtfsStop;
-										flyToGtfsStop($selectedStop.gtfsStop);
-									}}>{$operatorRel.stop_ref}</button
+										$selectedGtfsStop = $selectedOperatorStop.gtfsStop;
+										flyToGtfsStop($selectedOperatorStop.gtfsStop);
+									}}>{$selectedOperatorStop?.stop_ref}</button
 								>
 							{:else}
 								<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-									>⚠️{$operatorRel.stop_ref}</button
+									>⚠️{$selectedOperatorStop?.stop_ref}</button
 								>
-								<button class="btn btn-xs btn-error">Apagar erro</button>
 							{/if}
 						</div>
+						<textarea class="w-full">{JSON.stringify($selectedOperatorStop)}</textarea>
 					{/if}
 					<h2 class="text-sm self-center font-semibold">Rotas</h2>
 					<div class="w-full flex flex-wrap gap-1">
