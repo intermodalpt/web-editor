@@ -10,6 +10,7 @@
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
+	import MatchViewer from './MatchViewer.svelte';
 
 	const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
@@ -94,8 +95,13 @@
 	// IML stops that are not linked
 	const unusedRegionStops = derived(regionStops, ($regionStops) => {
 		if (!$regionStops) return [];
+		console.log('Region stops', Object.keys($regionStops).length);
 
 		return Object.values($regionStops).filter((stop) => !usedStopIds.has(stop.id));
+	});
+
+	unusedRegionStops.subscribe((stops) => {
+		console.log('Unused stops', stops?.length);
 	});
 
 	const linkedStops = derived([regionStops, gtfsStops], ([$stops, $gtfsStops]) => {
@@ -118,75 +124,8 @@
 	});
 
 	const selectedOperatorStop = writable(null);
-	const selectedUnusedtop = writable(null);
+	const selectedUnusedStop = writable(null);
 	const selectedGtfsStop = writable(null);
-
-	const selectedImlStop = derived(
-		[selectedOperatorStop, selectedUnusedtop],
-		([$selectedOperatorStop, $selectedUnrelatedStop]) => {
-			if ($selectedOperatorStop) {
-				return {
-					id: $selectedOperatorStop.id,
-					name: $selectedOperatorStop.official_name,
-					lat: $selectedOperatorStop.lat,
-					lon: $selectedOperatorStop.lon,
-					layer: 'operator'
-				};
-			}
-			if ($selectedUnrelatedStop) {
-				return {
-					id: $selectedUnrelatedStop.id,
-					name: $selectedUnrelatedStop.name,
-					lat: $selectedUnrelatedStop.lat,
-					lon: $selectedUnrelatedStop.lon,
-					layer: 'region'
-				};
-			}
-			return null;
-		}
-	);
-
-	const selectedGtfsStopRoutes = derived(selectedGtfsStop, ($selectedGTFSStop) => {
-		if ($selectedGTFSStop == null) return [];
-		return Array.from($selectedGTFSStop.routes)
-			.sort((a, b) => a.id.localeCompare(b.id))
-			.map((r) => {
-				const filteredRoute = Object.assign({}, r);
-				filteredRoute.trips = filteredRoute.trips.filter((t) =>
-					t.stops.includes($selectedGTFSStop.id)
-				);
-				return filteredRoute;
-			});
-	});
-
-	const hasMutualLink = derived(
-		[selectedOperatorStop, selectedGtfsStop],
-		([$selectedOperatorStop, $selectedGtfsStop]) => {
-			if (!$selectedOperatorStop || !$selectedGtfsStop) {
-				return false;
-			}
-			return $selectedOperatorStop.stop_ref === $selectedGtfsStop.stop_id;
-		}
-	);
-
-	const selectedStopRoutes = derived(
-		[selectedOperatorStop, selectedUnusedtop],
-		([$selectedOperatorStop, $selectedUnrelatedStop], set) => {
-			const selectedStopId = $selectedOperatorStop?.id ?? $selectedUnrelatedStop?.id;
-
-			if (!selectedStopId) return null;
-
-			fetch(`${apiServer}/v1/stops/${selectedStopId}/spider`)
-				.then((r) => r.json())
-				.then((r) => {
-					set(
-						Object.values(r.routes).sort(
-							(a, b) => parseInt(a.code) - parseInt(b.code) || a.code.localeCompare(b.code)
-						)
-					);
-				});
-		}
-	);
 
 	const previewedTrip = writable(null);
 
@@ -195,7 +134,7 @@
 		if (!map) return;
 
 		map.easeTo({
-			padding: { left: gtfsStop || $selectedOperatorStop || $selectedUnusedtop ? 300 : 0 },
+			padding: { left: gtfsStop || $selectedOperatorStop || $selectedUnusedStop ? 300 : 0 },
 			duration: 750
 		});
 		return;
@@ -203,18 +142,18 @@
 
 	selectedOperatorStop.subscribe((selectedOperatorStop) => {
 		if (selectedOperatorStop) {
-			$selectedUnusedtop = null;
+			$selectedUnusedStop = null;
 		}
 		if (!map) return;
 
 		map.easeTo({
-			padding: { left: $selectedGtfsStop || selectedOperatorStop || $selectedUnusedtop ? 300 : 0 },
+			padding: { left: $selectedGtfsStop || selectedOperatorStop || $selectedUnusedStop ? 300 : 0 },
 			duration: 750
 		});
 		return;
 	});
 
-	selectedUnusedtop.subscribe((selectedUnusedtop) => {
+	selectedUnusedStop.subscribe((selectedUnusedtop) => {
 		if (selectedUnusedtop) {
 			$selectedOperatorStop = null;
 		}
@@ -451,20 +390,10 @@
 		});
 	}
 
-	function flyToGtfsStop(gtfsStop) {
-		document.getElementById('stop-search-modal').checked = false;
-
+	function flyTo(lon, lat) {
+		console.log('Flying to', lon, lat);
 		map.flyTo({
-			center: [gtfsStop.lon, gtfsStop.lat],
-			zoom: 17.5
-		});
-	}
-
-	function flyToStop(stop) {
-		document.getElementById('stop-search-modal').checked = false;
-
-		map.flyTo({
-			center: [stop.lon, stop.lat],
+			center: [lon, lat],
 			zoom: 17.5
 		});
 	}
@@ -564,6 +493,14 @@
 			}
 		});
 	}
+
+	selectedRegion.subscribe((region) => {
+		if (!map || !region) return;
+		console.log('Centering on', region);
+		const mapParams = regionMapParams(region);
+		map.setCenter(mapParams.center);
+		map.setZoom(mapParams.zoom);
+	});
 
 	function addSourcesAndLayers() {
 		// The UNVERIFIED matches between operator stops and GTFS stops
@@ -794,13 +731,14 @@
 
 		map.on('click', 'unused-stops', (e) => {
 			let stop = $stopIndex[e.features[0].properties.id];
-			$selectedUnusedtop = stop;
+			$selectedUnusedStop = stop;
 		});
 
 		map.on('click', 'gtfs', (e) => {
 			if (map.getZoom() < 15) return;
 
 			let stop = $gtfsStops[e.features[0].properties.id];
+			console.log('Selected', stop);
 			$selectedGtfsStop = stop;
 
 			// For each route, for each trip, build a three stop window with the previous, current and next stop
@@ -936,14 +874,6 @@
 		});
 	}
 
-	selectedRegion.subscribe((region) => {
-		if (!map || !region) return;
-		console.log('Centering on', region);
-		const mapParams = regionMapParams(region);
-		map.setCenter(mapParams.center);
-		map.setZoom(mapParams.zoom);
-	});
-
 	onMount(() => {
 		const mapParams = regionMapParams($selectedRegion);
 		console.log('Mounting', $selectedRegion);
@@ -954,10 +884,6 @@
 			zoom: mapParams.zoom,
 			minZoom: 8,
 			maxZoom: 20
-			/* maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]*/
 		});
 
 		map.addControl(new NavigationControl(), 'top-right');
@@ -1034,220 +960,20 @@
 		<div
 			class="w-[300px] h-full lg:h-[95%] overflow-y-scroll p-2 bg-base-100 flex flex-col gap-2 lg:rounded-r-xl shadow-md"
 		>
-			<div class="justify-center w-full">
-				<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operator.tag}">
-					{operator.name}
-				</a>
-			</div>
-			<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-orange-600 relative">
-				{#if $selectedGtfsStop}
-					<button
-						class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
-						on:click={() => ($selectedGtfsStop = null)}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/></svg
-						>
-					</button>
-					<div class="flex gap-2">
-						<button
-							class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-							on:click={() => {
-								if ($selectedGtfsStop) {
-									flyToGtfsStop($selectedGtfsStop);
-								}
-							}}
-						>
-							{$selectedGtfsStop?.stop_id}
-						</button>
-						<span class="font-bold">{$selectedGtfsStop?.stop_name}</span>
-					</div>
-					<div class="border border-base-300 rounded-md p-2">
-						<h1 class="text-sm font-semibold text-center">Rotas</h1>
-						<div class="max-h-64 xl:max-h-96 overflow-scroll">
-							<ul class="flex flex-col gap-3">
-								{#each $selectedGtfsStopRoutes as route}
-									<li class="flex flex-col">
-										<span class="badge badge-neutral">{route.id}</span>
-										<ul class="ml-4 flex flex-col gap-2">
-											{#each route.trips as trip}
-												<li class="flex flex-col">
-													<div class="flex">
-														<button
-															class="btn btn-neutral btn-outline btn-xs !rounded-r-0 grow"
-															on:click={() => {
-																flyToTrip(trip);
-																$previewedTrip = trip;
-															}}>{trip.id}</button
-														>
-														<button
-															class="btn btn-xs !rounded-l-0"
-															class:btn-primary={trip === $previewedTrip}
-															on:click={() => {
-																$previewedTrip = trip === $previewedTrip ? null : trip;
-															}}>Ver</button
-														>
-													</div>
-													<span>Destino: <span class="font-bold">{trip.headsign}</span></span>
-												</li>
-											{/each}
-										</ul>
-									</li>
-								{/each}
-							</ul>
-						</div>
-					</div>
-				{:else}
-					<div class="text-slate-500 font-semibold text-lg">
-						Pontos <span class="border-b-2 border-orange-600">laranja</span> denotam paragens no
-						<a
-							href="https://en.wikipedia.org/wiki/GTFS"
-							target="_blank"
-							class="link-primary font-bold">GTFS</a
-						> do operador.
-					</div>
-				{/if}
-			</div>
-
-			{#if $decodedToken?.permissions?.is_admin}
-				<div class="flex justify-center">
-					{#if $selectedGtfsStop && $selectedOperatorStop}
-						{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($selectedOperatorStop?.source))}
-							<button
-								class="btn btn-primary btn-sm"
-								on:click={() => {
-									connectStops($selectedOperatorStop, $selectedGtfsStop);
-								}}>↑ Ligar paragens ↓</button
-							>
-						{:else if $hasMutualLink}
-							<button
-								class="btn btn-error btn-sm"
-								on:click={() => {
-									disconnectStops($selectedOperatorStop, $selectedGtfsStop);
-								}}>↑ Apagar ligação ↓</button
-							>
-						{/if}
-					{/if}
-				</div>
-			{/if}
-			<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-blue-500 relative">
-				{#if $selectedImlStop}
-					<button
-						class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
-						on:click={() => {
-							$selectedOperatorStop = null;
-							$selectedUnusedtop = null;
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/></svg
-						>
-					</button>
-					<div class="flex gap-1">
-						<div
-							class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
-							on:click={() => {
-								flyToStop($selectedImlStop);
-							}}
-							on:keypress={() => {
-								flyToStop($selectedImlStop);
-							}}
-						>
-							{$selectedImlStop?.id}
-						</div>
-						<span class="font-bold">{$selectedImlStop?.name}</span>
-					</div>
-					<div class="flex gap-2">
-						<div class="flex">
-							<input
-								class="btn btn-secondary btn-xs rounded-r-none"
-								type="button"
-								value={$selectedImlStop?.lat.toFixed(6)}
-								on:click={() => {
-									navigator.clipboard.writeText($selectedImlStop?.lat.toFixed(6));
-								}}
-							/>
-							<input
-								class="btn btn-secondary btn-xs rounded-l-none"
-								type="button"
-								value={$selectedImlStop?.lon.toFixed(6)}
-								on:click={() => {
-									navigator.clipboard.writeText($selectedImlStop?.lon.toFixed(6));
-								}}
-							/>
-						</div>
-						<input
-							class="btn btn-secondary btn-xs"
-							type="button"
-							value="Copiar"
-							on:click={() => {
-								navigator.clipboard.writeText(
-									$selectedImlStop?.lat.toFixed(6) + '\t' + $selectedImlStop?.lon.toFixed(6)
-								);
-							}}
-						/>
-					</div>
-					{#if $selectedOperatorStop && !$hasMutualLink}
-						<div class="flex gap-1">
-							<h1 class="text-xs font-bold">Ligada a</h1>
-							{#if $selectedOperatorStop.gtfsStop}
-								<button
-									class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-									on:click={() => {
-										$selectedGtfsStop = $selectedOperatorStop.gtfsStop;
-										flyToGtfsStop($selectedOperatorStop.gtfsStop);
-									}}>{$selectedOperatorStop?.stop_ref}</button
-								>
-							{:else}
-								<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-									>⚠️{$selectedOperatorStop?.stop_ref}</button
-								>
-							{/if}
-						</div>
-						<textarea class="w-full">{JSON.stringify($selectedOperatorStop)}</textarea>
-					{/if}
-					<h2 class="text-sm self-center font-semibold">Rotas</h2>
-					<div class="w-full flex flex-wrap gap-1">
-						{#each $selectedStopRoutes || [] as route}
-							<div
-								class="badge badge-secondary badge-outline"
-								on:click={() => {
-									alert(route.code + ' - ' + route.name);
-								}}
-								on:keypress={() => {
-									alert(route.code + ' - ' + route.name);
-								}}
-							>
-								{route.code}
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<div class="text-slate-500 font-semibold text-lg">
-						Pontos <span class="border-b-2 border-blue-500">azuis</span> denotam paragens no intermodal.
-					</div>
-				{/if}
-			</div>
+			{$selectedGtfsStop?.stop_id}
+			<MatchViewer
+				canEdit={$decodedToken?.permissions?.is_admin}
+				{operator}
+				{selectedGtfsStop}
+				{selectedOperatorStop}
+				{selectedUnusedStop}
+				{credibleSources}
+				{previewedTrip}
+				on:fly-to={(e) => flyTo(...e.detail)}
+				on:fly-to-trip={(e) => flyToTrip(e.detail.trip)}
+				on:connect={(e) => connectStops(e.detail.operatorStop, e.detail.gtfsStop)}
+				on:disconnect={(e) => disconnectStops(e.detail.operatorStop, e.detail.gtfsStop)}
+			/>
 		</div>
 	</div>
 	<div class="absolute">
@@ -1275,10 +1001,10 @@
 							<div
 								class="card card-compact w-full bg-base-100 border-2 shadow-sm cursor-pointer"
 								on:click={() => {
-									flyToStop(result);
+									flyTo(result.lon, result.lat);
 								}}
 								on:keypress={() => {
-									flyToStop(result);
+									flyTo(result.lon, result.lat);
 								}}
 							>
 								<div class="card-body">
