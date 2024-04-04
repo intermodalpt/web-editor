@@ -12,3 +12,5 @@ export const cacheInvalidationTime = minute * 60 * 6; // 6 hours
 
 // About 1cm at Portugal's latitude
 export const movementTreshold = 0.000001;
+
+export const credibleSources = ['tml', 'manual', 'flags', 'h1'];
