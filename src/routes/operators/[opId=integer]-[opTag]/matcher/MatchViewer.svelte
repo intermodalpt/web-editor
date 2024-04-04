@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
+	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -219,49 +220,14 @@
 		<div class="flex gap-1">
 			<div
 				class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
-				on:click={() => {
-					dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat]);
-					// flyToStop($selectedImlStop);
-				}}
-				on:keypress={() => {
-					dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat]);
-					// flyToStop($selectedImlStop);
-				}}
+				on:click={() => dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat])}
+				on:keypress={() => dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat])}
 			>
 				{$selectedImlStop?.id}
 			</div>
 			<span class="font-bold">{$selectedImlStop?.name}</span>
 		</div>
-		<div class="flex gap-2">
-			<div class="flex">
-				<input
-					class="btn btn-secondary btn-xs rounded-r-none"
-					type="button"
-					value={$selectedImlStop?.lat.toFixed(6)}
-					on:click={() => {
-						navigator.clipboard.writeText($selectedImlStop?.lat.toFixed(6));
-					}}
-				/>
-				<input
-					class="btn btn-secondary btn-xs rounded-l-none"
-					type="button"
-					value={$selectedImlStop?.lon.toFixed(6)}
-					on:click={() => {
-						navigator.clipboard.writeText($selectedImlStop?.lon.toFixed(6));
-					}}
-				/>
-			</div>
-			<input
-				class="btn btn-secondary btn-xs"
-				type="button"
-				value="Copiar"
-				on:click={() => {
-					navigator.clipboard.writeText(
-						$selectedImlStop?.lat.toFixed(6) + '\t' + $selectedImlStop?.lon.toFixed(6)
-					);
-				}}
-			/>
-		</div>
+		<CoordViewer lat={$selectedImlStop.lat} lon={$selectedImlStop.lon} />
 		{#if $selectedOperatorStop && !$hasMutualLink}
 			<div class="flex gap-1">
 				<h1 class="text-xs font-bold">Ligada a</h1>
