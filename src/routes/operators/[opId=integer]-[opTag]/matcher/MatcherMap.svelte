@@ -8,7 +8,9 @@
 	const dispatch = createEventDispatcher();
 
 	export let mapParams;
+
 	let map;
+	let searchDialog;
 
 	export function toggleSidePadding(show) {
 		map.easeTo({
@@ -358,7 +360,7 @@
 		});
 
 		map.addControl(new NavigationControl(), 'top-right');
-		map.addControl(new SearchControl(), 'top-right');
+		map.addControl(new SearchControl(() => searchDialog.showModal()), 'top-right');
 		map.addControl(
 			new GeolocateControl({
 				positionOptions: {
@@ -382,5 +384,8 @@
 </script>
 
 <div id="map" class="h-full relative">
+	<dialog bind:this={searchDialog} class="modal modal-bottom sm:modal-middle">
+		<slot name="search-dialog" />
+	</dialog>
 	<slot />
 </div>

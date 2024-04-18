@@ -98,13 +98,8 @@
 	// IML stops that are not linked
 	const unusedRegionStops = derived(regionStops, ($regionStops) => {
 		if (!$regionStops) return [];
-		console.log('Region stops', Object.keys($regionStops).length);
 
 		return Object.values($regionStops).filter((stop) => !usedStopIds.has(stop.id));
-	});
-
-	unusedRegionStops.subscribe((stops) => {
-		console.log('Unused stops', stops?.length);
 	});
 
 	const linkedStops = derived([regionStops, gtfsStops], ([$stops, $gtfsStops]) => {
@@ -291,9 +286,6 @@
 			(stop) => stop.source && credibleSources.includes(stop.source) && stop.gtfsStop
 		);
 
-		console.log('unv', unvStops);
-		console.log('ver', verStops);
-
 		map.redrawMatches(unvStops, verStops);
 
 		const usedFeatures = Object.values($operatorStops).map((stop) => {
@@ -439,7 +431,6 @@
 	selectedRegion.subscribe((region) => {
 		if (!map || !region) return;
 
-		console.log('Centering on', region);
 		const mapParams = regionMapParams(region);
 		map.setCenterAndZoom(mapParams.center, mapParams.zoom);
 	});
@@ -531,65 +522,57 @@
 			/>
 		</div>
 	</div>
-	<div class="absolute">
-		<input type="checkbox" id="stop-search-modal" class="modal-toggle" />
-		<div class="modal z-30">
-			<div
-				class="modal-box relative z-30 max-w-5xl grid grid-cols-1"
-				style="grid-template-rows: auto 1fr;"
-			>
-				<div>
-					<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2"
-						>✕</label
-					>
-					<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
-					<input
-						type="text"
-						class="input input-primary input-bordered w-full"
-						placeholder="Nome ou identificador"
-						bind:value={$stopSearchInput}
-					/>
-				</div>
-				{#if $stopSearchResults}
-					<div class="flex flex-col gap-1 mt-2 overflow-y-scroll">
-						{#each $stopSearchResults as result}
-							<div
-								class="card card-compact w-full bg-base-100 border-2 shadow-sm cursor-pointer"
-								on:click={() => {
-									flyTo(result.lon, result.lat);
-								}}
-								on:keypress={() => {
-									flyTo(result.lon, result.lat);
-								}}
-							>
-								<div class="card-body">
-									<div class="flex gap-1">
-										{#if result.type === 'iml'}
-											<span class="px-2 mr-1 bg-blue-500 rounded-full" />
-											<h2 class="text-md font-semibold">
-												<span class="text-md border-b-2 border-blue-500">{result.id}</span>
-												{result.name || result.official_name}
-											</h2>
-											{#if result.stopRef}
-												→
-												<span class="text-md border-b-2 border-orange-600 self-start">
-													{result.stopRef}
-												</span>
-											{/if}
-										{:else}
-											<span class="px-2 mr-1 bg-orange-600 rounded-full" />
-											<h2 class="text-md font-semibold">
-												<span class="text-md border-b-2 border-orange-600">{result.id}</span>
-												{result.name || result.official_name}
-											</h2>
-										{/if}
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
+
+	<div
+		class="modal-box relative z-30 sm:max-w-5xl grid grid-cols-1"
+		style="grid-template-rows: auto 1fr;"
+		slot="search-dialog"
+	>
+		<div>
+			<form method="dialog">
+				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
+			</form>
+			<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
+			<input
+				type="text"
+				class="input input-primary input-bordered w-full"
+				placeholder="Nome ou identificador"
+				bind:value={$stopSearchInput}
+			/>
 		</div>
+		{#if $stopSearchResults}
+			<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">
+				{#each $stopSearchResults as result}
+					<button
+						class="card card-compact w-full bg-base-100 border-2 shadow-sm cursor-pointer"
+						on:click={() => map.flyTo(result.lon, result.lat)}
+					>
+						<div class="card-body">
+							<div class="flex gap-1">
+								{#if result.type === 'iml'}
+									<span class="px-2 mr-1 bg-blue-500 rounded-full" />
+									<h2 class="text-md font-semibold">
+										<span class="text-md border-b-2 border-blue-500">{result.id}</span>
+										{result.name || result.official_name}
+									</h2>
+									{#if result.stopRef}
+										→
+										<span class="text-md border-b-2 border-orange-600 self-start">
+											{result.stopRef}
+										</span>
+									{/if}
+								{:else}
+									<span class="px-2 mr-1 bg-orange-600 rounded-full" />
+									<h2 class="text-md font-semibold">
+										<span class="text-md border-b-2 border-orange-600">{result.id}</span>
+										{result.name || result.official_name}
+									</h2>
+								{/if}
+							</div>
+						</div>
+					</button>
+				{/each}
+			</form>
+		{/if}
 	</div>
 </MatcherMap>
