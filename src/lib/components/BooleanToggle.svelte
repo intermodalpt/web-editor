@@ -2,9 +2,10 @@
 	export let state = null;
 	export let disabled = false;
 	export let compact = false;
+	export let nullable = true;
 
 	function rotateState() {
-		if (state === null) {
+		if (state === null || (!nullable && !state)) {
 			state = true;
 		} else if (state) {
 			state = false;
@@ -49,13 +50,15 @@
 			class:cursor-not-allowed={disabled}
 			on:click={() => !disabled && (state = true)}>✔️</button
 		>
-		<button
-			class="btn btn-sm border-0 bg-yellow-50 hover:bg-yellow-500 w-8"
-			class:!bg-yellow-500={(state == null || state == undefined) && !disabled}
-			class:!bg-yellow-300={(state == null || state == undefined) && disabled}
-			class:cursor-not-allowed={disabled}
-			on:click={() => !disabled && (state = null)}>❓</button
-		>
+		{#if nullable}
+			<button
+				class="btn btn-sm border-0 bg-yellow-50 hover:bg-yellow-500 w-8"
+				class:!bg-yellow-500={(state == null || state == undefined) && !disabled}
+				class:!bg-yellow-300={(state == null || state == undefined) && disabled}
+				class:cursor-not-allowed={disabled}
+				on:click={() => !disabled && (state = null)}>❓</button
+			>
+		{/if}
 		<button
 			class="btn btn-sm border-0 bg-red-50 hover:bg-red-500 text-red-900 font-extrabold w-10"
 			class:!bg-red-400={state === false && !disabled}
