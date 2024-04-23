@@ -1,0 +1,176 @@
+<script>
+	import { createEventDispatcher } from 'svelte';
+	import { marked } from 'marked';
+	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
+
+	const dispatch = createEventDispatcher();
+
+	export let externalItem;
+	export let operators;
+	export let regions;
+
+	$: extContentHtml =
+		$externalItem?.content_md || $externalItem?.prepro_content_md
+			? marked($externalItem.content_md ?? $externalItem?.prepro_content_md)
+			: null;
+
+	function handleSyncTitle() {
+		dispatch('sync-title', { title: $externalItem.title });
+	}
+
+	function handleSyncSummary() {
+		dispatch('sync-summary', { summary: $externalItem.summary });
+	}
+
+	function handleSyncContent() {
+		dispatch('sync-content', { content: $externalItem.content_md });
+	}
+
+	function handleSyncRegions() {
+		dispatch('sync-regions', { regions: $externalItem.region_ids });
+	}
+
+	function handleSyncOperators() {
+		dispatch('sync-operators', { operators: $externalItem.operator_ids });
+	}
+
+	function handleSyncPubDate() {
+		dispatch('sync-pub-date', { pubDate: $externalItem.publish_datetime });
+	}
+	function handleSyncEditDate() {
+		dispatch('sync-edit-date', { editDate: $externalItem.edit_datetime });
+	}
+
+	function handleSyncAll() {
+		dispatch('sync-all', {});
+	}
+
+	function handleExtImgClick(image) {
+		dispatch('import-img', { image });
+	}
+</script>
+
+<div class="flex gap-1">
+	<button class="btn btn-xs h-auto" on:click={handleSyncTitle}>«</button>
+	<h2 class="text-lg font-bold">
+		<span>{$externalItem.title}</span>
+	</h2>
+</div>
+
+<h4 class="label-text">Sumário</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncSummary}>«</button>
+	<div class="grow">
+		<p>{$externalItem.summary}</p>
+	</div>
+</div>
+
+<h4 class="label-text">Conteúdo</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncContent}>«</button>
+	<div class="grow">
+		<p class="border-l-2 p-2 border-info bg-base-200 text-left">{@html extContentHtml}</p>
+	</div>
+</div>
+
+<h4 class="label-text">Imagens</h4>
+<div class="flex gap-2 flex-wrap ml-2">
+	{#each $externalItem.images ?? [] as image}
+		<button on:click={() => handleExtImgClick(image)}>
+			<img
+				src={image.url}
+				alt={image.transcript}
+				class="max-h-32 rounded-lg hover:scale-110 transition-all"
+			/>
+		</button>
+	{/each}
+    {#if ($externalItem.images ?? []).length === 0}
+        <span>Sem imagens referênciadas</span>
+    {/if}
+</div>
+
+<h4 class="label-text">Regiões</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncRegions}>«</button>
+	<div class="flex gap-2 flex-wrap">
+		{#if $regions}
+			{#each $externalItem.region_ids ?? [] as region_id}
+				<span class="badge badge-outline border-green-500">{$regions[region_id]?.name}</span>
+			{/each}
+		{/if}
+		{#if ($externalItem.operator_ids ?? []).length === 0}
+			<span>Sem regiões referênciadas</span>
+		{/if}
+	</div>
+</div>
+<h4 class="label-text">Operadores</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncOperators}>«</button>
+	<div class="flex gap-2 flex-wrap">
+		{#if $operators}
+			{#each $externalItem.operator_ids ?? [] as operator_id}
+				<span class="badge badge-outline border-orange-500">{$operators[operator_id]?.name}</span>
+			{/each}
+		{/if}
+		{#if ($externalItem.operator_ids ?? []).length === 0}
+			<span>Sem operadores referênciados</span>
+		{/if}
+	</div>
+</div>
+
+<h4 class="label-text">Edição</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncEditDate}>«</button>
+	{#if $externalItem.edit_datetime}
+		<span>{new Date($externalItem.edit_datetime).toLocaleString('pt')}</span>
+	{:else}
+		<span class="label-text">Sem data de edição</span>
+	{/if}
+</div>
+<h4 class="label-text">Publicação</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncPubDate}>«</button>
+	<p>{new Date($externalItem.publish_datetime).toLocaleString('pt')}</p>
+</div>
+
+<h4 class="label-text">Atributos:</h4>
+<div class="flex gap-6 flex-wrap items-center ml-2">
+	<div class="flex gap-2 flex-wrap">
+		<span class="badge badge-info badge-sm">{$externalItem.source}</span>
+		<a
+			class="link link-primary text-xs"
+			href={$externalItem.url}
+			target="_blank"
+			rel="noopener noreferrer">Fonte</a
+		>
+	</div>
+	<div class="flex gap-2 flex-wrap">
+		<span>Validado:</span>
+		<BooleanToggle
+			state={$externalItem.is_validated}
+			disabled={true}
+			compact={true}
+			nullable={false}
+		/>
+		<span>Sensivel:</span>
+		<BooleanToggle
+			state={$externalItem.is_sensitive}
+			disabled={true}
+			compact={true}
+			nullable={false}
+		/>
+		<span>Completo:</span>
+		<BooleanToggle state={!$externalItem.is_partial} disabled={true} compact={true} />
+		<span>Relevante:</span>
+		<BooleanToggle
+			state={$externalItem.is_relevant}
+			disabled={true}
+			compact={true}
+			nullable={false}
+		/>
+	</div>
+</div>
+
+<div class="flex justify-end">
+	<button class="btn btn-warning" on:click={handleSyncAll}>Sincronizar</button>
+</div>
