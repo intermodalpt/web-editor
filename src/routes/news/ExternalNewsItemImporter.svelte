@@ -10,39 +10,57 @@
 	export let regions;
 
 	$: extContentHtml =
-		$externalItem?.content_md || $externalItem?.prepro_content_md
-			? marked($externalItem.content_md ?? $externalItem?.prepro_content_md)
+		externalItem?.content_md || externalItem?.prepro_content_md
+			? marked(externalItem.content_md ?? externalItem?.prepro_content_md)
 			: null;
 
 	function handleSyncTitle() {
-		dispatch('sync-title', { title: $externalItem.title });
+		dispatch('sync-title', { title: externalItem.title });
 	}
 
 	function handleSyncSummary() {
-		dispatch('sync-summary', { summary: $externalItem.summary });
+		dispatch('sync-summary', { summary: externalItem.summary });
 	}
 
 	function handleSyncContent() {
-		dispatch('sync-content', { content: $externalItem.content_md });
+		dispatch('sync-content', {
+			content: externalItem.content_md || externalItem.prepro_content_md,
+			url: externalItem.url
+		});
 	}
 
 	function handleSyncRegions() {
-		dispatch('sync-regions', { regions: $externalItem.region_ids });
+		dispatch('sync-regions', { regionIds: externalItem.region_ids });
 	}
 
 	function handleSyncOperators() {
-		dispatch('sync-operators', { operators: $externalItem.operator_ids });
+		dispatch('sync-operators', { operatorIds: externalItem.operator_ids });
 	}
 
 	function handleSyncPubDate() {
-		dispatch('sync-pub-date', { pubDate: $externalItem.publish_datetime });
+		dispatch('sync-pub-date', { pubDatetime: externalItem.publish_datetime });
 	}
+
 	function handleSyncEditDate() {
-		dispatch('sync-edit-date', { editDate: $externalItem.edit_datetime });
+		dispatch('sync-edit-date', { editDatetime: externalItem.edit_datetime });
+	}
+
+	function handleSyncAuthor() {
+		dispatch('sync-author', { author: externalItem.author });
 	}
 
 	function handleSyncAll() {
-		dispatch('sync-all', {});
+		dispatch('sync-all', {
+			title: externalItem.title,
+			summary: externalItem.summary,
+			content: externalItem.content_md || externalItem.prepro_content_md,
+			regionIds: externalItem.region_ids,
+			operatorIds: externalItem.operator_ids,
+			pubDatetime: externalItem.publish_datetime,
+			editDatetime: externalItem.edit_datetime,
+			author: externalItem.author,
+			url: externalItem.url
+		});
 	}
 
 	function handleExtImgClick(image) {
@@ -50,10 +68,12 @@
 	}
 </script>
 
+<button class="btn btn-warning btn-sm mb-3" on:click={handleSyncAll}>Sincronizar</button>
+
 <div class="flex gap-1">
 	<button class="btn btn-xs h-auto" on:click={handleSyncTitle}>«</button>
 	<h2 class="text-lg font-bold">
-		<span>{$externalItem.title}</span>
+		<span>{externalItem.title}</span>
 	</h2>
 </div>
 
@@ -61,7 +81,7 @@
 <div class="flex gap-1 ml-2">
 	<button class="btn btn-xs h-auto" on:click={handleSyncSummary}>«</button>
 	<div class="grow">
-		<p>{$externalItem.summary}</p>
+		<p>{externalItem.summary}</p>
 	</div>
 </div>
 
@@ -75,7 +95,7 @@
 
 <h4 class="label-text">Imagens</h4>
 <div class="flex gap-2 flex-wrap ml-2">
-	{#each $externalItem.images ?? [] as image}
+	{#each externalItem.images ?? [] as image}
 		<button on:click={() => handleExtImgClick(image)}>
 			<img
 				src={image.url}
@@ -84,9 +104,9 @@
 			/>
 		</button>
 	{/each}
-    {#if ($externalItem.images ?? []).length === 0}
-        <span>Sem imagens referênciadas</span>
-    {/if}
+	{#if (externalItem.images ?? []).length === 0}
+		<span>Sem imagens referênciadas</span>
+	{/if}
 </div>
 
 <h4 class="label-text">Regiões</h4>
@@ -94,11 +114,11 @@
 	<button class="btn btn-xs h-auto" on:click={handleSyncRegions}>«</button>
 	<div class="flex gap-2 flex-wrap">
 		{#if $regions}
-			{#each $externalItem.region_ids ?? [] as region_id}
+			{#each externalItem.region_ids ?? [] as region_id}
 				<span class="badge badge-outline border-green-500">{$regions[region_id]?.name}</span>
 			{/each}
 		{/if}
-		{#if ($externalItem.operator_ids ?? []).length === 0}
+		{#if (externalItem.operator_ids ?? []).length === 0}
 			<span>Sem regiões referênciadas</span>
 		{/if}
 	</div>
@@ -108,38 +128,47 @@
 	<button class="btn btn-xs h-auto" on:click={handleSyncOperators}>«</button>
 	<div class="flex gap-2 flex-wrap">
 		{#if $operators}
-			{#each $externalItem.operator_ids ?? [] as operator_id}
+			{#each externalItem.operator_ids ?? [] as operator_id}
 				<span class="badge badge-outline border-orange-500">{$operators[operator_id]?.name}</span>
 			{/each}
 		{/if}
-		{#if ($externalItem.operator_ids ?? []).length === 0}
+		{#if (externalItem.operator_ids ?? []).length === 0}
 			<span>Sem operadores referênciados</span>
 		{/if}
 	</div>
 </div>
 
+<h4 class="label-text">Publicação</h4>
+<div class="flex gap-1 ml-2">
+	<button class="btn btn-xs h-auto" on:click={handleSyncPubDate}>«</button>
+	<p>{new Date(externalItem.publish_datetime).toLocaleString('pt')}</p>
+</div>
 <h4 class="label-text">Edição</h4>
 <div class="flex gap-1 ml-2">
 	<button class="btn btn-xs h-auto" on:click={handleSyncEditDate}>«</button>
-	{#if $externalItem.edit_datetime}
-		<span>{new Date($externalItem.edit_datetime).toLocaleString('pt')}</span>
+	{#if externalItem.edit_datetime}
+		<span>{new Date(externalItem.edit_datetime).toLocaleString('pt')}</span>
 	{:else}
 		<span class="label-text">Sem data de edição</span>
 	{/if}
 </div>
-<h4 class="label-text">Publicação</h4>
+<h4 class="label-text">Autor</h4>
 <div class="flex gap-1 ml-2">
-	<button class="btn btn-xs h-auto" on:click={handleSyncPubDate}>«</button>
-	<p>{new Date($externalItem.publish_datetime).toLocaleString('pt')}</p>
+	<button class="btn btn-xs h-auto" on:click={handleSyncAuthor}>«</button>
+	{#if externalItem.author}
+		<span>{externalItem.author}</span>
+	{:else}
+		<span class="label-text">Autor desconhecido</span>
+	{/if}
 </div>
 
 <h4 class="label-text">Atributos:</h4>
 <div class="flex gap-6 flex-wrap items-center ml-2">
 	<div class="flex gap-2 flex-wrap">
-		<span class="badge badge-info badge-sm">{$externalItem.source}</span>
+		<span class="badge badge-info badge-sm">{externalItem.source}</span>
 		<a
 			class="link link-primary text-xs"
-			href={$externalItem.url}
+			href={externalItem.url}
 			target="_blank"
 			rel="noopener noreferrer">Fonte</a
 		>
@@ -147,30 +176,26 @@
 	<div class="flex gap-2 flex-wrap">
 		<span>Validado:</span>
 		<BooleanToggle
-			state={$externalItem.is_validated}
+			state={externalItem.is_validated}
 			disabled={true}
 			compact={true}
 			nullable={false}
 		/>
 		<span>Sensivel:</span>
 		<BooleanToggle
-			state={$externalItem.is_sensitive}
+			state={externalItem.is_sensitive}
 			disabled={true}
 			compact={true}
 			nullable={false}
 		/>
 		<span>Completo:</span>
-		<BooleanToggle state={!$externalItem.is_partial} disabled={true} compact={true} />
+		<BooleanToggle state={!externalItem.is_partial} disabled={true} compact={true} />
 		<span>Relevante:</span>
 		<BooleanToggle
-			state={$externalItem.is_relevant}
+			state={externalItem.is_relevant}
 			disabled={true}
 			compact={true}
 			nullable={false}
 		/>
 	</div>
-</div>
-
-<div class="flex justify-end">
-	<button class="btn btn-warning" on:click={handleSyncAll}>Sincronizar</button>
 </div>

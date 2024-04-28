@@ -106,7 +106,7 @@
 	}
 
 	onMount(() => {
-		fetch(`${apiServer}/v1/news/external/${id}`, {
+		fetch(`${apiServer}/v1/news/external/${id}/full`, {
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${$token}`
@@ -122,7 +122,7 @@
 					return { value: id };
 				});
 				summary = item.summary;
-				content_md = item.content_md;
+				content_md = item.content_md || item.prepro_content_md;
 				is_complete = item.is_complete;
 				is_relevant = item.is_relevant;
 				is_sensitive = item.is_sensitive;
@@ -200,9 +200,16 @@
 
 	<div class="flex gap-2 justify-between">
 		<button class="btn btn-error" class:hidden={!canEdit} on:click={deleteItem}>Apagar</button>
-		<button class="btn btn-primary" class:hidden={!canEdit} on:click={save} disabled={!formValid}
-			>Guardar</button
-		>
+		<div class="flex gap-2">
+			<a
+				class="btn btn-primary"
+				class:hidden={!canEdit || !original?.is_validated}
+				href="/news/import/{id}">Importar</a
+			>
+			<button class="btn btn-primary" class:hidden={!canEdit} on:click={save} disabled={!formValid}
+				>Guardar</button
+			>
+		</div>
 	</div>
 {:else}
 	<div class="w-full flex justify-center">

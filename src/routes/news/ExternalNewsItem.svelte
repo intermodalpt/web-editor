@@ -2,6 +2,8 @@
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	export let item;
+	export let operators;
+	export let regions;
 </script>
 
 <h2 class="card-title text-lg">
@@ -16,9 +18,16 @@
 
 <div class="flex gap-2 flex-wrap justify-between">
 	<div class="flex gap-2 flex-wrap">
-		{#each item.operator_ids as operator_id}
-			<span class="badge badge-outline">{operator_id}</span>
-		{/each}
+		{#if $operators}
+			{#each item.operator_ids as operator_id}
+				<span class="badge badge-outline border-orange-500">{$operators[operator_id]?.name}</span>
+			{/each}
+		{/if}
+		{#if $regions}
+			{#each item.region_ids as region_id}
+				<span class="badge badge-outline border-green-500">{$regions[region_id]?.name}</span>
+			{/each}
+		{/if}
 	</div>
 	<div class="flex gap-2 flex-wrap">
 		<span>Validado:</span>

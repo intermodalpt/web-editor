@@ -2,11 +2,14 @@
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import Select from 'svelte-select';
-	import { marked } from 'marked';
 	import { apiServer } from '$lib/settings.js';
 	import { token, toast } from '$lib/stores.js';
+	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
-	import ExternalNewsItemImporter from './ExternalNewsItemImporter.svelte';
+	import MdContent from './content/MdContent.svelte';
+	import ImageContent from './content/ImageContent.svelte';
+	import MapContent from './content/MapContent.svelte';
+	import ReadMoreContent from './content/ContinuationContent.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -14,8 +17,6 @@
 	export let operators;
 	export let regions;
 	export let canEdit;
-
-	let externalDialog;
 
 	const operatorOptions = derived(
 		operators,
@@ -35,13 +36,14 @@
 			})) ?? []
 	);
 
-	const externalId = writable(2);
-
-	const externalItem = derived(externalId, async ($externalId, set) => {
-		if (!$externalId) {
+	// The dialog in the current component
+	let newExternalDialog;
+	const newExternalId = writable(null);
+	const newExternalItem = derived(newExternalId, async ($newExternalId, set) => {
+		if (!$newExternalId) {
 			return;
 		}
-		const res = await fetch(`${apiServer}/v1/news/external/${$externalId}/full`, {
+		const res = await fetch(`${apiServer}/v1/news/external/${$newExternalId}/full`, {
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${$token}`
@@ -49,12 +51,15 @@
 		});
 
 		if (!res.ok) {
-			toast(`Erro ao carregar notícia externa ${$externalId}`, 'error');
+			toast(`Erro ao carregar notícia externa ${$newExternalId}`, 'error');
 			return;
 		}
 
 		set(await res.json());
 	});
+
+	// Foreign dialog inside ExternalSourceRow
+	let externalDialog;
 
 	let original = null;
 	let selectedRegions = [];
@@ -62,14 +67,16 @@
 	let title = '';
 	let summary = '';
 	let content_md = '';
-	let is_visible = null;
+	let is_visible = true;
 	let author_override = null;
 	let publish_datetime = null;
 	let edit_datetime = null;
+	let content = [];
+	let externalIds = [2, 6];
+
+	content;
 
 	$: formValid = true;
-
-	$: content_html = marked(content_md);
 
 	$: loaded = id == original?.id;
 
@@ -125,6 +132,52 @@
 		}
 	}
 
+	function addContentBlock(type) {
+		if (type === 'md') {
+			content.push({ md: '' });
+		} else if (type === 'img') {
+			content.push({
+				id: null,
+				url: '',
+				description: '',
+				transcription: null,
+				attribution: null
+			});
+		} else if (type === 'map') {
+			content.push({
+				map: {
+					data: [],
+					lat: null,
+					lon: null,
+					zoom: null
+				}
+			});
+		} else if (type === 'continuation') {
+			content.push({
+				continuation: {
+					name: null,
+					url: null
+				}
+			});
+		}
+
+		content = content;
+	}
+
+	function dropContentBlock(i) {
+		content = [...content.slice(0, i), ...content.slice(i + 1)];
+		content = content;
+	}
+
+	function stripTimezone(datestr) {
+		if (!datestr) {
+			return null;
+		}
+
+		const date = new Date(datestr);
+		return date.toISOString().slice(0, 19);
+	}
+
 	onMount(() => {
 		if (!id) {
 			return;
@@ -138,51 +191,25 @@
 			.then((r) => r.json())
 			.then((item) => {
 				original = item;
+				title = item.title;
+				summary = item.summary;
+				content = item.content;
+				publish_datetime = stripTimezone(item.publish_datetime);
+				edit_datetime = stripTimezone(item.edit_datetime);
+				author_override = item.author_override;
+				is_visible = item.is_visible;
+
 				selectedRegions = item.region_ids.map((id) => {
 					return { value: id };
 				});
 				selectedOperators = item.operator_ids.map((id) => {
 					return { value: id };
 				});
-				summary = item.summary;
-				content_md = item.content_md;
-				is_complete = item.is_complete;
-				is_relevant = item.is_relevant;
-				is_sensitive = item.is_sensitive;
 			});
 	});
 </script>
 
 {#if loaded}
-	<div class="alert border-2 border-primary bg-zinc-50 relative">
-		<span class="-top-2 left-4 badge badge-primary absolute">Fonte externa</span>
-		<div class="flex gap-2 w-full items-center">
-			<div class="form-control shrink-0">
-				<label class="input-group">
-					<span>Id</span>
-					<input
-						type="number"
-						bind:value={$externalId}
-						class="input input-bordered w-32"
-						disabled={!canEdit}
-					/>
-				</label>
-			</div>
-			{#if $externalId}
-				<span class="btn btn-success"></span>
-				<span class="flex-grow text-lg font-bold">{$externalItem?.title}{$externalItem?.title}</span>
-				<button
-					class="btn btn-primary"
-					on:click={() => {
-						externalDialog.showModal();
-					}}>Sincronizar</button
-				>
-			{:else}
-				<span class="btn btn-error"></span>
-			{/if}
-		</div>
-	</div>
-
 	<h2 class="flex gap-2 items-center">
 		{#if id}
 			<span class="text-md">#{id}</span>
@@ -201,16 +228,52 @@
 	</h2>
 	<h4 class="label-text">Sumário:</h4>
 	<textarea class="w-full h-20 input input-bordered" disabled={!canEdit}>{summary}</textarea>
-	<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-		<div>
-			<h4 class="label-text">Markdown:</h4>
-			<textarea class="w-full input input-bordered h-40" disabled={!canEdit} bind:value={content_md}
-			></textarea>
+
+	<h4 class="label-text">Conteúdo:</h4>
+	{#each content as block, i}
+		<div class="relative">
+			<button
+				class="btn btn-xs btn-error absolute right-2 top-2"
+				on:click={() => dropContentBlock(i)}>x</button
+			>
+			{#if 'md' in block}
+				<MdContent bind:data={block.md} {canEdit} />
+			{:else if 'image' in block}
+				<ImageContent bind:data={block.map} {canEdit} />
+			{:else if 'map' in block}
+				<MapContent bind:data={block.map} {canEdit} />
+				<img src={block.url} alt={block.alt} />
+			{:else if 'continuation' in block}
+				<ReadMoreContent bind:data={block.continuation} {canEdit} />
+			{/if}
 		</div>
-		<div>
-			<h4 class="label-text">Previsão:</h4>
-			<div class="border-l-2 ml-2 p-2 border-info bg-base-200">{@html content_html}</div>
-		</div>
+		<hr />
+	{/each}
+	<div class="flex flex-wrap gap-3 justify-end">
+		<button
+			class="btn btn-primary btn-sm"
+			on:click={() => {
+				addContentBlock('md');
+			}}>+Texto</button
+		>
+		<button
+			class="btn btn-primary btn-sm"
+			on:click={() => {
+				addContentBlock('img');
+			}}>+Imagem</button
+		>
+		<button
+			class="btn btn-primary btn-sm"
+			on:click={() => {
+				addContentBlock('map');
+			}}>+Mapa</button
+		>
+		<button
+			class="btn btn-primary btn-sm"
+			on:click={() => {
+				addContentBlock('continuation');
+			}}>+Continuação</button
+		>
 	</div>
 
 	<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
@@ -236,13 +299,13 @@
 	<div class="flex py-2 gap-4 flex-wrap">
 		<div class="form-control">
 			<label class="input-group">
-				<span class="w-32">Publicação</span>
+				<span>Publicação</span>
 				<input type="datetime-local" bind:value={publish_datetime} class="input input-bordered" />
 			</label>
 		</div>
 		<div class="form-control">
 			<label class="input-group">
-				<span class="w-32">Edição</span>
+				<span>Edição</span>
 				<input type="datetime-local" bind:value={edit_datetime} class="input input-bordered" />
 			</label>
 		</div>
@@ -250,7 +313,7 @@
 	<div class="flex py-2 gap-4 flex-wrap">
 		<div class="form-control">
 			<label class="input-group">
-				<span class="w-48">Autor alternativo</span>
+				<span>Autor alternativo</span>
 				<input
 					type="text"
 					bind:value={author_override}
@@ -264,10 +327,106 @@
 			<BooleanToggle bind:state={is_visible} disabled={!canEdit} nullable={false} />
 		</div>
 	</div>
+	<div class="alert flex border-2 border-info bg-zinc-50 relative px-2 pb-3">
+		<span class="-top-2 left-4 badge badge-info absolute">Fontes externas</span>
+		<button
+			class="-top-2 right-4 btn btn-xs btn-success absolute"
+			on:click={() => {
+				newExternalDialog.showModal();
+			}}>+</button
+		>
+		<div class="flex flex-col gap-2 w-full">
+			{#each externalIds as externalId}
+				{#key externalId}
+					<ExternalSourceRow
+						{externalId}
+						{operators}
+						{regions}
+						{canEdit}
+						on:sync-title={(e) => {
+							title = e.detail.title;
+							toast('Título sincronizado', 'success');
+						}}
+						on:sync-summary={(e) => {
+							summary = e.detail.summary;
+							toast('Sumário sincronizado', 'success');
+						}}
+						on:sync-content={(e) => {
+							content = [{ md: e.detail.content_md || e.detail.prepro_content_md }];
+							toast('Conteúdo sincronizado', 'success');
+						}}
+						on:sync-regions={(e) => {
+							selectedRegions = e.detail.regionIds.map((id) => {
+								return {
+									label: $regions[id]?.name,
+									value: id
+								};
+							});
+							toast('Regiões sincronizadas', 'success');
+						}}
+						on:sync-operators={(e) => {
+							selectedOperators = e.detail.operatorIds.map((id) => {
+								return {
+									label: $operators[id]?.name,
+									value: id
+								};
+							});
+							toast('Operadores sincronizados', 'success');
+						}}
+						on:sync-pub-date={(e) => {
+							publish_datetime = stripTimezone(e.detail.pubDate);
+							toast('Data de publicação sincronizada', 'success');
+						}}
+						on:sync-edit-date={(e) => {
+							edit_datetime = stripTimezone(e.detail.editDate);
+							toast('Data de edição sincronizada', 'success');
+						}}
+						on:sync-author={(e) => {
+							author_override = e.detail.author;
+							toast('Autor sincronizado', 'success');
+						}}
+						on:sync-all={(e) => {
+							title = e.detail.title;
+							summary = e.detail.summary;
+							selectedRegions = e.detail.regionIds.map((id) => {
+								return {
+									label: $regions[id]?.name,
+									value: id
+								};
+							});
+							selectedOperators = e.detail.operatorIds.map((id) => {
+								return {
+									label: $operators[id]?.name,
+									value: id
+								};
+							});
+							publish_datetime = stripTimezone(e.detail.pubDatetime);
+							edit_datetime = stripTimezone(e.detail.editDatetime);
+							author_override = e.detail.author;
+							content = [
+								{ md: e.detail.content },
+								{ continuation: { name: 'Lisboa para Pessoas', url: e.detail.url } }
+							];
+							externalDialog?.close();
+							toast('Tudo sincronizado', 'success');
+						}}
+						on:import-img={() => {
+							// TODO
+						}}
+						on:open-dialog={(e) => {
+							externalDialog = e.detail.dialog;
+						}}
+					/>
+				{/key}
+			{/each}
+		</div>
+	</div>
 
 	<div class="flex gap-2 justify-between">
 		{#if id}
 			<button class="btn btn-error" class:hidden={!canEdit} on:click={deleteItem}>Apagar</button>
+		{:else}
+			<span></span>
 		{/if}
 		<div class="flex gap-2">
 			<button class="btn btn-primary" class:hidden={!canEdit} on:click={save} disabled={!formValid}
@@ -281,71 +440,39 @@
 	</div>
 {/if}
 
-<dialog bind:this={externalDialog} class="modal modal-bottom sm:modal-middle">
+<dialog bind:this={newExternalDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative z-30 sm:max-w-5xl">
 		<div>
 			<form method="dialog">
 				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
 			</form>
-			{#key externalId}
-				{#if $externalItem}
-					<ExternalNewsItemImporter
-						{externalItem}
-						{operators}
-						{regions}
-						{canEdit}
-						on:sync-title={() => {
-							title = $externalItem.title;
-							toast('Título sincronizado', 'success');
-						}}
-						on:sync-summary={() => {
-							summary = $externalItem.summary;
-							toast('Sumário sincronizado', 'success');
-						}}
-						on:sync-content={() => {
-							//content_md = $externalItem.content_md;
-							toast('Conteúdo sincronizado', 'success');
-						}}
-						on:sync-regions={() => {
-							selectedRegions = $externalItem.region_ids.map((id) => {
-								return { value: id };
-							});
-							toast('Regiões sincronizadas', 'success');
-						}}
-						on:sync-operators={() => {
-							selectedOperators = $externalItem.operator_ids.map((id) => {
-								return { value: id };
-							});
-							toast('Operadores sincronizados', 'success');
-						}}
-						on:sync-pub-date={() => {
-							publish_datetime = $externalItem.publish_datetime;
-							toast('Data de publicação sincronizada', 'success');
-						}}
-						on:sync-edit-date={() => {
-							edit_datetime = $externalItem.edit_datetime;
-							toast('Data de edição sincronizada', 'success');
-						}}
-						on:sync-all={() => {
-							title = $externalItem.title;
-							summary = $externalItem.summary;
-							//content_md = $externalItem.content_md;
-							selectedRegions = $externalItem.region_ids.map((id) => {
-								return { value: id };
-							});
-							selectedOperators = $externalItem.operator_ids.map((id) => {
-								return { value: id };
-							});
-							publish_datetime = $externalItem.publish_datetime;
-							edit_datetime = $externalItem.edit_datetime;
-							toast('Tudo sincronizado', 'success');
-						}}
-						on:import-img={() => {
-							// TODO
-						}}
-					/>
+			<div class="form-control mb-2">
+				<label class="input-group">
+					<span>Identificador</span>
+					<input type="number" bind:value={$newExternalId} class="input input-bordered" />
+				</label>
+			</div>
+			<div class="flex gap-2 w-full items-center">
+				{#if $newExternalId}
+					{#if $newExternalItem}
+						<span class="btn btn-success"></span>
+					{:else}
+						<span class="btn btn-error"></span>
+					{/if}
+					<span class="text-lg font-bold">{$newExternalItem?.title}</span>
 				{/if}
-			{/key}
+			</div>
+			<div class="flex justify-end">
+				<button
+					class="btn btn-info"
+					on:click={() => {
+						newExternalDialog.close();
+						// Add ensuring no duplicates
+						externalIds = [...new Set([...externalIds, $newExternalId])];
+						toast(`Conteúdo externo ligado com sucesso`, 'success');
+					}}>Adicionar</button
+				>
+			</div>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop">
