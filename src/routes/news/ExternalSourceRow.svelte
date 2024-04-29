@@ -34,22 +34,28 @@
 	});
 </script>
 
-<button
-	class="flex gap-2 w-full items-center"
-	on:click={() => {
-		externalDialog.showModal();
-		dispatch('open-dialog', {
-			dialog: externalDialog
-		});
-	}}
->
-	<span
+<div class="flex gap-2 w-full items-center">
+	<button
 		class="input content-center bg-base-300 rounded-lg border-2"
 		class:border-success={externalItem}
-		class:border-error={!externalItem}>#{externalId}</span
+		class:border-error={!externalItem}
+		on:click={() => {
+			externalDialog.showModal();
+			dispatch('open-dialog', {
+				dialog: externalDialog
+			});
+		}}>#{externalId}</button
 	>
-	<span class="grow text-lg font-bold text-left">{externalItem?.title}</span>
-</button>
+	<span class="grow text-lg font-bold text-left">{externalItem?.title ?? 'Sem título'}</span>
+	<button
+		class="btn btn-xs btn-error"
+		on:click={() => {
+			dispatch('delete', {
+				id: externalId
+			});
+		}}>x</button
+	>
+</div>
 
 <dialog bind:this={externalDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative z-30 sm:max-w-5xl">

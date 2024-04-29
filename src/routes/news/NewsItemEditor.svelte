@@ -410,11 +410,13 @@
 							externalDialog?.close();
 							toast('Tudo sincronizado', 'success');
 						}}
-						on:import-img={() => {
-							// TODO
-						}}
+						on:import-img={importExternalImg}
 						on:open-dialog={(e) => {
 							externalDialog = e.detail.dialog;
+						}}
+						on:delete={(e) => {
+							externalIds = externalIds.filter((id) => id !== e.detail.id);
+							externalIds = externalIds;
 						}}
 					/>
 				{/key}
