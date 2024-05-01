@@ -7,7 +7,7 @@
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 	import MdContent from './content/MdContent.svelte';
-	import ImageContent from './content/ImageContent.svelte';
+	import PicContent from './content/PicContent.svelte';
 	import MapContent from './content/MapContent.svelte';
 	import ReadMoreContent from './content/ContinuationContent.svelte';
 
@@ -73,8 +73,7 @@
 	let edit_datetime = null;
 	let content = [];
 	let externalIds = [2, 6];
-
-	content;
+	let pictures = {};
 
 	$: formValid = true;
 
@@ -135,13 +134,15 @@
 	function addContentBlock(type) {
 		if (type === 'md') {
 			content.push({ md: '' });
-		} else if (type === 'img') {
+		} else if (type === 'pic') {
 			content.push({
-				id: null,
-				url: '',
-				description: '',
-				transcription: null,
-				attribution: null
+				pic: {
+					id: null,
+					url: '',
+					description: '',
+					transcript: null,
+					attribution: null
+				}
 			});
 		} else if (type === 'map') {
 			content.push({
@@ -178,6 +179,53 @@
 		return date.toISOString().slice(0, 19);
 	}
 
+	async function importExternalImg(e) {
+		const id = e.detail.id;
+
+		const res = await fetch(`${apiServer}/v1/news/images/import_external/${id}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			}
+		});
+
+		if (!res.ok) {
+			toast(`Erro ao carregar notícia externa ${$newExternalId}`, 'error');
+			return;
+		}
+
+		const newImg = await res.json();
+
+		pictures = [...pictures, newImg];
+	}
+
+	function calcPics() {
+		for (const block of content) {
+			if ('pic' in block) {
+				const blockPic = structuredClone(block.pic);
+				blockPic.linked = false;
+				blockPic.used = true;
+				pictures[block.pic.id] = blockPic;
+			}
+		}
+
+		for (const linkedPic of original?.pictures ?? []) {
+			const match = pictures[linkedPic.id];
+			if (match) {
+				match.linked = true;
+			} else {
+				pictures[linkedPic.id] = {
+					id: linkedPic.id,
+					url: linkedPic.url_medium,
+					transcript: linkedPic.transcript,
+					linked: true,
+					used: false
+				};
+			}
+		}
+	}
+
 	onMount(() => {
 		if (!id) {
 			return;
@@ -205,6 +253,7 @@
 				selectedOperators = item.operator_ids.map((id) => {
 					return { value: id };
 				});
+				calcPics();
 			});
 	});
 </script>
@@ -228,18 +277,52 @@
 	</h2>
 	<h4 class="label-text">Sumário:</h4>
 	<textarea class="w-full h-20 input input-bordered" disabled={!canEdit}>{summary}</textarea>
-
+	<!--<textarea class="w-full h-40 input input-bordered">{JSON.stringify(pictures, null, 2)}</textarea>-->
+	<h4 class="label-text">Miniatura:</h4>
+	<div class="flex gap-2 flex-wrap ml-2">
+		<button class="btn btn-outline h-32"> Sem imagem </button>
+		{#each Object.values(pictures ?? {}) as pic}
+			<button class="relative">
+				<img
+					src={pic.url}
+					alt={pic.transcript}
+					class="max-h-32 rounded-lg hover:scale-110 transition-all"
+				/>
+			</button>
+		{/each}
+	</div>
 	<h4 class="label-text">Conteúdo:</h4>
 	{#each content as block, i}
-		<div class="relative">
+		<div class="relative border-l-2 border-secondary pl-2">
 			<button
 				class="btn btn-xs btn-error absolute right-2 top-2"
 				on:click={() => dropContentBlock(i)}>x</button
 			>
 			{#if 'md' in block}
 				<MdContent bind:data={block.md} {canEdit} />
-			{:else if 'image' in block}
-				<ImageContent bind:data={block.map} {canEdit} />
+			{:else if 'pic' in block}
+				<PicContent
+					bind:data={block.pic}
+					bind:pictures
+					{canEdit}
+					on:new-pic={(e) => {
+						const pic = e.detail.pic;
+
+						if (!pictures[pic.id]) {
+							pictures[pic.id] = {
+								id: pic.id,
+								url: pic.url_medium,
+								transcript: pic.transcript,
+								linked: false,
+								used: true
+							};
+						} else {
+							pictures[pic.id].used = true;
+						}
+						pictures = pictures;
+					}}
+					on:select-pic={calcPics}
+				/>
 			{:else if 'map' in block}
 				<MapContent bind:data={block.map} {canEdit} />
 				<img src={block.url} alt={block.alt} />
@@ -259,7 +342,7 @@
 		<button
 			class="btn btn-primary btn-sm"
 			on:click={() => {
-				addContentBlock('img');
+				addContentBlock('pic');
 			}}>+Imagem</button
 		>
 		<button
@@ -275,7 +358,6 @@
 			}}>+Continuação</button
 		>
 	</div>
-
 	<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
 		<div>
 			<h4 class="label-text">Operadores:</h4>
