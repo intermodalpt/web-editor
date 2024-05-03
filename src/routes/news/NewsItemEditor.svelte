@@ -227,6 +227,28 @@
 		}
 	}
 
+	function moveContentBlockUp(i) {
+		if (i === 0) {
+			return;
+		}
+
+		const tmp = content[i - 1];
+		content[i - 1] = content[i];
+		content[i] = tmp;
+		content = content;
+	}
+
+	function moveContentBlockDown(i) {
+		if (i === content.length - 1) {
+			return;
+		}
+
+		const tmp = content[i + 1];
+		content[i + 1] = content[i];
+		content[i] = tmp;
+		content = content;
+	}
+
 	onMount(() => {
 		if (!id) {
 			return;
@@ -304,10 +326,19 @@
 	<h4 class="label-text">Conteúdo:</h4>
 	{#each content as block, i}
 		<div class="relative border-l-2 border-secondary pl-2">
-			<button
-				class="btn btn-xs btn-error absolute right-2 top-2"
-				on:click={() => dropContentBlock(i)}>x</button
-			>
+			<div class="absolute right-2 top-2 flex gap-2">
+				<button
+					class="btn btn-xs btn-outline"
+					class:hidden={i === 0}
+					on:click={() => moveContentBlockUp(i)}>↑</button
+				>
+				<button
+					class="btn btn-xs btn-outline"
+					class:hidden={i === content.length - 1}
+					on:click={() => moveContentBlockDown(i)}>↓</button
+				>
+				<button class="btn btn-xs btn-error" on:click={() => dropContentBlock(i)}>x</button>
+			</div>
 			{#if 'md' in block}
 				<MdContent bind:data={block.md} {canEdit} />
 			{:else if 'pic' in block}
