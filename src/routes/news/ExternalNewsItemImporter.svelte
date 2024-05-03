@@ -64,7 +64,7 @@
 	}
 
 	function handleExtImgClick(image) {
-		dispatch('import-img', { image });
+		dispatch('import-img', { id: image.id });
 	}
 </script>
 

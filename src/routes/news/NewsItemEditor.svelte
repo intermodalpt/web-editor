@@ -74,6 +74,7 @@
 	let content = [];
 	let externalIds = [2, 6];
 	let pictures = {};
+	let thumbId = null;
 
 	$: formValid = true;
 
@@ -280,13 +281,22 @@
 	<!--<textarea class="w-full h-40 input input-bordered">{JSON.stringify(pictures, null, 2)}</textarea>-->
 	<h4 class="label-text">Miniatura:</h4>
 	<div class="flex gap-2 flex-wrap ml-2">
-		<button class="btn btn-outline h-32"> Sem imagem </button>
+		<button
+			class="btn btn-outline h-32"
+			class:btn-active={thumbId == null}
+			on:click={() => (thumbId = null)}>Sem imagem</button
+		>
 		{#each Object.values(pictures ?? {}) as pic}
-			<button class="relative">
+			<button
+				class="relative"
+				on:click={() => (thumbId = pic.id)}
+			>
 				<img
 					src={pic.url}
 					alt={pic.transcript}
 					class="max-h-32 rounded-lg hover:scale-110 transition-all"
+					class:border-2={thumbId == pic.id}
+					class:border-primary={thumbId == pic.id}
 				/>
 			</button>
 		{/each}
