@@ -9,7 +9,7 @@
 	import MdContent from './content/MdContent.svelte';
 	import PicContent from './content/PicContent.svelte';
 	import MapContent from './content/MapContent.svelte';
-	import ReadMoreContent from './content/ContinuationContent.svelte';
+	import ContentRef from './content/ContentRef.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -148,15 +148,15 @@
 		} else if (type === 'map') {
 			content.push({
 				map: {
-					data: [],
-					lat: null,
-					lon: null,
-					zoom: null
+					geojson: [],
+					lat: 38.75,
+					lon: -9.136,
+					zoom: 9
 				}
 			});
-		} else if (type === 'continuation') {
+		} else if (type === 'ref') {
 			content.push({
-				continuation: {
+				ref: {
 					name: null,
 					url: null
 				}
@@ -309,10 +309,7 @@
 			on:click={() => (thumbId = null)}>Sem imagem</button
 		>
 		{#each Object.values(pictures ?? {}) as pic}
-			<button
-				class="relative"
-				on:click={() => (thumbId = pic.id)}
-			>
+			<button class="relative" x on:click={() => (thumbId = pic.id)}>
 				<img
 					src={pic.url}
 					alt={pic.transcript}
@@ -367,8 +364,8 @@
 			{:else if 'map' in block}
 				<MapContent bind:data={block.map} {canEdit} />
 				<img src={block.url} alt={block.alt} />
-			{:else if 'continuation' in block}
-				<ReadMoreContent bind:data={block.continuation} {canEdit} />
+			{:else if 'ref' in block}
+				<ContentRef bind:data={block.ref} {canEdit} />
 			{/if}
 		</div>
 		<hr />
@@ -395,7 +392,7 @@
 		<button
 			class="btn btn-primary btn-sm"
 			on:click={() => {
-				addContentBlock('continuation');
+				addContentBlock('ref');
 			}}>+Continuação</button
 		>
 	</div>
@@ -497,11 +494,11 @@
 							toast('Operadores sincronizados', 'success');
 						}}
 						on:sync-pub-date={(e) => {
-							publish_datetime = stripTimezone(e.detail.pubDate);
+							publish_datetime = stripTimezone(e.detail.pubDatetime);
 							toast('Data de publicação sincronizada', 'success');
 						}}
 						on:sync-edit-date={(e) => {
-							edit_datetime = stripTimezone(e.detail.editDate);
+							edit_datetime = stripTimezone(e.detail.editDatetime);
 							toast('Data de edição sincronizada', 'success');
 						}}
 						on:sync-author={(e) => {
@@ -528,7 +525,7 @@
 							author_override = e.detail.author;
 							content = [
 								{ md: e.detail.content },
-								{ continuation: { name: 'Lisboa para Pessoas', url: e.detail.url } }
+								{ ref: { name: 'Lisboa para Pessoas', url: e.detail.url } }
 							];
 							externalDialog?.close();
 							toast('Tudo sincronizado', 'success');

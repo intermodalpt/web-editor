@@ -74,7 +74,7 @@
 	function selectPic(pic) {
 		if (pic.id !== data.id) {
 			data.id = pic.id;
-			data.url = pic.url_medium;
+			data.url = pic.url_medium ?? pic.url;
 			data.transcription = pic.transcription ?? '';
 			data.attribution = null;
 			data = data;

@@ -8,7 +8,6 @@
 	const operators = liveQuery(() => getOperators());
 	const regions = liveQuery(() => getRegions());
 
-
 	async function loadData() {
 		await Promise.all([fetchOperators(), fetchRegions()]);
 	}
@@ -17,7 +16,6 @@
 		console.log('data loaded');
 		await loadMissing();
 	});
-
 </script>
 
 <svelte:head>
