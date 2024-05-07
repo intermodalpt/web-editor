@@ -6,15 +6,15 @@
 	const dispatch = createEventDispatcher();
 
 	export let data;
-	export let pictures;
+	export let images;
 	export let canEdit;
 
 	const tabs = {
 		preview: 1,
 		meta: 2,
-		pictures: 3
+		images: 3
 	};
-	let tab = data.id ? tabs.preview : tabs.pictures;
+	let tab = data.id ? tabs.preview : tabs.images;
 
 	let files = [];
 
@@ -27,7 +27,6 @@
 		const file = files[0];
 
 		isUploading = true;
-		dispatch('upload-begin');
 
 		const formData = new FormData();
 		formData.append('images[]', file);
@@ -51,9 +50,8 @@
 			const json = await res.json();
 			if (isUploaded) {
 				toast('Imagem enviada', 'success');
-				console.log('new pic', json);
-				dispatch('new-pic', { pic: json });
-				selectPic(json);
+				dispatch('new-img', { img: json });
+				selectImg(json);
 			} else if (isConflict) {
 				toast('Imagem já enviada', 'warning');
 			} else if (isError) {
@@ -71,15 +69,15 @@
 		isUploading = false;
 	}
 
-	function selectPic(pic) {
-		if (pic.id !== data.id) {
-			data.id = pic.id;
-			data.url = pic.url_medium ?? pic.url;
-			data.transcription = pic.transcription ?? '';
+	function selectImg(img) {
+		if (img.id !== data.id) {
+			data.id = img.id;
+			data.url = img.url_medium ?? img.url;
+			data.transcription = img.transcription ?? '';
 			data.attribution = null;
 			data = data;
 		}
-		dispatch('select-pic', { pic: pic });
+		dispatch('select-img', { img });
 		tab = tabs.preview;
 	}
 </script>
@@ -102,8 +100,8 @@
 	<button
 		role="tab"
 		class="tab"
-		class:tab-active={tab == tabs.pictures}
-		on:click={() => (tab = tabs.pictures)}>Imagens</button
+		class:tab-active={tab == tabs.images}
+		on:click={() => (tab = tabs.images)}>Imagens</button
 	>
 </div>
 {#if tab == tabs.preview}
@@ -122,26 +120,26 @@
 	<textarea class="w-full input input-bordered" bind:value={data.transcript}></textarea>
 	<h4 class="label-text">Atribuição:</h4>
 	<textarea class="w-full input input-bordered" bind:value={data.attribution}></textarea>
-{:else if tab == tabs.pictures}
+{:else if tab == tabs.images}
 	<div class="flex gap-2 flex-wrap ml-2">
-		{#each Object.values(pictures ?? {}) as pic}
-			<button class="relative" on:click={() => selectPic(pic)}>
+		{#each Object.values(images ?? {}) as img}
+			<button class="relative" on:click={() => selectImg(img)}>
 				<div class="absolute top-0 right-0 flex gap-1 p-1">
-					{#if pic.used}
+					{#if img.used}
 						<div class="bg-success rounded-full p-1 border-2 border-white"></div>
 					{/if}
-					{#if pic.id === data.id}
+					{#if img.id === data.id}
 						<div class="bg-primary rounded-full p-1 border-2 border-white"></div>
 					{/if}
 				</div>
 				<img
-					src={pic.url}
-					alt={pic.transcript}
+					src={img.url}
+					alt={img.transcript}
 					class="max-h-32 rounded-lg hover:scale-110 transition-all"
 				/>
 			</button>
 		{/each}
-		{#if (pictures ?? []).length === 0}
+		{#if (images ?? []).length === 0}
 			<span>Sem imagens referênciadas</span>
 		{/if}
 	</div>

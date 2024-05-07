@@ -1,7 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import MdContent from './MdContent.svelte';
-	import PicContent from './PicContent.svelte';
+	import ImgContent from './ImgContent.svelte';
 	import MapContent from './MapContent.svelte';
 	import ContentRef from './ContentRef.svelte';
 	import { isValidContentBlock } from './utils.js';
@@ -11,7 +11,7 @@
 	export let hasPrevious;
 	export let hasNext;
 	export let block;
-	export let pictures;
+	export let images;
 	export let canEdit;
 
 	$: isValid = checkIsValid(block);
@@ -43,28 +43,28 @@
 
 	{#if 'md' in block}
 		<MdContent bind:data={block.md} {canEdit} />
-	{:else if 'pic' in block}
-		<PicContent
-			bind:data={block.pic}
-			bind:pictures
+	{:else if 'img' in block}
+		<ImgContent
+			bind:data={block.img}
+			bind:images={images}
 			{canEdit}
-			on:new-pic={(e) => {
-				const pic = e.detail.pic;
+			on:new-img={(e) => {
+				const img = e.detail.img;
 
-				if (!pictures[pic.id]) {
-					pictures[pic.id] = {
-						id: pic.id,
-						url: pic.url_medium,
-						transcript: pic.transcript,
+				if (!images[img.id]) {
+					images[img.id] = {
+						id: img.id,
+						url: img.url_medium,
+						transcript: img.transcript,
 						linked: false,
 						used: true
 					};
 				} else {
-					pictures[pic.id].used = true;
+					images[img.id].used = true;
 				}
-				pictures = pictures;
+				images = images;
 			}}
-			on:select-pic={() => dispatch('refresh-pics')}
+			on:select-imgs={() => dispatch('refresh-imgs')}
 		/>
 	{:else if 'map' in block}
 		<MapContent bind:data={block.map} {canEdit} />

@@ -157,33 +157,33 @@
 
 	async function importExternalImg(e) {
 		const newImg = e.detail.img;
-		if (pictures[newImg.id]) return;
+		if (images[newImg.id]) return;
 
 		newImg.linked = false;
 		newImg.used = false;
 		newImg.url = newImg.url_medium;
-		pictures[newImg.id] = newImg;
+		images[newImg.id] = newImg;
 	}
 
-	function calcPics() {
+	function calcImgs() {
 		for (const block of content) {
-			if ('pic' in block) {
-				const blockPic = structuredClone(block.pic);
-				blockPic.linked = false;
-				blockPic.used = true;
-				pictures[block.pic.id] = blockPic;
+			if ('img' in block) {
+				const blockImg = structuredClone(block.img);
+				blockImg.linked = false;
+				blockImg.used = true;
+				images[block.img.id] = blockImg;
 			}
 		}
 
-		for (const linkedPic of original?.pictures ?? []) {
-			const match = pictures[linkedPic.id];
+		for (const linkedImg of original?.images ?? []) {
+			const match = images[linkedImg.id];
 			if (match) {
 				match.linked = true;
 			} else {
-				pictures[linkedPic.id] = {
-					id: linkedPic.id,
-					url: linkedPic.url_medium,
-					transcript: linkedPic.transcript,
+				images[linkedImg.id] = {
+					id: linkedImg.id,
+					url: linkedImg.url_medium,
+					transcript: linkedImg.transcript,
 					linked: true,
 					used: false
 				};
@@ -251,7 +251,7 @@
 				selectedOperators = item.operator_ids.map((id) => {
 					return { value: id };
 				});
-				calcPics();
+				calcImgs();
 			});
 	});
 </script>
@@ -283,14 +283,14 @@
 			class:btn-active={thumbId == null}
 			on:click={() => (thumbId = null)}>Sem imagem</button
 		>
-		{#each Object.values(pictures ?? {}) as pic}
-			<button class="relative" x on:click={() => (thumbId = pic.id)}>
+		{#each Object.values(images ?? {}) as img}
+			<button class="relative" x on:click={() => (thumbId = img.id)}>
 				<img
-					src={pic.url}
-					alt={pic.transcript}
+					src={img.url}
+					alt={img.transcript}
 					class="max-h-32 rounded-lg hover:scale-110 transition-all"
-					class:border-2={thumbId == pic.id}
-					class:border-primary={thumbId == pic.id}
+					class:border-2={thumbId == img.id}
+					class:border-primary={thumbId == img.id}
 				/>
 			</button>
 		{/each}
@@ -299,7 +299,7 @@
 	{#each content as block, i}
 		<ContentBlock
 			bind:block
-			bind:pictures
+			bind:images
 			{canEdit}
 			hasPrevious={i > 0}
 			hasNext={i < content.length - 1}
@@ -307,7 +307,7 @@
 			on:down={() => moveContentBlockDown(i)}
 			on:drop={() => dropContentBlock(i)}
 			on:validation-update={(e) => (contentBlockValidity[i] = e.detail.isValid)}
-			on:refresh-pics={calcPics}
+			on:refresh-imgs={calcImgs}
 		></ContentBlock>
 	{/each}
 	<div class="flex flex-wrap gap-3 justify-end">
@@ -320,7 +320,7 @@
 		<button
 			class="btn btn-primary btn-sm"
 			on:click={() => {
-				addContentBlock('pic');
+				addContentBlock('img');
 			}}>+Imagem</button
 		>
 		<button

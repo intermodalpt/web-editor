@@ -1,9 +1,9 @@
 export function defaultContentBlock(type) {
 	if (type === 'md') {
 		return { md: '' };
-	} else if (type === 'pic') {
+	} else if (type === 'img') {
 		return {
-			pic: {
+			img: {
 				id: null,
 				url: '',
 				description: '',
@@ -33,8 +33,8 @@ export function defaultContentBlock(type) {
 export function isValidContentBlock(block) {
 	if ('md' in block) {
 		return nonBlankString(block.md);
-	} else if ('pic' in block) {
-		return block.pic.id && block.pic.url;
+	} else if ('img' in block) {
+		return block.img.id && block.img.url;
 	} else if ('map' in block) {
 		return isValidGeoJson(block.map.geojson) &&
 			block.map.lat <= 90.0 &&
