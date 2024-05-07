@@ -7,7 +7,7 @@
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 	import ContentBlock from './content/ContentBlock.svelte';
-	import { defaultContentBlock } from './content/utils.js';
+	import { defaultContentBlock, nonBlankString } from './content/utils.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -66,47 +66,74 @@
 	let summary = '';
 	let is_visible = true;
 	let author_override = null;
-	let publish_datetime = null;
-	let edit_datetime = null;
+	let pubDatetime = null;
+	let editDatetime = null;
 	let content = [];
 	let externalIds = [2, 6];
-	let pictures = {};
+	let images = {};
 	let thumbId = null;
-
-	$: formValid = true;
 
 	$: loaded = id == original?.id;
 
 	let contentBlockValidity = [];
 	$: isContentValid = contentBlockValidity.every((v) => v);
+	$: formValid =
+		isContentValid && nonBlankString(title) && nonBlankString(summary) && content.length > 0;
+
+	$: resultingData = {
+		id: original?.id,
+		title,
+		summary,
+		content,
+		thumb_id: thumbId,
+		region_ids: selectedRegions.map((r) => r.value),
+		operator_ids: selectedOperators.map((o) => o.value),
+		external_ids: externalIds,
+		publish_datetime: nonBlankString(pubDatetime)
+			? new Date(pubDatetime).toISOString()
+			: original?.publish_datetime ?? new Date().toISOString(),
+		edit_datetime: nonBlankString(editDatetime)
+			? new Date(editDatetime).toISOString()
+			: original?.edit_datetime ?? null,
+		author_override,
+		is_visible
+	};
 
 	async function save() {
-		const data = {
-			id: original.id,
-			title: title,
-			author: original.author,
-			summary,
-			is_visible,
-			region_ids: selectedRegions.map((r) => r.value),
-			operator_ids: selectedOperators.map((o) => o.value),
-			publish_datetime: original.publish_datetime,
-			edit_datetime: original.edit_datetime
-		};
+		const id = original?.id;
+		if (id) {
+			const res = await fetch(`${apiServer}/v1/news/${id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$token}`
+				},
+				body: JSON.stringify(resultingData)
+			});
 
-		const res = await fetch(`${apiServer}/v1/news/external/${id}`, {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
-			body: JSON.stringify(data)
-		});
-
-		if (res.ok) {
-			toast(`Item ${id} guardado`, 'success');
-			dispatch('save', { id });
+			if (res.ok) {
+				toast(`Item ${id} guardado`, 'success');
+				dispatch('save', { id });
+			} else {
+				toast(`Erro ao guardar`, 'error');
+			}
 		} else {
-			toast(`Erro ao guardar`, 'error');
+			const res = await fetch(`${apiServer}/v1/news`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${$token}`
+				},
+				body: JSON.stringify(resultingData)
+			});
+
+			if (res.ok) {
+				const id = await res.json().id;
+				toast(`Novo item guardado (${id})`, 'success');
+				dispatch('save', { id });
+			} else {
+				toast(`Erro ao guardar`, 'error');
+			}
 		}
 	}
 
@@ -240,8 +267,8 @@
 				title = item.title;
 				summary = item.summary;
 				content = item.content;
-				publish_datetime = stripTimezone(item.publish_datetime);
-				edit_datetime = stripTimezone(item.edit_datetime);
+				pubDatetime = stripTimezone(item.publish_datetime);
+				editDatetime = stripTimezone(item.edit_datetime);
 				author_override = item.author_override;
 				is_visible = item.is_visible;
 
@@ -268,14 +295,19 @@
 					type="text"
 					bind:value={title}
 					class="input input-bordered w-full"
+					class:input-error={!nonBlankString(title)}
 					disabled={!canEdit}
 				/>
 			</label>
 		</div>
 	</h2>
 	<h4 class="label-text">Sumário:</h4>
-	<textarea class="w-full h-20 input input-bordered" disabled={!canEdit}>{summary}</textarea>
-	<!--<textarea class="w-full h-40 input input-bordered">{JSON.stringify(pictures, null, 2)}</textarea>-->
+	<textarea
+		class="w-full h-20 input input-bordered"
+		class:input-error={!nonBlankString(summary)}
+		bind:value={summary}
+		disabled={!canEdit}
+	></textarea>
 	<h4 class="label-text">Miniatura:</h4>
 	<div class="flex gap-2 flex-wrap ml-2">
 		<button
@@ -360,13 +392,13 @@
 		<div class="form-control">
 			<label class="input-group">
 				<span>Publicação</span>
-				<input type="datetime-local" bind:value={publish_datetime} class="input input-bordered" />
+				<input type="datetime-local" bind:value={pubDatetime} class="input input-bordered" />
 			</label>
 		</div>
 		<div class="form-control">
 			<label class="input-group">
 				<span>Edição</span>
-				<input type="datetime-local" bind:value={edit_datetime} class="input input-bordered" />
+				<input type="datetime-local" bind:value={editDatetime} class="input input-bordered" />
 			</label>
 		</div>
 	</div>
@@ -434,11 +466,11 @@
 							toast('Operadores sincronizados', 'success');
 						}}
 						on:sync-pub-date={(e) => {
-							publish_datetime = stripTimezone(e.detail.pubDatetime);
+							pubDatetime = stripTimezone(e.detail.pubDatetime);
 							toast('Data de publicação sincronizada', 'success');
 						}}
 						on:sync-edit-date={(e) => {
-							edit_datetime = stripTimezone(e.detail.editDatetime);
+							editDatetime = stripTimezone(e.detail.editDatetime);
 							toast('Data de edição sincronizada', 'success');
 						}}
 						on:sync-author={(e) => {
@@ -460,8 +492,8 @@
 									value: id
 								};
 							});
-							publish_datetime = stripTimezone(e.detail.pubDatetime);
-							edit_datetime = stripTimezone(e.detail.editDatetime);
+							pubDatetime = stripTimezone(e.detail.pubDatetime);
+							editDatetime = stripTimezone(e.detail.editDatetime);
 							author_override = e.detail.author;
 							content = externalContentToContentBlocks(e.detail);
 							externalDialog?.close();
