@@ -238,6 +238,17 @@
 		content = content;
 	}
 
+	function externalContentToContentBlocks(data) {
+		const refBlock = { ref: { name: null, url: null } };
+
+		if (data.source == 'lpp') {
+			refBlock.ref.name = 'Lisboa para Pessoas';
+			refBlock.ref.url = data.url;
+		}
+
+		return [{ md: data.content }, refBlock];
+	}
+
 	onMount(() => {
 		if (!id) {
 			return;
@@ -461,7 +472,7 @@
 							toast('Sumário sincronizado', 'success');
 						}}
 						on:sync-content={(e) => {
-							content = [{ md: e.detail.content_md || e.detail.prepro_content_md }];
+							content = externalContentToContentBlocks(e.detail);
 							toast('Conteúdo sincronizado', 'success');
 						}}
 						on:sync-regions={(e) => {
@@ -512,10 +523,7 @@
 							publish_datetime = stripTimezone(e.detail.pubDatetime);
 							edit_datetime = stripTimezone(e.detail.editDatetime);
 							author_override = e.detail.author;
-							content = [
-								{ md: e.detail.content },
-								{ ref: { name: 'Lisboa para Pessoas', url: e.detail.url } }
-							];
+							content = externalContentToContentBlocks(e.detail);
 							externalDialog?.close();
 							toast('Tudo sincronizado', 'success');
 						}}

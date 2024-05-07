@@ -30,7 +30,8 @@
 	function handleSyncContent() {
 		dispatch('sync-content', {
 			content: externalItem.content_md || externalItem.prepro_content_md,
-			url: externalItem.url
+			url: externalItem.url,
+			source: externalItem.source
 		});
 	}
 
@@ -64,7 +65,8 @@
 			pubDatetime: externalItem.publish_datetime,
 			editDatetime: externalItem.edit_datetime,
 			author: externalItem.author,
-			url: externalItem.url
+			url: externalItem.url,
+			source: externalItem.source
 		});
 	}
 
