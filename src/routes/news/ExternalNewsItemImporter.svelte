@@ -1,6 +1,8 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { marked } from 'marked';
+	import { apiServer } from '$lib/settings.js';
+	import { token, toast } from '$lib/stores.js';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -8,6 +10,9 @@
 	export let externalItem;
 	export let operators;
 	export let regions;
+
+	let importedImages = new Set();
+	let uploadingImages = new Set();
 
 	$: extContentHtml =
 		externalItem?.content_md || externalItem?.prepro_content_md
@@ -63,8 +68,31 @@
 		});
 	}
 
-	function handleExtImgClick(image) {
-		dispatch('import-img', { id: image.id });
+	async function handleExtImgClick(extImageId) {
+		uploadingImages.add(extImageId);
+		uploadingImages = uploadingImages;
+
+		const res = await fetch(`${apiServer}/v1/news/images/import_external/${extImageId}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			}
+		});
+
+		uploadingImages.delete(extImageId);
+		uploadingImages = uploadingImages;
+
+		if (!res.ok) {
+			toast(`Erro ao importar imagem ${extImageId}`, 'error');
+			return;
+		}
+
+		importedImages.add(extImageId);
+		importedImages = importedImages;
+		const importedImg = await res.json();
+
+		dispatch('import-img', { img: importedImg });
 	}
 </script>
 
@@ -96,13 +124,25 @@
 <h4 class="label-text">Imagens</h4>
 <div class="flex gap-2 flex-wrap ml-2">
 	{#each externalItem.images ?? [] as image}
-		<button on:click={() => handleExtImgClick(image)}>
-			<img
-				src={image.url}
-				alt={image.transcript}
-				class="max-h-32 rounded-lg hover:scale-110 transition-all"
-			/>
-		</button>
+		{#if uploadingImages.has(image.id)}
+			<div class="relative">
+				<img src={image.url} alt={image.transcript} class="max-h-32 rounded-lg" />
+				<div class="absolute top-1 right-1 bg-warning rounded-full border-2 p-1 border-white"></div>
+			</div>
+		{:else if importedImages.has(image.id)}
+			<div class="relative">
+				<img src={image.url} alt={image.transcript} class="max-h-32 rounded-lg" />
+				<div class="absolute top-1 right-1 bg-success rounded-full border-2 p-1 border-white"></div>
+			</div>
+		{:else}
+			<button on:click={() => handleExtImgClick(image.id)}>
+				<img
+					src={image.url}
+					alt={image.transcript}
+					class="max-h-32 rounded-lg hover:scale-110 transition-all"
+				/>
+			</button>
+		{/if}
 	{/each}
 	{#if (externalItem.images ?? []).length === 0}
 		<span>Sem imagens referênciadas</span>

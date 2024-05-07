@@ -181,24 +181,13 @@
 	}
 
 	async function importExternalImg(e) {
-		const id = e.detail.id;
+		const newImg = e.detail.img;
+		if (pictures[newImg.id]) return;
 
-		const res = await fetch(`${apiServer}/v1/news/images/import_external/${id}`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
-		});
-
-		if (!res.ok) {
-			toast(`Erro ao carregar notícia externa ${$newExternalId}`, 'error');
-			return;
-		}
-
-		const newImg = await res.json();
-
-		pictures = [...pictures, newImg];
+		newImg.linked = false;
+		newImg.used = false;
+		newImg.url = newImg.url_medium;
+		pictures[newImg.id] = newImg;
 	}
 
 	function calcPics() {
