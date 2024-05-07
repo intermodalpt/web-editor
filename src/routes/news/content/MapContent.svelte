@@ -3,13 +3,16 @@
 	import { Map } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { tileStyle } from '$lib/settings.js';
+	import { isValidGeoJson } from './utils.js';
 
 	export let data;
 
 	let map;
 	let mapElem;
 	let mapLoaded = false;
-	let badJson = false;
+	let validGeoJson = false;
+
+	let geoJsonText = JSON.stringify(data.geojson, null, 2);
 
 	const tabs = {
 		map: 1,
@@ -19,23 +22,32 @@
 	let tab = tabs.map;
 
 	function redraw() {
-		if (!mapLoaded) return;
-
-		let parsed;
-		try {
-			parsed = JSON.parse(data.geojson);
-		} catch (e) {
-			badJson = true;
-			return;
-		}
+		if (!mapLoaded || !map) return;
 
 		try {
-			if (map) {
-				map.getSource('geojson').setData(parsed);
-			}
+			map
+				.getSource('geojson')
+				.setData(validGeoJson ? data.geojson : { type: 'FeatureCollection', features: [] });
+			console.log('redraw');
 		} catch (e) {
 			console.error(e);
 		}
+	}
+
+	function textChange(e) {
+		geoJsonText = e.target.value;
+
+		try {
+			const parsed = JSON.parse(geoJsonText);
+			data.geojson = parsed;
+			validGeoJson = isValidGeoJson(parsed);
+		} catch (e) {
+			data.geojson = null;
+			validGeoJson = false;
+		}
+
+		data = data;
+		redraw();
 	}
 
 	onMount(() => {
@@ -44,6 +56,13 @@
 			style: tileStyle,
 			center: [data.lon, data.lat],
 			zoom: data.zoom
+		});
+
+		map.on('move', () => {
+			data.lon = map.getCenter().lng;
+			data.lat = map.getCenter().lat;
+			data.zoom = map.getZoom();
+			data = data;
 		});
 
 		map.on('load', function () {
@@ -114,27 +133,44 @@
 			<div class="form-control">
 				<label class="input-group">
 					<span class="label-text">Zoom</span>
-					<input type="numeric" class="input input-bordered input-xs w-20" bind:value={data.zoom} />
+					<input
+						type="numeric"
+						disabled
+						class="input input-bordered input-xs w-20"
+						class:input-error={data.zoom < 1 || data.zoom > 22}
+						bind:value={data.zoom}
+					/>
 				</label>
 			</div>
 			<div class="form-control">
 				<label class="input-group">
 					<span class="label-text">Lon</span>
-					<input type="numeric" class="input input-bordered input-xs w-20" bind:value={data.lon} />
+					<input
+						type="numeric"
+						class="input input-bordered input-xs w-20"
+						disabled
+						class:input-error={data.lon < -180 || data.lon > 180}
+						bind:value={data.lon}
+					/>
 				</label>
 			</div>
 			<div class="form-control">
 				<label class="input-group">
 					<span class="label-text">Lat</span>
-					<input type="numeric" class="input input-bordered input-xs w-20" bind:value={data.lat} />
+					<input
+						type="numeric"
+						class="input input-bordered input-xs w-20"
+						class:input-error={data.lat < -90 || data.lat > 90}
+						disabled
+						bind:value={data.lat}
+					/>
 				</label>
 			</div>
 		</div>
 		<textarea
 			class="input input-bordered grow w-full"
-			class:border-error={badJson}
-			bind:value={data.geojson}
-			on:change={redraw}
+			class:border-error={!validGeoJson}
+			on:change={textChange}
 		></textarea>
 	</div>
 </div>

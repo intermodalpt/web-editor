@@ -6,10 +6,8 @@
 	import { token, toast } from '$lib/stores.js';
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
-	import MdContent from './content/MdContent.svelte';
-	import PicContent from './content/PicContent.svelte';
-	import MapContent from './content/MapContent.svelte';
-	import ContentRef from './content/ContentRef.svelte';
+	import ContentBlock from './content/ContentBlock.svelte';
+	import { defaultContentBlock } from './content/utils.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -66,7 +64,6 @@
 	let selectedOperators = [];
 	let title = '';
 	let summary = '';
-	let content_md = '';
 	let is_visible = true;
 	let author_override = null;
 	let publish_datetime = null;
@@ -80,13 +77,15 @@
 
 	$: loaded = id == original?.id;
 
+	let contentBlockValidity = [];
+	$: isContentValid = contentBlockValidity.every((v) => v);
+
 	async function save() {
 		const data = {
 			id: original.id,
 			title: title,
 			author: original.author,
 			summary,
-			content_md,
 			is_visible,
 			region_ids: selectedRegions.map((r) => r.value),
 			operator_ids: selectedOperators.map((o) => o.value),
@@ -133,41 +132,17 @@
 	}
 
 	function addContentBlock(type) {
-		if (type === 'md') {
-			content.push({ md: '' });
-		} else if (type === 'pic') {
-			content.push({
-				pic: {
-					id: null,
-					url: '',
-					description: '',
-					transcript: null,
-					attribution: null
-				}
-			});
-		} else if (type === 'map') {
-			content.push({
-				map: {
-					geojson: [],
-					lat: 38.75,
-					lon: -9.136,
-					zoom: 9
-				}
-			});
-		} else if (type === 'ref') {
-			content.push({
-				ref: {
-					name: null,
-					url: null
-				}
-			});
-		}
-
+		contentBlockValidity = [...contentBlockValidity, false];
+		content.push(defaultContentBlock(type));
 		content = content;
 	}
 
 	function dropContentBlock(i) {
 		content = [...content.slice(0, i), ...content.slice(i + 1)];
+		contentBlockValidity = [
+			...contentBlockValidity.slice(0, i),
+			...contentBlockValidity.slice(i + 1)
+		];
 		content = content;
 	}
 
@@ -322,53 +297,18 @@
 	</div>
 	<h4 class="label-text">Conteúdo:</h4>
 	{#each content as block, i}
-		<div class="relative border-l-2 border-secondary pl-2">
-			<div class="absolute right-2 top-2 flex gap-2">
-				<button
-					class="btn btn-xs btn-outline"
-					class:hidden={i === 0}
-					on:click={() => moveContentBlockUp(i)}>↑</button
-				>
-				<button
-					class="btn btn-xs btn-outline"
-					class:hidden={i === content.length - 1}
-					on:click={() => moveContentBlockDown(i)}>↓</button
-				>
-				<button class="btn btn-xs btn-error" on:click={() => dropContentBlock(i)}>x</button>
-			</div>
-			{#if 'md' in block}
-				<MdContent bind:data={block.md} {canEdit} />
-			{:else if 'pic' in block}
-				<PicContent
-					bind:data={block.pic}
-					bind:pictures
-					{canEdit}
-					on:new-pic={(e) => {
-						const pic = e.detail.pic;
-
-						if (!pictures[pic.id]) {
-							pictures[pic.id] = {
-								id: pic.id,
-								url: pic.url_medium,
-								transcript: pic.transcript,
-								linked: false,
-								used: true
-							};
-						} else {
-							pictures[pic.id].used = true;
-						}
-						pictures = pictures;
-					}}
-					on:select-pic={calcPics}
-				/>
-			{:else if 'map' in block}
-				<MapContent bind:data={block.map} {canEdit} />
-				<img src={block.url} alt={block.alt} />
-			{:else if 'ref' in block}
-				<ContentRef bind:data={block.ref} {canEdit} />
-			{/if}
-		</div>
-		<hr />
+		<ContentBlock
+			bind:block
+			bind:pictures
+			{canEdit}
+			hasPrevious={i > 0}
+			hasNext={i < content.length - 1}
+			on:up={() => moveContentBlockUp(i)}
+			on:down={() => moveContentBlockDown(i)}
+			on:drop={() => dropContentBlock(i)}
+			on:validation-update={(e) => (contentBlockValidity[i] = e.detail.isValid)}
+			on:refresh-pics={calcPics}
+		></ContentBlock>
 	{/each}
 	<div class="flex flex-wrap gap-3 justify-end">
 		<button
