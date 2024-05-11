@@ -130,31 +130,31 @@ export function calendarStr(calendar) {
 	if (calendar.only_if.length > 0) {
 		conditions.push(
 			'that are ' +
-				calendar.only_if
-					.map((condition) => {
-						return conditionName(condition);
-					})
-					.join(', ')
+			calendar.only_if
+				.map((condition) => {
+					return conditionName(condition);
+				})
+				.join(', ')
 		);
 	}
 	if (calendar.also_if.length > 0) {
 		conditions.push(
 			'plus ' +
-				calendar.also_if
-					.map((condition) => {
-						return conditionName(condition);
-					})
-					.join(', ')
+			calendar.also_if
+				.map((condition) => {
+					return conditionName(condition);
+				})
+				.join(', ')
 		);
 	}
 	if (calendar.except_if.length > 0) {
 		conditions.push(
 			'except ' +
-				calendar.except_if
-					.map((condition) => {
-						return conditionName(condition);
-					})
-					.join(', ')
+			calendar.except_if
+				.map((condition) => {
+					return conditionName(condition);
+				})
+				.join(', ')
 		);
 	}
 
@@ -306,7 +306,7 @@ export function needlemanWunsch(seq1, seq2) {
 			j > 0 &&
 			//
 			matrix[i][j] ===
-				matrix[i - 1][j - 1] + (seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
+			matrix[i - 1][j - 1] + (seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
 		) {
 			// Diagonal, no space added
 			alignedSeq1.push(seq1[i - 1]);
@@ -437,8 +437,8 @@ export function progressiveSequenceAlignment(sequences) {
 				i > 0 &&
 				j > 0 &&
 				bestAlignmentMatrix[i][j] ===
-					bestAlignmentMatrix[i - 1][j - 1] +
-						(seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
+				bestAlignmentMatrix[i - 1][j - 1] +
+				(seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
 			) {
 				// Diagonal, no space added
 				i--;
@@ -542,4 +542,29 @@ export function longestCommonSubsequence(arr1, arr2) {
 	}
 
 	return result;
+}
+
+export function regionMapParams(region) {
+	let centerLon = region?.center_lon;
+	let centerLat = region?.center_lat;
+
+
+	let zoom = region?.zoom ?? 9;
+	if (!centerLon || !centerLat) {
+		// Default to Lisbon
+		centerLat = 38.75;
+		centerLon = -9.136;
+	}
+
+	return { center: [centerLon, centerLat], zoom };
+}
+
+export function isValidUri(uri) {
+	try {
+		new URL(uri);
+	} catch (_) {
+		return false;
+	}
+
+	return true;
 }

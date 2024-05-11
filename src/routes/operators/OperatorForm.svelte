@@ -7,6 +7,7 @@
 	import { apiServer } from '$lib/settings.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import RouteTypeForm from './RouteTypeForm.svelte';
+	import { isValidUri } from '$lib/utils.js';
 
 	const regions = liveQuery(() => getRegions());
 	const sortedRegions = derived(regions, ($regions) => {
@@ -27,12 +28,22 @@
 	let originalName = operator?.name;
 	let originalTag = operator?.tag;
 	let originalDescription = operator?.description;
+	let originalIsComplete = operator?.is_complete ?? false;
+	let originalWebsiteUrl = operator?.website_url;
+	let originalLibraryUrl = operator?.library_url;
+	let originalForumUrl = operator?.forum_url;
+	let originalContactUris = operator?.contact_uris?.join(',') ?? '';
 	let originalRegions = operator?.regions || [];
 	let originalRouteTypes = routeTypes ? deepCopy(routeTypes) : [];
 
 	let name = originalName;
 	let tag = originalTag;
 	let description = originalDescription;
+	let isComplete = originalIsComplete;
+	let websiteUrl = originalWebsiteUrl;
+	let libraryUrl = originalLibraryUrl;
+	let forumUrl = originalForumUrl;
+	let contactUris = originalContactUris;
 	let operatorRegions = originalRegions ? deepCopy(originalRegions) : [];
 	let logoFiles;
 
@@ -46,13 +57,20 @@
 		badge_text_color: '#ffffff',
 		badge_bg_color: '#000000'
 	};
-	if (routeTypes.length == 0) {
-		addRouteType();
-	}
 
 	let operatorRegionsLoaded = id != undefined;
 
-	$: dataChanged = originalName != name || originalTag != tag || originalDescription != description;
+	$: dataChanged =
+		originalName != name ||
+		originalTag != tag ||
+		originalDescription != description ||
+		originalWebsiteUrl != websiteUrl ||
+		originalLibraryUrl != libraryUrl ||
+		originalForumUrl != forumUrl ||
+		originalContactUris != contactUris ||
+		!isDeepEqual(originalRegions || [], operatorRegions || []) ||
+		logoFiles ||
+		!isDeepEqual(originalRouteTypes, routeTypes);
 
 	$: regionsChanged =
 		operatorRegionsLoaded && !isDeepEqual(originalRegions || {}, operatorRegions || {});
@@ -63,7 +81,15 @@
 
 	$: invalidName = !name || name.trim().length < 3;
 	$: invalidTag = !tag || tag.length < 2 || tag.includes(' ');
-	$: invalidDescription = description != null && description.length < 3;
+	$: invalidDescription = description != null && description.trim().length < 3;
+	$: invalidSite = websiteUrl && websiteUrl.trim() != '' && !isValidUri(websiteUrl);
+	$: invalidLibrary = libraryUrl && libraryUrl.trim() != '' && !isValidUri(libraryUrl);
+	$: invalidForum = forumUrl && forumUrl.trim() != '' && !isValidUri(forumUrl);
+	$: invalidContactUris = contactUris
+		?.split(';')
+		.map((uri) => uri.trim())
+		.filter((uri) => uri)
+		.find((uri) => !isValidUri(uri));
 	$: invalidOperatorRegions = operatorRegions && operatorRegions.length < 1;
 	$: invalidRouteTypes = routeTypes.some(
 		(routeType) =>
@@ -74,7 +100,15 @@
 			!routeType.badge_bg_color
 	);
 	$: invalidData =
-		invalidName || invalidTag || invalidDescription || invalidOperatorRegions || invalidRouteTypes;
+		invalidName ||
+		invalidTag ||
+		invalidDescription ||
+		invalidSite ||
+		invalidLibrary ||
+		invalidForum ||
+		invalidContactUris ||
+		invalidOperatorRegions ||
+		invalidRouteTypes;
 
 	function addRouteType() {
 		const newRouteType = deepCopy(emptyRouteType);
@@ -83,11 +117,31 @@
 		routeTypes = routeTypes;
 	}
 
+	function copyCurrentToOriginal() {
+		originalName = name;
+		originalTag = tag;
+		originalDescription = description;
+		originalIsComplete = isComplete;
+		originalWebsiteUrl = websiteUrl;
+		originalLibraryUrl = libraryUrl;
+		originalForumUrl = forumUrl;
+		originalContactUris = contactUris;
+	}
+
 	async function saveOperator() {
 		let data = {
 			name: name,
 			tag: tag,
-			description: description?.trim() || null
+			description: description?.trim() || null,
+			is_complete: isComplete,
+			website_url: websiteUrl?.trim() || null,
+			library_url: libraryUrl?.trim() || null,
+			forum_url: forumUrl?.trim() || null,
+			contact_uris:
+				contactUris
+					?.split(';')
+					.map((uri) => uri.trim())
+					.filter((uri) => uri) || []
 		};
 
 		const newRegions = operatorRegions.filter((region) => !originalRegions.includes(region));
@@ -281,9 +335,7 @@
 				uploadLogo()
 			]);
 			if (dataRes.ok) {
-				originalName = name;
-				originalTag = tag;
-				originalDescription = description?.trim() || null;
+				copyCurrentToOriginal();
 				toast(`Operador ${operator.tag} alterado com sucesso`, 'success');
 			} else {
 				dataRes
@@ -307,10 +359,7 @@
 
 			if (res.ok) {
 				id = await res.json().then((data) => data.id);
-
-				originalName = name;
-				originalTag = tag;
-				originalDescription = description?.trim() || null;
+				copyCurrentToOriginal();
 				toast(`Operador ${originalTag} alterado com sucesso`, 'success');
 			} else {
 				res
@@ -383,18 +432,77 @@
 		<div class="label">
 			<span class="label-text">Descrição</span>
 		</div>
-		<textarea class="textarea textarea-bordered" bind:value={description} />
+		<textarea
+			class="textarea textarea-bordered"
+			class:textarea-error={invalidDescription}
+			bind:value={description}
+		/>
 	</label>
+	<div class="form-control w-full">
+		<label class="input-group">
+			<span class="w-32">Site</span>
+			<input
+				type="text"
+				bind:value={websiteUrl}
+				class="input input-bordered w-full input-md"
+				class:input-error={invalidSite}
+				disabled={!canEdit}
+			/>
+		</label>
+	</div>
+	<div class="form-control w-full">
+		<label class="input-group">
+			<span class="w-32">Forum</span>
+			<input
+				type="text"
+				bind:value={forumUrl}
+				class="input input-bordered w-full input-md"
+				class:input-error={invalidForum}
+				disabled={!canEdit}
+			/>
+		</label>
+	</div>
+	<div class="form-control w-full">
+		<label class="input-group">
+			<span class="w-32">Biblioteca</span>
+			<input
+				type="text"
+				bind:value={libraryUrl}
+				class="input input-bordered w-full input-md"
+				class:input-error={invalidLibrary}
+				disabled={!canEdit}
+			/>
+		</label>
+	</div>
+	<div class="form-control w-full">
+		<label class="input-group">
+			<span class="w-32">Contactos</span>
+			<input
+				type="text"
+				bind:value={contactUris}
+				class="input input-bordered w-full input-md"
+				placeholder="tel:+351912345678; mailto:foo@bar.com; https://example.com/contactos"
+				class:input-error={invalidContactUris}
+				disabled={!canEdit}
+			/>
+		</label>
+	</div>
+	<div class="flex">
+		<div class="form-control">
+			<label class="input-group">
+				<span>Info completa</span>
+				<input type="checkbox" bind:value={isComplete} class="checkbox" disabled={!canEdit} />
+			</label>
+		</div>
+	</div>
 </div>
-
 <div class="label">
 	<span class="label-text">Tipos de rota</span>
 	<button class="btn btn-xs btn-success" on:click={addRouteType}>+</button>
 </div>
 <div class="flex flex-col gap-2">
 	{#each routeTypes as rt (rt.id)}
-		<div class="border-2 rounded-lg p-2"
-			class:bg-green-50={rt.id < 0}>
+		<div class="border-2 rounded-lg p-2" class:bg-green-50={rt.id < 0}>
 			<RouteTypeForm
 				bind:id={rt.id}
 				bind:name={rt.name}
