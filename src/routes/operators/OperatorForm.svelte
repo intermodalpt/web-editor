@@ -1,6 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
+	import { onMount } from 'svelte';
 	import { liveQuery } from 'dexie';
 	import { getRegions, wipeRegionCachedData } from '$lib/db';
 	import { token, decodedToken, toast } from '$lib/stores.js';
@@ -21,30 +22,31 @@
 
 	const canEdit = $decodedToken?.permissions.is_admin;
 
-	export let operator;
+	export let id;
+
 	export let routeTypes = [];
 
-	let id = operator?.id;
-	let originalName = operator?.name;
-	let originalTag = operator?.tag;
-	let originalDescription = operator?.description;
-	let originalIsComplete = operator?.is_complete ?? false;
-	let originalWebsiteUrl = operator?.website_url;
-	let originalLibraryUrl = operator?.library_url;
-	let originalForumUrl = operator?.forum_url;
-	let originalContactUris = operator?.contact_uris?.join(',') ?? '';
-	let originalRegions = operator?.regions || [];
-	let originalRouteTypes = routeTypes ? deepCopy(routeTypes) : [];
+	let originalName,
+		originalTag,
+		originalDescription,
+		originalIsComplete,
+		originalWebsiteUrl,
+		originalLibraryUrl,
+		originalForumUrl,
+		originalContactUris,
+		originalRegions,
+		originalRouteTypes = deepCopy(routeTypes);
 
-	let name = originalName;
-	let tag = originalTag;
-	let description = originalDescription;
-	let isComplete = originalIsComplete;
-	let websiteUrl = originalWebsiteUrl;
-	let libraryUrl = originalLibraryUrl;
-	let forumUrl = originalForumUrl;
-	let contactUris = originalContactUris;
-	let operatorRegions = originalRegions ? deepCopy(originalRegions) : [];
+	let name,
+		tag,
+		description,
+		isComplete,
+		websiteUrl,
+		libraryUrl,
+		forumUrl,
+		contactUris,
+		operatorRegions;
+
 	let logoFiles;
 
 	let tmpRouteTypeId = -1;
@@ -378,6 +380,31 @@
 
 		await wipeRegionCachedData();
 	}
+
+	onMount(() => {
+		if (!id) return;
+
+		fetch(`${apiServer}/v1/operators/${id}`, {
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			}
+		})
+			.then((r) => r.json())
+			.then((item) => {
+				name = originalName = item.name;
+				tag = originalTag = item.tag;
+				description = originalDescription = item.description;
+				isComplete = originalIsComplete = item.is_complete ?? false;
+				websiteUrl = originalWebsiteUrl = item.website_url;
+				libraryUrl = originalLibraryUrl = item.library_url;
+				forumUrl = originalForumUrl = item.forum_url;
+				contactUris = originalContactUris = item.contact_uris.join(';') ?? '';
+				originalRegions = item.regions || [];
+				operatorRegions = originalRegions ? deepCopy(originalRegions) : [];
+				originalRouteTypes = item.route_types ? deepCopy(item.route_types) : [];
+			});
+	});
 </script>
 
 <div class="flex flex-col gap-1 p-2 overflow-visible w-full">
