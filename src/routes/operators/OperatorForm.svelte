@@ -22,7 +22,7 @@
 
 	const canEdit = $decodedToken?.permissions.is_admin;
 
-	export let id;
+	export let id = null;
 
 	export let routeTypes = [];
 
@@ -34,7 +34,7 @@
 		originalLibraryUrl,
 		originalForumUrl,
 		originalContactUris,
-		originalRegions,
+		originalRegions = [],
 		originalRouteTypes = deepCopy(routeTypes);
 
 	let name,
@@ -83,7 +83,7 @@
 
 	$: invalidName = !name || name.trim().length < 3;
 	$: invalidTag = !tag || tag.length < 2 || tag.includes(' ');
-	$: invalidDescription = description != null && description.trim().length < 3;
+	$: invalidDescription = description != null && description != '' && description.trim().length < 3;
 	$: invalidSite = websiteUrl && websiteUrl.trim() != '' && !isValidUri(websiteUrl);
 	$: invalidLibrary = libraryUrl && libraryUrl.trim() != '' && !isValidUri(libraryUrl);
 	$: invalidForum = forumUrl && forumUrl.trim() != '' && !isValidUri(forumUrl);
@@ -518,7 +518,7 @@
 		<div class="form-control">
 			<label class="input-group">
 				<span>Info completa</span>
-				<input type="checkbox" bind:value={isComplete} class="checkbox" disabled={!canEdit} />
+				<input type="checkbox" bind:checked={isComplete} class="checkbox" disabled={!canEdit} />
 			</label>
 		</div>
 	</div>
