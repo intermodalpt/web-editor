@@ -12,7 +12,7 @@
 		{#if operator.logo_url}
 			<span
 				class="grow bg-left-top sm:bg-right-top bg-no-repeat bg-contain h-12"
-				style="background-image: url('{operator.logo_url}'); background-size: contain; max-width: 10rem;"
+				style="background-image: url('{operator.logo_url}'); background-size: contain; max-width: 10rem; min-width: 5rem;"
 			/>
 		{:else}
 			<span class="h-12" />
