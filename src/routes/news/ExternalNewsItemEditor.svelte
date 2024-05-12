@@ -162,6 +162,21 @@
 	<h4 class="label-text">Regiões:</h4>
 	<Select items={$regionOptions} multiple={true} disabled={!canEdit} bind:value={selectedRegions} />
 
+	<h4 class="label-text">Imagens</h4>
+	<div class="flex gap-2 flex-wrap ml-2 min-h-32">
+		{#each original.images ?? [] as image}
+			<button>
+				<img
+					src={image.url}
+					alt={image.transcript}
+					class="max-h-32 rounded-lg hover:scale-110 transition-all"
+				/>
+			</button>
+		{/each}
+		{#if (original.images ?? []).length === 0}
+			<span>Sem imagens referênciadas</span>
+		{/if}
+	</div>
 	<div class="flex py-2 gap-2 flex-wrap justify-between">
 		<div>
 			<span>Validado</span>
