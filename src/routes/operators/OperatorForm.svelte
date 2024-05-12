@@ -3,7 +3,7 @@
 	import { derived } from 'svelte/store';
 	import { onMount } from 'svelte';
 	import { liveQuery } from 'dexie';
-	import { getRegions, wipeRegionCachedData } from '$lib/db';
+	import { getRegions, wipeOperators } from '$lib/db';
 	import { token, decodedToken, toast } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
@@ -338,7 +338,7 @@
 			]);
 			if (dataRes.ok) {
 				copyCurrentToOriginal();
-				toast(`Operador ${operator.tag} alterado com sucesso`, 'success');
+				toast(`Operador ${tag} alterado com sucesso`, 'success');
 			} else {
 				dataRes
 					.text()
@@ -378,7 +378,7 @@
 			await Promise.all([updateRegions(), uploadLogo(), updateRouteTypes()]);
 		}
 
-		await wipeRegionCachedData();
+		await wipeOperators();
 	}
 
 	onMount(() => {

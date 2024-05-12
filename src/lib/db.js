@@ -374,3 +374,9 @@ export async function wipeRegionCachedData() {
 		parishesLoaded.set(false);
 	});
 }
+
+export async function wipeOperators() {
+	await db.operators.clear().then(() => {
+		operatorsLoaded.set(false);
+	});
+}
