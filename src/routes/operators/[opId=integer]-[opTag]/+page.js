@@ -18,7 +18,7 @@ export async function load({ params, fetch }) {
 	const operator = await getOperator(operatorId);
 
 	if (!operator) {
-		throw error(404, 'Operator not found');
+		error(404, 'Operator not found');
 	}
 
 	return {

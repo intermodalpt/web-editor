@@ -20,7 +20,7 @@ export async function load({ params, fetch }) {
 	const operator = await getOperator(operatorId);
 
 	if (!operator) {
-		throw error(404, 'Operator not found');
+		error(404, 'Operator not found');
 	}
 
 	const [stopsRes, routeRes, routeTypesRes] = await Promise.all([
@@ -32,27 +32,27 @@ export async function load({ params, fetch }) {
 
 	if (!stopsRes.ok) {
 		if (stopsRes.status === 0) {
-			throw error(500, 'Failed to connect to server');
+			error(500, 'Failed to connect to server');
 		} else {
-			throw error(500, 'Failed to fetch stops');
+			error(500, 'Failed to fetch stops');
 		}
 	}
 	if (!routeRes.ok) {
 		if (routeRes.status === 0) {
-			throw error(500, 'Failed to connect to server');
+			error(500, 'Failed to connect to server');
 		} else if (routeRes.status === 404) {
-			throw error(404, 'Route not found');
+			error(404, 'Route not found');
 		} else {
-			throw error(500, 'Failed to fetch route');
+			error(500, 'Failed to fetch route');
 		}
 	}
 	if (!routeTypesRes.ok) {
 		if (routeTypesRes.status === 0) {
-			throw error(500, 'Failed to connect to server');
+			error(500, 'Failed to connect to server');
 		} else if (routeTypesRes.status === 404) {
-			throw error(404, 'Route types not found');
+			error(404, 'Route types not found');
 		} else {
-			throw error(500, 'Failed to fetch route types');
+			error(500, 'Failed to fetch route types');
 		}
 	}
 
