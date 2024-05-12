@@ -85,8 +85,7 @@
 
 		if (res.ok) {
 			let data = await res.json();
-			console.log(data);
-			// navigate(`/issues/${data.id}`);
+			navigate(`/issues/${data.id}`);
 		} else {
 			alert('Erro ao criar problema');
 			console.error(res);
