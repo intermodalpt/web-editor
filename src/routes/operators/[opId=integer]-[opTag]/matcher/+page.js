@@ -19,7 +19,7 @@ export async function load({ params, fetch }) {
 	const operator = await getOperator(operatorId);
 
 	if (!operator) {
-		throw error(404, 'Operator not found');
+		error(404, 'Operator not found');
 	}
 
 	const [operatorStopsRes, gtfsStopsRes, gtfsRoutesRes] = await Promise.all([
@@ -30,9 +30,9 @@ export async function load({ params, fetch }) {
 
 	if (!operatorStopsRes.ok) {
 		if (operatorStopsRes.status === 0) {
-			throw error(500, 'Failed to connect to server');
+			error(500, 'Failed to connect to server');
 		} else {
-			throw error(500, 'Failed to fetch the operator stops');
+			error(500, 'Failed to fetch the operator stops');
 		}
 	}
 
@@ -44,9 +44,9 @@ export async function load({ params, fetch }) {
 		gtfsStops = await gtfsStopsRes.json();
 	} else {
 		if (gtfsStopsRes.status === 0) {
-			throw error(500, 'Failed to connect to server');
+			error(500, 'Failed to connect to server');
 		} else if (gtfsStopsRes.status !== 404) {
-			throw error(500, 'Failed to fetch the operator gtfs stops');
+			error(500, 'Failed to fetch the operator gtfs stops');
 		}
 	}
 
@@ -54,9 +54,9 @@ export async function load({ params, fetch }) {
 		gtfsRoutes = await gtfsRoutesRes.json();
 	} else {
 		if (gtfsRoutesRes.status === 0) {
-			throw error(500, 'Failed to connect to server');
+			error(500, 'Failed to connect to server');
 		} else if (gtfsRoutesRes.status !== 404) {
-			throw error(500, 'Failed to fetch the operator gtfs routes');
+			error(500, 'Failed to fetch the operator gtfs routes');
 		}
 	}
 
