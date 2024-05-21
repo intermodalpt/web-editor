@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
+	import { distance } from '$lib/utils.js';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -9,11 +10,19 @@
 	export let canEdit = false;
 
 	export let operator;
+	export let gtfsStops;
 	export let selectedGtfsStop;
 	export let selectedOperatorStop;
 	export let selectedUnusedStop;
 	export let credibleSources;
 	export let previewedTrip;
+
+	let pairingDialog;
+	let newPairingOfficialName;
+	let newPairingRef;
+	let newPairingSource;
+
+	$: newPairingGtfsStop = gtfsStops[newPairingRef];
 
 	const selectedGtfsStopRoutes = derived(selectedGtfsStop, ($selectedGTFSStop) => {
 		if ($selectedGTFSStop == null) return [];
@@ -32,6 +41,10 @@
 		[selectedOperatorStop, selectedUnusedStop],
 		([$selectedOperatorStop, $selectedUnusedStop]) => {
 			if ($selectedOperatorStop) {
+				newPairingOfficialName = $selectedOperatorStop.name;
+				newPairingRef = $selectedOperatorStop.stop_ref;
+				newPairingSource = $selectedOperatorStop.source;
+
 				return {
 					id: $selectedOperatorStop.id,
 					name: $selectedOperatorStop.name,
@@ -41,6 +54,10 @@
 				};
 			}
 			if ($selectedUnusedStop) {
+				newPairingOfficialName = $selectedUnusedStop.name;
+				newPairingRef = null;
+				newPairingSource = null;
+
 				return {
 					id: $selectedUnusedStop.id,
 					name: $selectedUnusedStop.name,
@@ -52,6 +69,18 @@
 			return null;
 		}
 	);
+
+	$: newPairingImlToGtfsDist =
+		$selectedImlStop && newPairingGtfsStop
+			? Math.round(
+					distance(
+						$selectedImlStop.lat,
+						$selectedImlStop.lon,
+						newPairingGtfsStop.lat,
+						newPairingGtfsStop.lon
+					)
+				)
+			: null;
 
 	const selectedStopRoutes = derived(selectedImlStop, ($selectedImlStop, set) => {
 		const selectedStopId = $selectedImlStop?.id;
@@ -81,7 +110,7 @@
 </script>
 
 <div class="justify-center w-full">
-	<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operator.tag}">
+	<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operator.id}-{operator.tag}">
 		{operator.name}
 	</a>
 </div>
@@ -105,14 +134,11 @@
 				/></svg
 			>
 		</button>
-		<div class="flex gap-2">
+		<div class="flex gap-2 items-center">
 			<button
 				class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
 				on:click={() => {
-					if ($selectedGtfsStop) {
-						dispatch('fly-to', [$selectedGtfsStop.lon, $selectedGtfsStop.lat]);
-						// flyToGtfsStop($selectedGtfsStop);
-					}
+					dispatch('fly-to', [$selectedGtfsStop.lon, $selectedGtfsStop.lat]);
 				}}
 			>
 				{$selectedGtfsStop?.stop_id}
@@ -172,7 +198,6 @@
 				<button
 					class="btn btn-primary btn-sm"
 					on:click={() => {
-						// connectStops($selectedOperatorStop, $selectedGtfsStop);
 						dispatch('connect', {
 							operatorStop: $selectedOperatorStop,
 							gtfsStop: $selectedGtfsStop
@@ -183,7 +208,6 @@
 				<button
 					class="btn btn-error btn-sm"
 					on:click={() => {
-						// disconnectStops($selectedOperatorStop, $selectedGtfsStop);
 						dispatch('disconnect', {
 							operatorStop: $selectedOperatorStop,
 							gtfsStop: $selectedGtfsStop
@@ -217,7 +241,7 @@
 				/></svg
 			>
 		</button>
-		<div class="flex gap-1">
+		<div class="flex gap-1 items-center">
 			<div
 				class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
 				on:click={() => dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat])}
@@ -228,9 +252,13 @@
 			<span class="font-bold">{$selectedImlStop?.name}</span>
 		</div>
 		<CoordViewer lat={$selectedImlStop.lat} lon={$selectedImlStop.lon} />
-		{#if $selectedOperatorStop && !$hasMutualLink}
-			<div class="flex gap-1">
-				<h1 class="text-xs font-bold">Ligada a</h1>
+		{#if $selectedOperatorStop}
+			<div class="flex gap-2 items-center">
+				<h2 class="text-xs font-bold">Emparelhamento</h2>
+				<span class="text-xs">({$selectedOperatorStop?.source})</span>
+				<button class="btn btn-primary btn-xs" on:click={() => pairingDialog.show()}>Editar</button>
+			</div>
+			<div class="flex gap-1 items-center">
 				{#if $selectedOperatorStop.gtfsStop}
 					<button
 						class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
@@ -241,16 +269,16 @@
 								$selectedOperatorStop.gtfsStop.lon,
 								$selectedOperatorStop.gtfsStop.lat
 							]);
-							// flyToGtfsStop($selectedOperatorStop.gtfsStop);
 						}}>{$selectedOperatorStop?.stop_ref}</button
 					>
 				{:else}
-					<button class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-						>⚠️{$selectedOperatorStop?.stop_ref}</button
+					<span class="btn btn-xs text-orange-600 bg-white border-orange-600"
+						>⚠️{$selectedOperatorStop?.stop_ref}</span
 					>
 				{/if}
+				{$selectedOperatorStop?.name}
+				{#if $selectedOperatorStop.gtfsStop && $selectedOperatorStop.name != $selectedOperatorStop.gtfsStop?.stop_name}⚠️{/if}
 			</div>
-			<textarea class="w-full">{JSON.stringify($selectedOperatorStop)}</textarea>
 		{/if}
 		<h2 class="text-sm self-center font-semibold">Rotas</h2>
 		<div class="w-full flex flex-wrap gap-1">
@@ -274,3 +302,77 @@
 		</div>
 	{/if}
 </div>
+
+<dialog bind:this={pairingDialog} class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box relative">
+		<form method="dialog">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">x</button>
+		</form>
+		<h3 class="font-bold text-lg">Emparelhamento</h3>
+		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">
+			<div class="form-control w-full">
+				<label class="input-group">
+					<span class="w-32">Nome oficial</span>
+					<input
+						type="text"
+						bind:value={newPairingOfficialName}
+						class="input input-bordered w-full input-sm"
+						disabled={!canEdit}
+					/>
+				</label>
+			</div>
+			<div class="form-control w-full">
+				<label class="input-group">
+					<span class="w-32">Referência</span>
+					<input
+						type="text"
+						bind:value={newPairingRef}
+						class="input input-bordered w-full input-sm"
+						disabled={!canEdit}
+					/>
+				</label>
+			</div>
+			<div class="pl-3 border-l-2 border-orange-600 flex flex-col gap-1">
+				{#if newPairingGtfsStop}
+					<div class="flex gap-1">
+						<span class="font-bold">{newPairingGtfsStop.stop_name}</span>
+						{#if newPairingOfficialName != newPairingGtfsStop.stop_name}
+							<button
+								class="btn btn-xs btn-secondary"
+								on:click={() => {
+									newPairingOfficialName = newPairingGtfsStop.stop_name;
+								}}>Replicar</button
+							>
+						{/if}
+					</div>
+				{/if}
+				{#if newPairingImlToGtfsDist}
+					<span
+						class="w-fit"
+						class:border-b-2={newPairingImlToGtfsDist > 30}
+						class:border-warning={newPairingImlToGtfsDist > 30 && newPairingImlToGtfsDist <= 100}
+						class:border-error={newPairingImlToGtfsDist > 100}
+					>
+						Dista {newPairingImlToGtfsDist} metros
+					</span>
+				{/if}
+			</div>
+			<div class="flex justify-end">
+				<button
+					class="btn btn-primary"
+					on:click={() => {
+						dispatch('pair', {
+							id: $selectedImlStop.id,
+							officialName: newPairingOfficialName,
+							ref: newPairingRef
+						});
+						pairingDialog.close();
+					}}>Guardar</button
+				>
+			</div>
+		</form>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>

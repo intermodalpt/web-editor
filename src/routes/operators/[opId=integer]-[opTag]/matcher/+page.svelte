@@ -74,6 +74,7 @@
 				id: stop.id,
 				name: stop.official_name || genericNames[stop.id] || '{?}',
 				stop_ref: stop.stop_ref,
+				gtfsStop: $gtfsStops[stop.stop_ref] || null,
 				source: stop.source,
 				lat: stop.lat,
 				lon: stop.lon
@@ -506,6 +507,7 @@
 			<MatchViewer
 				canEdit={$decodedToken?.permissions?.is_admin}
 				{operator}
+				gtfsStops={$gtfsStops}
 				{selectedGtfsStop}
 				{selectedOperatorStop}
 				{selectedUnusedStop}
