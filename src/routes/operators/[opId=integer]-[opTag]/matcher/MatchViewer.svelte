@@ -34,7 +34,7 @@
 			if ($selectedOperatorStop) {
 				return {
 					id: $selectedOperatorStop.id,
-					name: $selectedOperatorStop.official_name,
+					name: $selectedOperatorStop.name,
 					lat: $selectedOperatorStop.lat,
 					lon: $selectedOperatorStop.lon,
 					layer: 'operator'

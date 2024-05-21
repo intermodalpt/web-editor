@@ -92,7 +92,7 @@
 		});
 
 		// Merge them into a single object where the operatorStops have precedence
-		return Object.fromEntries([...opStops, ...regStops].map((stop) => [stop.id, stop]));
+		return Object.fromEntries([...regStops, ...opStops].map((stop) => [stop.id, stop]));
 	});
 
 	// IML stops that are not linked
