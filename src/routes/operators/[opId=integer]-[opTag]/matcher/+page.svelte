@@ -18,53 +18,41 @@
 	const operatorId = operator.id;
 	//const operatorStops = data.operatorStops;
 
+	// IML stops that are linked
+	const operatorStops = writable(data.operatorStops);
+	// IML stops in the region (which might or might not be linked)
+	const regionStops = writable(data.regionStops);
+	const gtfsStops = writable(data.gtfsStops);
+	const gtfsRoutes = writable(data.gtfsRoutes);
+
+	const knownGtfsIds = new Set(Object.values(data.gtfsStops).map((stop) => stop.stop_id));
+	// const usedGtfsIds = new Set(
+	// 	data.operatorStops
+	// 		.filter((stop) => knownGtfsIds.has(stop.stop_ref))
+	// 		.map((stop) => stop.stop_ref)
+	// );
+	// const danglingGtfsIds = new Set(
+	// 	data.operatorStops
+	// 		.filter((stop) => knownGtfsIds.has(stop.stop_ref))
+	// 		.map((stop) => stop.stop_ref)
+	// );
+
 	let map;
 
-	let stopsLoaded = false;
+	let stopsLoaded = true;
 	let mapLoaded = false;
 	// Get rid of these if we decide to stay with page.js's load()
 	let gtfsStopsLoaded = true;
 	let gtfsTripsLoaded = true;
 	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
 
-	const regionStops = liveQuery(() => getStops());
-
-	async function loadData() {
-		await fetchStops().then(async () => {
-			await tick();
-			stopsLoaded = true;
-		});
-	}
-
-	loadData().then(() => {
-		console.log('Data loaded');
-	});
-
 	const genericNames = derived(regionStops, ($regionStops) => {
 		if (!$regionStops) return {};
 		return Object.fromEntries(Object.values($regionStops).map((stop) => [stop.name, stop]));
 	});
 
-	const gtfsStops = writable(data.gtfsStops);
-	const gtfsRoutes = writable(data.gtfsRoutes);
-
-	const knownGtfsIds = new Set(Object.values(data.gtfsStops).map((stop) => stop.stop_id));
-	const usedGtfsIds = new Set(
-		data.operatorStops
-			.filter((stop) => knownGtfsIds.has(stop.stop_ref))
-			.map((stop) => stop.stop_ref)
-	);
-	const danglingGtfsIds = new Set(
-		data.operatorStops
-			.filter((stop) => knownGtfsIds.has(stop.stop_ref))
-			.map((stop) => stop.stop_ref)
-	);
-
 	// Every stop ID that is matched with a GTFS stop
 	const usedStopIds = new Set(data.operatorStops.map((stop) => stop.id));
-
-	// IML stops that are linked
-	const operatorStops = writable(data.operatorStops);
 
 	const stopIndex = derived([regionStops, operatorStops], ([$regionStops, $operatorStops]) => {
 		if (!$regionStops || !$operatorStops) return {};
@@ -81,7 +69,7 @@
 			};
 		});
 
-		const regStops = Object.values($regionStops).map((stop) => {
+		const regStops = $regionStops.map((stop) => {
 			return {
 				id: stop.id,
 				name: stop.name,
@@ -103,23 +91,18 @@
 		return Object.values($regionStops).filter((stop) => !usedStopIds.has(stop.id));
 	});
 
-	const linkedStops = derived([regionStops, gtfsStops], ([$stops, $gtfsStops]) => {
-		if (!$stops || !$gtfsStops) return {};
+	const linkedStops = derived([regionStops, gtfsStops], ([$regionStops, $gtfsStops]) => {
+		if (!$regionStops || !$gtfsStops) return {};
 
-		return Object.fromEntries(
-			Object.values($stops).map((stop) => {
-				const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
-				if (!rel) return [stop.id, stop];
-				return [
-					stop.id,
-					Object.assign(stop, {
-						official_name: rel.name,
-						source: rel.source,
-						gtfsStop: $gtfsStops[rel.stop_ref] || null
-					})
-				];
-			})
-		);
+		return $regionStops.map((stop) => {
+			const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
+			if (!rel) return stop;
+			return Object.assign(stop, {
+				official_name: rel.name,
+				source: rel.source,
+				gtfsStop: $gtfsStops[rel.stop_ref] || null
+			});
+		});
 	});
 
 	const selectedOperatorStop = writable(null);
@@ -165,7 +148,7 @@
 
 			let lowerInput = $stopSearchInput.toLowerCase();
 
-			const stop_results = Object.values($linkedStops)
+			const stop_results = $linkedStops
 				.filter((stop) => {
 					return (
 						(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
@@ -444,12 +427,10 @@
 	{gtfsStops}
 	mapParams={regionMapParams($selectedRegion)}
 	on:load={async () => {
-		console.log('Map loaded');
 		mapLoaded = true;
 		await tick();
 
 		if (!loading) {
-			console.log('Map loaded2');
 			refreshStops();
 		}
 	}}

@@ -102,7 +102,6 @@
 	}
 
 	export function flyTo(lon, lat) {
-		console.log('Flying to', lon, lat);
 		map.flyTo({
 			center: [lon, lat],
 			zoom: 17.5

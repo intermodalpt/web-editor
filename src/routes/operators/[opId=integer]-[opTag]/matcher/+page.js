@@ -1,7 +1,8 @@
 import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
-import { fetchOperators, getOperator } from '$lib/db.js';
+import { fetchOperators, getOperator, fetchStops, getStops, regionId } from '$lib/db.js';
 import { apiServer } from '$lib/settings.js';
+import { get } from 'svelte/store';
 
 export const csr = true;
 export const ssr = false;
@@ -10,23 +11,33 @@ export const prerender = false;
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
 	const operatorId = parseInt(params.opId);
+	const selectedRegionId = get(regionId);
 
-	if (!browser) {
-		return;
+	// Redirect the user to the root
+	if (!selectedRegionId) {
+		error(400, 'Without a selected region');
 	}
 
-	await fetchOperators(fetch);
-	const operator = await getOperator(operatorId);
-
-	if (!operator) {
-		error(404, 'Operator not found');
-	}
-
-	const [operatorStopsRes, gtfsStopsRes, gtfsRoutesRes] = await Promise.all([
+	const [_, regionStopsRes, operatorStopsRes, gtfsStopsRes, gtfsRoutesRes] = await Promise.all([
+		fetchOperators(),
+		fetch(`${apiServer}/v1/regions/${selectedRegionId}/stops/full`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/stop_rels`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/stops`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/routes`)
 	]);
+
+	const operator = await getOperator(operatorId);
+	if (!operator) {
+		error(404, 'Operator not found');
+	}
+
+	if (!regionStopsRes.ok) {
+		if (regionStopsRes.status === 0) {
+			error(500, 'Failed to connect to server');
+		} else {
+			error(500, 'Failed to fetch the operator stops');
+		}
+	}
 
 	if (!operatorStopsRes.ok) {
 		if (operatorStopsRes.status === 0) {
@@ -36,6 +47,7 @@ export async function load({ params, fetch }) {
 		}
 	}
 
+	const regionStops = await regionStopsRes.json();
 	const operatorStops = await operatorStopsRes.json();
 	let gtfsStops = [];
 	let gtfsRoutes = [];
@@ -93,6 +105,7 @@ export async function load({ params, fetch }) {
 	return {
 		operator: operator,
 		operatorStops: operatorStops,
+		regionStops: regionStops,
 		gtfsStops: gtfsStops,
 		gtfsRoutes: gtfsRoutes
 	};
