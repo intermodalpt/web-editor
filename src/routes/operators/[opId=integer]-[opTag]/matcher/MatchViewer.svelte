@@ -114,6 +114,115 @@
 		{operator.name}
 	</a>
 </div>
+<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-blue-500 relative">
+	{#if $selectedImlStop}
+		<button
+			class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
+			on:click={() => {
+				$selectedOperatorStop = null;
+				$selectedUnusedStop = null;
+			}}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M6 18L18 6M6 6l12 12"
+				/></svg
+			>
+		</button>
+		<div class="flex gap-1 items-center">
+			<button
+				class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
+				on:click={() => dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat])}
+			>
+				{$selectedImlStop?.id}
+			</button>
+			<span class="font-bold">{$selectedImlStop?.name}</span>
+		</div>
+		<CoordViewer lat={$selectedImlStop.lat} lon={$selectedImlStop.lon} />
+		{#if $selectedOperatorStop}
+			<div class="flex gap-2 items-center">
+				<h2 class="text-xs font-bold">Emparelhamento</h2>
+				<span class="text-xs">({$selectedOperatorStop?.source})</span>
+				<button class="btn btn-primary btn-xs" on:click={() => pairingDialog.show()}>Editar</button>
+			</div>
+			<div class="flex gap-1 items-center">
+				{#if $selectedOperatorStop.gtfsStop}
+					<button
+						class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
+						on:click={() => {
+							$selectedGtfsStop = $selectedOperatorStop.gtfsStop;
+
+							dispatch('fly-to', [
+								$selectedOperatorStop.gtfsStop.lon,
+								$selectedOperatorStop.gtfsStop.lat
+							]);
+						}}>{$selectedOperatorStop?.stop_ref}</button
+					>
+				{:else}
+					<span class="btn btn-xs text-orange-600 bg-white border-orange-600"
+						>⚠️{$selectedOperatorStop?.stop_ref}</span
+					>
+				{/if}
+				{$selectedOperatorStop?.name}
+				{#if $selectedOperatorStop.gtfsStop && $selectedOperatorStop.name != $selectedOperatorStop.gtfsStop?.stop_name}⚠️{/if}
+			</div>
+		{/if}
+		<h2 class="text-sm self-center font-semibold">Rotas</h2>
+		<div class="w-full flex flex-wrap gap-1">
+			{#each $selectedStopRoutes || [] as route}
+				<button
+					class="badge badge-secondary badge-outline"
+					on:click={() => {
+						alert(route.code + ' - ' + route.name);
+					}}
+				>
+					{route.code}
+				</button>
+			{/each}
+		</div>
+	{:else}
+		<div class="text-slate-500 font-semibold text-lg">
+			Pontos <span class="border-b-2 border-blue-500">azuis</span> denotam paragens no intermodal.
+		</div>
+	{/if}
+</div>
+
+{#if canEdit}
+	<div class="flex justify-center">
+		{#if $selectedGtfsStop && $selectedOperatorStop}
+			{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($selectedOperatorStop?.source))}
+				<button
+					class="btn btn-primary btn-sm"
+					on:click={() => {
+						dispatch('connect', {
+							operatorStop: $selectedOperatorStop,
+							gtfsStop: $selectedGtfsStop
+						});
+					}}>↑ Ligar paragens ↓</button
+				>
+			{:else if $hasMutualLink}
+				<button
+					class="btn btn-error btn-sm"
+					on:click={() => {
+						dispatch('disconnect', {
+							operatorStop: $selectedOperatorStop,
+							gtfsStop: $selectedGtfsStop
+						});
+					}}>↑ Apagar ligação ↓</button
+				>
+			{/if}
+		{/if}
+	</div>
+{/if}
+
 <div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-orange-600 relative">
 	{#if $selectedGtfsStop}
 		<button
@@ -187,118 +296,6 @@
 			<a href="https://en.wikipedia.org/wiki/GTFS" target="_blank" class="link-primary font-bold"
 				>GTFS</a
 			> do operador.
-		</div>
-	{/if}
-</div>
-
-{#if canEdit}
-	<div class="flex justify-center">
-		{#if $selectedGtfsStop && $selectedOperatorStop}
-			{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($selectedOperatorStop?.source))}
-				<button
-					class="btn btn-primary btn-sm"
-					on:click={() => {
-						dispatch('connect', {
-							operatorStop: $selectedOperatorStop,
-							gtfsStop: $selectedGtfsStop
-						});
-					}}>↑ Ligar paragens ↓</button
-				>
-			{:else if $hasMutualLink}
-				<button
-					class="btn btn-error btn-sm"
-					on:click={() => {
-						dispatch('disconnect', {
-							operatorStop: $selectedOperatorStop,
-							gtfsStop: $selectedGtfsStop
-						});
-					}}>↑ Apagar ligação ↓</button
-				>
-			{/if}
-		{/if}
-	</div>
-{/if}
-<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-blue-500 relative">
-	{#if $selectedImlStop}
-		<button
-			class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
-			on:click={() => {
-				$selectedOperatorStop = null;
-				$selectedUnusedStop = null;
-			}}
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M6 18L18 6M6 6l12 12"
-				/></svg
-			>
-		</button>
-		<div class="flex gap-1 items-center">
-			<div
-				class="btn btn-xs text-blue-200 bg-blue-500 border-blue-600"
-				on:click={() => dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat])}
-				on:keypress={() => dispatch('fly-to', [$selectedImlStop.lon, $selectedImlStop.lat])}
-			>
-				{$selectedImlStop?.id}
-			</div>
-			<span class="font-bold">{$selectedImlStop?.name}</span>
-		</div>
-		<CoordViewer lat={$selectedImlStop.lat} lon={$selectedImlStop.lon} />
-		{#if $selectedOperatorStop}
-			<div class="flex gap-2 items-center">
-				<h2 class="text-xs font-bold">Emparelhamento</h2>
-				<span class="text-xs">({$selectedOperatorStop?.source})</span>
-				<button class="btn btn-primary btn-xs" on:click={() => pairingDialog.show()}>Editar</button>
-			</div>
-			<div class="flex gap-1 items-center">
-				{#if $selectedOperatorStop.gtfsStop}
-					<button
-						class="btn btn-xs text-orange-200 bg-orange-600 border-orange-600"
-						on:click={() => {
-							$selectedGtfsStop = $selectedOperatorStop.gtfsStop;
-
-							dispatch('fly-to', [
-								$selectedOperatorStop.gtfsStop.lon,
-								$selectedOperatorStop.gtfsStop.lat
-							]);
-						}}>{$selectedOperatorStop?.stop_ref}</button
-					>
-				{:else}
-					<span class="btn btn-xs text-orange-600 bg-white border-orange-600"
-						>⚠️{$selectedOperatorStop?.stop_ref}</span
-					>
-				{/if}
-				{$selectedOperatorStop?.name}
-				{#if $selectedOperatorStop.gtfsStop && $selectedOperatorStop.name != $selectedOperatorStop.gtfsStop?.stop_name}⚠️{/if}
-			</div>
-		{/if}
-		<h2 class="text-sm self-center font-semibold">Rotas</h2>
-		<div class="w-full flex flex-wrap gap-1">
-			{#each $selectedStopRoutes || [] as route}
-				<div
-					class="badge badge-secondary badge-outline"
-					on:click={() => {
-						alert(route.code + ' - ' + route.name);
-					}}
-					on:keypress={() => {
-						alert(route.code + ' - ' + route.name);
-					}}
-				>
-					{route.code}
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<div class="text-slate-500 font-semibold text-lg">
-			Pontos <span class="border-b-2 border-blue-500">azuis</span> denotam paragens no intermodal.
 		</div>
 	{/if}
 </div>
