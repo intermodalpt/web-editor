@@ -125,6 +125,8 @@
 	const selectedUnusedStop = writable(null);
 	const selectedGtfsStop = writable(null);
 
+	$: areStopsSelected = $selectedGtfsStop || $selectedUnusedStop || $selectedOperatorStop;
+
 	const previewedTrip = writable(null);
 
 	selectedGtfsStop.subscribe((gtfsStop) => {
@@ -132,27 +134,23 @@
 
 		if (!map) return;
 
-		map.toggleSidePadding(gtfsStop || $selectedOperatorStop || $selectedUnusedStop);
+		map.increaseSidePadding(gtfsStop || $selectedOperatorStop || $selectedUnusedStop);
 	});
 
 	selectedOperatorStop.subscribe((selectedOperatorStop) => {
-		if (selectedOperatorStop) {
-			$selectedUnusedStop = null;
-		}
+		if (selectedOperatorStop) $selectedUnusedStop = null;
 
 		if (!map) return;
 
-		map.toggleSidePadding($selectedGtfsStop || selectedOperatorStop || $selectedUnusedStop);
+		map.increaseSidePadding($selectedGtfsStop || selectedOperatorStop || $selectedUnusedStop);
 	});
 
 	selectedUnusedStop.subscribe((selectedUnusedtop) => {
-		if (selectedUnusedtop) {
-			$selectedOperatorStop = null;
-		}
+		if (selectedUnusedtop) $selectedOperatorStop = null;
 
 		if (!map) return;
 
-		map.toggleSidePadding($selectedGtfsStop || $selectedOperatorStop || selectedUnusedtop);
+		map.increaseSidePadding($selectedGtfsStop || $selectedOperatorStop || selectedUnusedtop);
 	});
 
 	const stopSearchInput = writable(null);
@@ -501,9 +499,10 @@
 	{/if}
 	<div class="absolute left-0 z-20 flex flex-col justify-center h-full">
 		<div
-			class="w-[300px] h-full lg:h-[95%] overflow-y-scroll p-2 bg-base-100 flex flex-col gap-2 lg:rounded-r-xl shadow-md"
+			class="h-full lg:h-[95%] overflow-y-scroll p-2 bg-base-100 flex flex-col shrink gap-2 lg:rounded-r-xl shadow-md transition-all duration-300"
+			class:w-[350px]={areStopsSelected}
+			class:w-[300px]={!areStopsSelected}
 		>
-			{$selectedGtfsStop?.stop_id}
 			<MatchViewer
 				canEdit={$decodedToken?.permissions?.is_admin}
 				{operator}

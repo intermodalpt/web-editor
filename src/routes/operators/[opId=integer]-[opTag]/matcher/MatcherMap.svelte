@@ -6,16 +6,18 @@
 	import { tileStyle } from '$lib/settings.js';
 
 	const dispatch = createEventDispatcher();
+	const DEFAULT_PADDING = 300;
+	const EXTRA_PADDING = 350;
 
 	export let mapParams;
 
 	let map;
 	let searchDialog;
 
-	export function toggleSidePadding(show) {
+	export function increaseSidePadding(show) {
 		map.easeTo({
-			padding: { left: show ? 300 : 0 },
-			duration: 750
+			padding: { left: show ? EXTRA_PADDING : DEFAULT_PADDING },
+			duration: 300
 		});
 	}
 
@@ -72,7 +74,6 @@
 	}
 
 	export function redrawStops(used, unused, gtfs) {
-		console.log('Redrawing stops', used, unused, gtfs);
 		map.getSource('used-stops').setData({
 			type: 'FeatureCollection',
 			features: used
@@ -358,6 +359,7 @@
 			minZoom: 8,
 			maxZoom: 20
 		});
+		map.easeTo({ padding: { left: DEFAULT_PADDING } });
 
 		map.addControl(new NavigationControl(), 'top-right');
 		map.addControl(new SearchControl(() => searchDialog.showModal()), 'top-right');
