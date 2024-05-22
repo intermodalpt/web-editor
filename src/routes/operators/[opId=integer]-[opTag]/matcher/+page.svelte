@@ -3,8 +3,7 @@
 	import { derived, writable } from 'svelte/store';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
-	import { liveQuery } from 'dexie';
-	import { fetchStops, getStops, softInvalidateStops, selectedRegion } from '$lib/db';
+	import { softInvalidateStops, selectedRegion } from '$lib/db';
 	import { regionMapParams } from '$lib/utils.js';
 	import { decodedToken, token } from '$lib/stores.js';
 	import { apiServer, credibleSources } from '$lib/settings.js';
@@ -16,26 +15,15 @@
 
 	const operator = data.operator;
 	const operatorId = operator.id;
-	//const operatorStops = data.operatorStops;
 
 	// IML stops that are linked
-	const operatorStops = writable(data.operatorStops);
+	const operatorStopRels = writable(data.operatorStopRels);
 	// IML stops in the region (which might or might not be linked)
 	const regionStops = writable(data.regionStops);
 	const gtfsStops = writable(data.gtfsStops);
 	const gtfsRoutes = writable(data.gtfsRoutes);
 
 	const knownGtfsIds = new Set(Object.values(data.gtfsStops).map((stop) => stop.stop_id));
-	// const usedGtfsIds = new Set(
-	// 	data.operatorStops
-	// 		.filter((stop) => knownGtfsIds.has(stop.stop_ref))
-	// 		.map((stop) => stop.stop_ref)
-	// );
-	// const danglingGtfsIds = new Set(
-	// 	data.operatorStops
-	// 		.filter((stop) => knownGtfsIds.has(stop.stop_ref))
-	// 		.map((stop) => stop.stop_ref)
-	// );
 
 	let map;
 
@@ -48,41 +36,47 @@
 
 	const genericNames = derived(regionStops, ($regionStops) => {
 		if (!$regionStops) return {};
-		return Object.fromEntries(Object.values($regionStops).map((stop) => [stop.name, stop]));
+		return Object.fromEntries($regionStops.map((stop) => [stop.id, stop.name]));
 	});
 
 	// Every stop ID that is matched with a GTFS stop
-	const usedStopIds = new Set(data.operatorStops.map((stop) => stop.id));
+	const usedStopIds = new Set(data.operatorStopRels.map((stop) => stop.id));
 
-	const stopIndex = derived([regionStops, operatorStops], ([$regionStops, $operatorStops]) => {
-		if (!$regionStops || !$operatorStops) return {};
+	const stopIndex = derived(
+		[regionStops, operatorStopRels],
+		([$regionStops, $operatorStopRels]) => {
+			if (!$regionStops || !$operatorStopRels) return {};
 
-		const opStops = $operatorStops.map((stop) => {
-			return {
-				id: stop.id,
-				name: stop.official_name || genericNames[stop.id] || '{?}',
-				stop_ref: stop.stop_ref,
-				gtfsStop: $gtfsStops[stop.stop_ref] || null,
-				source: stop.source,
-				lat: stop.lat,
-				lon: stop.lon
-			};
-		});
+			console.log($operatorStopRels);
+			const opStops = $operatorStopRels.map((stop) => {
+				return {
+					id: stop.id,
+					name: stop.official_name || genericNames[stop.id] || '{?}',
+					stop_ref: stop.stop_ref,
+					gtfsStop: $gtfsStops[stop.stop_ref],
+					source: stop.source,
+					lat: stop.lat,
+					lon: stop.lon,
+					_ori: stop
+				};
+			});
 
-		const regStops = $regionStops.map((stop) => {
-			return {
-				id: stop.id,
-				name: stop.name,
-				lat: stop.lat,
-				lon: stop.lon,
-				stop_ref: null,
-				source: null
-			};
-		});
+			const regStops = $regionStops.map((stop) => {
+				return {
+					id: stop.id,
+					name: stop.name,
+					lat: stop.lat,
+					lon: stop.lon,
+					stop_ref: null,
+					source: null,
+					_ori: stop
+				};
+			});
 
-		// Merge them into a single object where the operatorStops have precedence
-		return Object.fromEntries([...regStops, ...opStops].map((stop) => [stop.id, stop]));
-	});
+			// Merge them into a single object where the operatorStops have precedence
+			return Object.fromEntries([...regStops, ...opStops].map((stop) => [stop.id, stop]));
+		}
+	);
 
 	// IML stops that are not linked
 	const unusedRegionStops = derived(regionStops, ($regionStops) => {
@@ -97,11 +91,14 @@
 		return $regionStops.map((stop) => {
 			const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
 			if (!rel) return stop;
-			return Object.assign(stop, {
-				official_name: rel.name,
-				source: rel.source,
-				gtfsStop: $gtfsStops[rel.stop_ref] || null
-			});
+			return Object.assign(
+				{
+					official_name: rel.name,
+					source: rel.source,
+					gtfsStop: $gtfsStops[rel.stop_ref] || null
+				},
+				stop
+			);
 		});
 	});
 
@@ -261,16 +258,16 @@
 	function refreshStops() {
 		if (!map) return;
 
-		let unvStops = $operatorStops.filter(
+		let unvStops = $operatorStopRels.filter(
 			(stop) => stop.source && !credibleSources.includes(stop.source) && stop.gtfsStop
 		);
-		let verStops = $operatorStops.filter(
+		let verStops = $operatorStopRels.filter(
 			(stop) => stop.source && credibleSources.includes(stop.source) && stop.gtfsStop
 		);
 
 		map.redrawMatches(unvStops, verStops);
 
-		const usedFeatures = Object.values($operatorStops).map((stop) => {
+		const usedFeatures = $operatorStopRels.map((stop) => {
 			return {
 				type: 'Feature',
 				geometry: {
@@ -424,7 +421,6 @@
 
 <MatcherMap
 	bind:this={map}
-	{gtfsStops}
 	mapParams={regionMapParams($selectedRegion)}
 	on:load={async () => {
 		mapLoaded = true;

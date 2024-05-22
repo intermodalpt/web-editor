@@ -1,6 +1,5 @@
-import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
-import { fetchOperators, getOperator, fetchStops, getStops, regionId } from '$lib/db.js';
+import { fetchOperators, getOperator, regionId } from '$lib/db.js';
 import { apiServer } from '$lib/settings.js';
 import { get } from 'svelte/store';
 
@@ -48,7 +47,7 @@ export async function load({ params, fetch }) {
 	}
 
 	const regionStops = await regionStopsRes.json();
-	const operatorStops = await operatorStopsRes.json();
+	const operatorStopRels = await operatorStopsRes.json();
 	let gtfsStops = [];
 	let gtfsRoutes = [];
 
@@ -73,7 +72,7 @@ export async function load({ params, fetch }) {
 	}
 
 	const seenGtfsIds = new Set();
-	operatorStops.forEach((stop) => {
+	operatorStopRels.forEach((stop) => {
 		seenGtfsIds.add(stop.stop_ref);
 	});
 
@@ -98,13 +97,13 @@ export async function load({ params, fetch }) {
 		});
 	});
 
-	operatorStops.forEach((stop) => {
+	operatorStopRels.forEach((stop) => {
 		stop.gtfsStop = gtfsStops[stop.stop_ref];
 	});
 
 	return {
 		operator: operator,
-		operatorStops: operatorStops,
+		operatorStopRels: operatorStopRels,
 		regionStops: regionStops,
 		gtfsStops: gtfsStops,
 		gtfsRoutes: gtfsRoutes
