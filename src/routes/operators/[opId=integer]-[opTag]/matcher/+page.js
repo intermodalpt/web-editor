@@ -19,7 +19,7 @@ export async function load({ params, fetch }) {
 
 	const [_, regionStopsRes, operatorStopsRes, gtfsStopsRes, gtfsRoutesRes] = await Promise.all([
 		fetchOperators(),
-		fetch(`${apiServer}/v1/regions/${selectedRegionId}/stops/full`),
+		fetch(`${apiServer}/v1/regions/${selectedRegionId}/stops`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/stop_rels`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/stops`),
 		fetch(`${apiServer}/v1/operators/${operatorId}/gtfs/routes`)

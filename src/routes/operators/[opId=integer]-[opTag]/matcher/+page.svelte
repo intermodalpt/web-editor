@@ -40,6 +40,7 @@
 	});
 
 	// Every stop ID that is matched with a GTFS stop
+	// TODO make this reactive
 	const usedStopIds = new Set(data.operatorStopRels.map((stop) => stop.id));
 
 	const stopIndex = derived(
@@ -85,23 +86,6 @@
 		return Object.values($regionStops).filter((stop) => !usedStopIds.has(stop.id));
 	});
 
-	const linkedStops = derived([regionStops, gtfsStops], ([$regionStops, $gtfsStops]) => {
-		if (!$regionStops || !$gtfsStops) return {};
-
-		return $regionStops.map((stop) => {
-			const rel = stop.operators.find((operatorStop) => operatorStop.operator_id === operatorId);
-			if (!rel) return stop;
-			return Object.assign(
-				{
-					official_name: rel.name,
-					source: rel.source,
-					gtfsStop: $gtfsStops[rel.stop_ref] || null
-				},
-				stop
-			);
-		});
-	});
-
 	const selectedOperatorStop = writable(null);
 	const selectedUnusedStop = writable(null);
 	const selectedGtfsStop = writable(null);
@@ -137,30 +121,27 @@
 	const stopSearchInput = writable(null);
 
 	const stopSearchResults = derived(
-		[stopSearchInput, linkedStops, gtfsStops],
-		([$stopSearchInput, $linkedStops, $gtfsStops]) => {
+		[stopSearchInput, stopIndex, gtfsStops],
+		([$stopSearchInput, $stopIndex, $gtfsStops]) => {
 			if (!$stopSearchInput || $stopSearchInput.length < 3) {
 				return;
 			}
 
-			let lowerInput = $stopSearchInput.toLowerCase();
+			const lowerInput = $stopSearchInput.toLowerCase();
 
-			const stop_results = $linkedStops
+			const results = Object.values($stopIndex)
 				.filter((stop) => {
 					return (
-						(stop.id && ('' + stop.id).includes($stopSearchInput)) ||
-						stop.operators.some(
-							(op) =>
-								op.stop_ref?.toLowerCase().includes($stopSearchInput) ||
-								op.name?.toLowerCase().includes($stopSearchInput)
-						) ||
-						(stop.name && stop.name.toLowerCase().includes(lowerInput))
+						('' + stop.id).includes($stopSearchInput) ||
+						stop.stop_ref?.toLowerCase().includes(lowerInput) ||
+						stop.name?.toLowerCase().includes(lowerInput) ||
+						stop.official_name?.toLowerCase().includes(lowerInput)
 					);
 				})
 				.map((stop) => {
 					return {
 						id: stop.id,
-						stopRef: stop.operators.find((op) => op.operator_id === operatorId)?.stop_ref,
+						stopRef: stop.stop_ref,
 						type: 'iml',
 						name: stop.name,
 						lat: stop.lat,
@@ -171,7 +152,7 @@
 			const gtfs_results = Object.values($gtfsStops)
 				.filter((stop) => {
 					return (
-						(stop.stop_id && stop.stop_id.includes($stopSearchInput)) ||
+						stop.stop_id.toLowerCase().includes(lowerInput) ||
 						(stop.stop_name && stop.stop_name.toLowerCase().includes(lowerInput))
 					);
 				})
@@ -186,7 +167,7 @@
 					};
 				});
 
-			return stop_results.concat(gtfs_results).sort((a, b) => {
+			return results.concat(gtfs_results).sort((a, b) => {
 				return a.name?.localeCompare(b.name);
 			});
 		}
