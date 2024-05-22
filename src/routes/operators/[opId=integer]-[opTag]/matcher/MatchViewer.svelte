@@ -171,8 +171,8 @@
 						>⚠️{$selectedOperatorStop?.stop_ref}</span
 					>
 				{/if}
-				{$selectedOperatorStop?.name}
-				{#if $selectedOperatorStop.gtfsStop && $selectedOperatorStop.name != $selectedOperatorStop.gtfsStop?.stop_name}⚠️{/if}
+				{$selectedOperatorStop?.official_name || $selectedOperatorStop?.name}
+				{#if $selectedOperatorStop.gtfsStop && $selectedOperatorStop.official_name != $selectedOperatorStop.gtfsStop?.stop_name}⚠️{/if}
 			</div>
 		{/if}
 		<h2 class="text-sm self-center font-semibold">Rotas</h2>

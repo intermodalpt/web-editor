@@ -47,11 +47,11 @@
 		([$regionStops, $operatorStopRels]) => {
 			if (!$regionStops || !$operatorStopRels) return {};
 
-			console.log($operatorStopRels);
 			const opStops = $operatorStopRels.map((stop) => {
 				return {
 					id: stop.id,
-					name: stop.official_name || genericNames[stop.id] || '{?}',
+					name: $genericNames[stop.id] || stop.official_name || '{?}',
+					official_name: stop.official_name,
 					stop_ref: stop.stop_ref,
 					gtfsStop: $gtfsStops[stop.stop_ref],
 					source: stop.source,
