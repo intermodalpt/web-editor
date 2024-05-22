@@ -5,7 +5,7 @@
 	import * as turf from '@turf/turf';
 	import { softInvalidateStops, selectedRegion } from '$lib/db';
 	import { regionMapParams } from '$lib/utils.js';
-	import { decodedToken, token } from '$lib/stores.js';
+	import { decodedToken, token, toast } from '$lib/stores.js';
 	import { apiServer, credibleSources } from '$lib/settings.js';
 	import MatchViewer from './MatchViewer.svelte';
 	import MatcherMap from './MatcherMap.svelte';
@@ -292,31 +292,20 @@
 		map.redrawStops(usedFeatures, unusedFeatures, gtfsFeatures);
 	}
 
-	function connectStops(stop, gtfsStop) {
-		const prevOpStopRel = stop.operators.find((rel) => rel.operator_id == operatorId);
+	function pairStop(stop, pairing) {
+		if (usedStopIds.has(stop.id)) {
+			const originalStop = $operatorStopRels.find((s) => s.id == stop.id);
+			const gtfsStop = stop.gtfsStop;
 
-		if (
-			stop.gtfsStop &&
-			stop.gtfsStop != gtfsStop &&
-			!confirm('Paragem já está ligada a outra paragem GTFS. Continuar?')
-		) {
-			// GTFS link conflict
-			return;
-		}
-
-		if (
-			prevOpStopRel &&
-			credibleSources.includes(prevOpStopRel.source) &&
-			!confirm('Paragem já tem um ID confirmado. Alterar?')
-		) {
-			//GTFS didn't change but the source is going to change
-			return;
-		}
-
-		const beingUsed = Object.values(regionStops).some((s) => s != stop && s.gtfsStop == gtfsStop);
-
-		if (beingUsed && !confirm('Paragem GTFS já está ligada a outra paragem. Continuar?')) {
-			return;
+			if (
+				!confirm(
+					gtfsStop
+						? `De certeza que quer desligar\n#${stop.id}:${stop.name} de\nG${gtfsStop.stop_id}:${gtfsStop.stop_name}?`
+						: `De certeza que quer desligar\n#${stop.id}:${stop.name} de\n${originalStop.stop_ref}:${originalStop.official_name}?`
+				)
+			) {
+				return;
+			}
 		}
 
 		fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stop.id}`, {
@@ -332,36 +321,57 @@
 			})
 		}).then(async (r) => {
 			if (r.ok) {
-				console.log('ID da paragem atualizado com sucesso.');
-				stop.gtfsStop = gtfsStop;
+				toast('Informação guardada', 'success');
 
-				stop.operators = stop.operators.filter((rel) => rel.operator_id != operatorId);
-				stop.operators.push({
-					operator_id: operatorId,
-					stop_ref: gtfsStop.stop_id,
-					name: gtfsStop.stop_name,
-					source: 'h1'
+				if (usedStopIds.has(stop.id)) {
+					$operatorStopRels = $operatorStopRels.filter((s) => s.id != stop.id);
+					usedStopIds.delete(stop.id);
+				}
+
+				// Add the stop to the "used" collections
+				$operatorStopRels.push({
+					id: stop.id,
+					official_name: pairing.official_name,
+					stop_ref: pairing.stop_ref,
+					source: 'h1',
+					lat: stop.lat,
+					lon: stop.lon,
+					gtfsStop: $gtfsStops[pairing.stop_ref]
 				});
-				await softInvalidateStops();
-
+				usedStopIds.add(stop.id);
+				// Force the recalculation of the unused stops
+				$regionStops = $regionStops;
+				// Change the selected stop to the non-operator one
+				$selectedOperatorStop = $stopIndex[stop.id];
+				// Redraw
 				refreshStops();
-				// Force data refresh
-				$selectedGtfsStop = $selectedGtfsStop;
-				$selectedOperatorStop = $selectedOperatorStop;
+
+				await softInvalidateStops();
 			} else {
 				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
+				console.error(r);
 			}
 		});
 	}
 
-	function disconnectStops(stop, gtfsStop) {
-		if (stop.gtfsStop != gtfsStop) {
-			console.error('BUG: Tentativa de desligar paragens desligadas');
+	function unpairStop(stop) {
+		const originalStop = stop._ori;
+		const gtfsStop = stop.gtfsStop;
+		if (!originalStop) {
+			console.error('BUG: No original stop found');
 			return;
 		}
 
-		if (!confirm(`De certeza que quer desligar #${stop.id} de GTFS#${gtfsStop.stop_id}?`)) {
-			return;
+		if (gtfsStop) {
+			if (
+				!confirm(
+					gtfsStop
+						? `De certeza que quer desligar\n#${stop.id}:${stop.name} de\nG${gtfsStop.stop_id}:${gtfsStop.stop_name}?`
+						: `De certeza que quer desligar\n#${stop.id}:${stop.name} de\n${originalStop.stop_ref}:${originalStop.official_name}?`
+				)
+			) {
+				return;
+			}
 		}
 
 		fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stop.id}`, {
@@ -372,16 +382,18 @@
 			}
 		}).then(async (r) => {
 			if (r.ok) {
-				console.log('ID da paragem atualizado com sucesso.');
-				stop.gtfsStop = undefined;
-
-				stop.operators = stop.operators.filter((rel) => rel.operator_id != operatorId);
-				await softInvalidateStops();
-
+				toast('Informação guardada', 'info');
+				// Drop the stop from the "used" collections
+				$operatorStopRels = $operatorStopRels.filter((stop) => stop.id != originalStop.id);
+				usedStopIds.delete(originalStop.id);
+				// Force the recalculation of the unused stops
+				$regionStops = $regionStops;
+				// Change the selected stop to the non-operator one
+				$selectedUnusedStop = $stopIndex[originalStop.id];
+				// Redraw
 				refreshStops();
-				// Force data refresh
-				$selectedGtfsStop = $selectedGtfsStop;
-				$selectedOperatorStop = $selectedOperatorStop;
+
+				await softInvalidateStops();
 			} else {
 				alert('Erro a desligar paragens.\nRecarregue e tente novamente.');
 			}
@@ -476,8 +488,8 @@
 					const trip = e.detail.trip;
 					map.flyToTrip(trip.stops.map((s) => $gtfsStops[s]));
 				}}
-				on:connect={(e) => connectStops(e.detail.operatorStop, e.detail.gtfsStop)}
-				on:disconnect={(e) => disconnectStops(e.detail.operatorStop, e.detail.gtfsStop)}
+				on:pair={(e) => pairStop(e.detail.stop, e.detail.pairing)}
+				on:unpair={(e) => unpairStop(e.detail.operatorStop)}
 			/>
 		</div>
 	</div>

@@ -41,7 +41,7 @@
 		[selectedOperatorStop, selectedUnusedStop],
 		([$selectedOperatorStop, $selectedUnusedStop]) => {
 			if ($selectedOperatorStop) {
-				newPairingOfficialName = $selectedOperatorStop.name;
+				newPairingOfficialName = $selectedOperatorStop.official_name;
 				newPairingRef = $selectedOperatorStop.stop_ref;
 				newPairingSource = $selectedOperatorStop.source;
 
@@ -50,11 +50,12 @@
 					name: $selectedOperatorStop.name,
 					lat: $selectedOperatorStop.lat,
 					lon: $selectedOperatorStop.lon,
+					_ori: $selectedOperatorStop._ori,
 					layer: 'operator'
 				};
 			}
 			if ($selectedUnusedStop) {
-				newPairingOfficialName = $selectedUnusedStop.name;
+				newPairingOfficialName = null;
 				newPairingRef = null;
 				newPairingSource = null;
 
@@ -63,6 +64,7 @@
 					name: $selectedUnusedStop.name,
 					lat: $selectedUnusedStop.lat,
 					lon: $selectedUnusedStop.lon,
+					_ori: $selectedUnusedStop._ori,
 					layer: 'region'
 				};
 			}
@@ -151,7 +153,16 @@
 			<div class="flex gap-2 items-center">
 				<h2 class="text-xs font-bold">Emparelhamento</h2>
 				<span class="text-xs">({$selectedOperatorStop?.source})</span>
-				<button class="btn btn-primary btn-xs" on:click={() => pairingDialog.show()}>Editar</button>
+				<button class="btn btn-secondary btn-xs" on:click={() => pairingDialog.show()}
+					>Editar</button
+				>
+				<button
+					class="btn btn-error btn-xs"
+					on:click={() =>
+						dispatch('unpair', {
+							operatorStop: $selectedOperatorStop
+						})}>Apagar</button
+				>
 			</div>
 			<div class="flex gap-1 items-center">
 				{#if $selectedOperatorStop.gtfsStop}
@@ -173,6 +184,12 @@
 				{/if}
 				{$selectedOperatorStop?.official_name || $selectedOperatorStop?.name}
 				{#if $selectedOperatorStop.gtfsStop && $selectedOperatorStop.official_name != $selectedOperatorStop.gtfsStop?.stop_name}⚠️{/if}
+			</div>
+		{:else if $selectedUnusedStop}
+			<div class="flex gap-2 items-center">
+				<h2 class="text-xs font-bold">Emparelhamento</h2>
+				<button class="btn btn-secondary btn-xs" on:click={() => pairingDialog.show()}>Criar</button
+				>
 			</div>
 		{/if}
 		<h2 class="text-sm self-center font-semibold">Rotas</h2>
@@ -197,26 +214,28 @@
 
 {#if canEdit}
 	<div class="flex justify-center">
-		{#if $selectedGtfsStop && $selectedOperatorStop}
+		{#if $selectedGtfsStop && $selectedImlStop}
 			{#if !$hasMutualLink || ($hasMutualLink && !credibleSources.includes($selectedOperatorStop?.source))}
 				<button
 					class="btn btn-primary btn-sm"
 					on:click={() => {
-						dispatch('connect', {
-							operatorStop: $selectedOperatorStop,
-							gtfsStop: $selectedGtfsStop
+						dispatch('pair', {
+							stop: $selectedImlStop,
+							pairing: {
+								official_name: $selectedGtfsStop.stop_name,
+								stop_ref: $selectedGtfsStop.stop_id
+							}
 						});
-					}}>↑ Ligar paragens ↓</button
+					}}>↑ Emparelhar ↓</button
 				>
 			{:else if $hasMutualLink}
 				<button
 					class="btn btn-error btn-sm"
 					on:click={() => {
-						dispatch('disconnect', {
-							operatorStop: $selectedOperatorStop,
-							gtfsStop: $selectedGtfsStop
+						dispatch('unpair', {
+							operatorStop: $selectedOperatorStop
 						});
-					}}>↑ Apagar ligação ↓</button
+					}}>↑ Desemparelhar ↓</button
 				>
 			{/if}
 		{/if}
@@ -309,7 +328,7 @@
 		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">
 			<div class="form-control w-full">
 				<label class="input-group">
-					<span class="w-32">Nome oficial</span>
+					<span class="w-36">Nome oficial</span>
 					<input
 						type="text"
 						bind:value={newPairingOfficialName}
@@ -320,7 +339,7 @@
 			</div>
 			<div class="form-control w-full">
 				<label class="input-group">
-					<span class="w-32">Referência</span>
+					<span class="w-36">Referência</span>
 					<input
 						type="text"
 						bind:value={newPairingRef}
@@ -359,9 +378,11 @@
 					class="btn btn-primary"
 					on:click={() => {
 						dispatch('pair', {
-							id: $selectedImlStop.id,
-							officialName: newPairingOfficialName,
-							ref: newPairingRef
+							stop: $selectedImlStop,
+							pairing: {
+								official_name: newPairingOfficialName,
+								stop_ref: newPairingRef
+							}
 						});
 						pairingDialog.close();
 					}}>Guardar</button
