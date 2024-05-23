@@ -315,8 +315,8 @@
 				authorization: `Bearer ${$token}`
 			},
 			body: JSON.stringify({
-				official_name: gtfsStop.stop_name,
-				stop_ref: gtfsStop.stop_id,
+				official_name: pairing.official_name,
+				stop_ref: pairing.stop_ref,
 				source: 'h1'
 			})
 		}).then(async (r) => {
@@ -342,7 +342,12 @@
 				// Force the recalculation of the unused stops
 				$regionStops = $regionStops;
 				// Change the selected stop to the non-operator one
-				$selectedOperatorStop = $stopIndex[stop.id];
+				// Do it this way to prevent a data race with the user changing stops in the meantime
+				if ($selectedOperatorStop && $selectedOperatorStop.id == stop.id) {
+					$selectedOperatorStop = $stopIndex[stop.id];
+				} else if ($selectedUnusedStop && $selectedUnusedStop.id == stop.id) {
+					$selectedOperatorStop = $stopIndex[stop.id];
+				}
 				// Redraw
 				refreshStops();
 

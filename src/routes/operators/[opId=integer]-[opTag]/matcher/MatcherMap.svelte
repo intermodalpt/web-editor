@@ -238,7 +238,7 @@
 			type: 'circle',
 			source: 'unused-stops',
 			paint: {
-				'circle-color': 'rgba(50, 150, 220, 0.3)',
+				'circle-color': 'rgba(50, 150, 220, 0.15)',
 				'circle-radius': {
 					base: 1.75,
 					stops: [
