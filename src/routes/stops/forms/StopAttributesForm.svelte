@@ -102,9 +102,7 @@
 	let currentSubform = subforms.info;
 
 	selectedStop.subscribe((stop) => {
-		if (!stop) {
-			return;
-		}
+		if (!stop) return;
 
 		name = stop.name ?? null;
 		shortName = stop.short_name ?? null;

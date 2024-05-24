@@ -16,7 +16,7 @@
 		logWeightedStopScore,
 		linearStopScore,
 		weightedStopScore
-	} from '$lib/stops/scoring.js';
+	} from './scoring.js';
 	import StopPicsMetaEditor from '$lib/pics/wrappers/StopPicsMetaEditor.svelte';
 	import PicDialog from '$lib/pics/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
@@ -46,6 +46,9 @@
 		const parsed = parseInt(id);
 
 		if (parsed != NaN) {
+			if (!$stops) {
+				console.error('$stops not loaded as of loadQueryStringData');
+			}
 			const stop = $stops[parsed];
 
 			if (stop) {
@@ -92,10 +95,10 @@
 						headers: {
 							authorization: `Bearer ${$token}`
 						}
-				  }).then((res) => res.json())
+					}).then((res) => res.json())
 				: new Promise((resolve) => {
 						resolve([]);
-				  })
+					})
 		])
 			.then(async ([unpatchedStops, pictures, patches]) => {
 				$userPatches = patches;
@@ -542,8 +545,7 @@
 				}
 			})
 			.catch((e) => {
-				console.log('Error requesting update');
-				console.log(e);
+				console.error('Error requesting update', e);
 				toast('Error requesting update');
 			});
 	}
