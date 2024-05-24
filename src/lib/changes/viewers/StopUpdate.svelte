@@ -64,7 +64,7 @@
 	let currentDiffs = currentStop
 		? listDifferences(currentStop, change.original).filter((diff) => {
 				return diff.key != 'lat' && diff.key != 'lon';
-		  })
+			})
 		: [];
 
 	onMount(() => {
@@ -150,12 +150,12 @@
 			{#if (ignoredKeys && !ignoredKeys.includes(diff.key)) || !isEvaluation}
 				<li>
 					{#if isEvaluation}
-						<span
+						<button
 							class="btn btn-xs btn-circle btn-error btn-outline"
 							on:click={() => {
 								ignoredKeys.push(diff.key);
 								ignoredKeys = ignoredKeys;
-							}}>✕</span
+							}}>✕</button
 						>
 						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{/if}
 					{diff.key}:
@@ -209,14 +209,14 @@
 		{#each ignoredKeys as key}
 			<span class="badge badge-outline badge-error"
 				>{key}
-				<div
+				<button
 					class="btn btn-error btn-circle btn-xs"
 					on:click={() => {
 						ignoredKeys = ignoredKeys.filter((ignored) => ignored != key);
 					}}
 				>
 					✕
-				</div>
+				</button>
 			</span>
 		{/each}
 	</div>

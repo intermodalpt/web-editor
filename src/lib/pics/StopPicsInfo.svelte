@@ -6,7 +6,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	export let stops;
 	export let selectedStop;
 
 	const stopPics = derived(selectedStop, ($selectedStop, set) => {
@@ -30,29 +29,32 @@
 	<span class="card-title"
 		>Fotografias de
 
-		<span
+		<button
 			class="badge badge-lg badge-secondary cursor-pointer whitespace-nowrap"
 			on:click={() => {
 				dispatch('select-stop', { id: $selectedStop.id });
 			}}
 		>
 			{$selectedStop?.id}: {$selectedStop?.short_name || $selectedStop?.name}
-		</span></span
+		</button></span
 	>
 	{#if $stopPics.length === 0}
 		<span class="text-lg">Sem fotografias associadas</span>
 	{/if}
 	<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 		{#each $stopPics as pic}
-			<div class="p-2 flex justify-center items-center cursor-pointer">
+			<button
+				class="p-2 flex justify-center items-center cursor-pointer"
+				on:click={() => {
+					dispatch('select-pic', { id: pic.id });
+				}}
+			>
 				<img
 					src={pic.url_medium}
+					alt="Fotografia de paragem"
 					class="rounded-box transition-all hover:scale-105"
-					on:click={() => {
-						dispatch('select-pic', { id: pic.id });
-					}}
 				/>
-			</div>
+			</button>
 		{/each}
 	</div>
 {/if}

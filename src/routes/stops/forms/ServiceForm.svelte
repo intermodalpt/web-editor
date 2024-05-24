@@ -156,13 +156,12 @@
 						{#each flag.route_codes as code, j}
 							<div class="badge badge-outline badge-lg">
 								{code}
-								<div
+								<button
 									class="btn btn-error btn-circle btn-xs"
 									on:click={() => removeFlagRoute(i, j)}
-									on:keypress={() => removeFlagRoute(i, j)}
 								>
 									✕
-								</div>
+								</button>
 							</div>
 						{/each}
 					</div>

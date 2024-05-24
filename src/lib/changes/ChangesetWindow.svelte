@@ -12,17 +12,12 @@
 	}
 </script>
 
-<div
+<button
 	class="fixed top-0 bottom-0 left-0 right-0 overflow-y-scroll grid grid-cols-1 bg-base-100 modal modal-open modal-bottom xl:modal-middle"
 	style="grid-template-rows: 1fr auto;"
 	on:click={close}
-	on:keypress={close}
 >
-	<div
-		class="modal-box xl:max-w-[80em]"
-		on:click|stopPropagation={() => {}}
-		on:keypress|stopPropagation={() => {}}
-	>
+	<button class="modal-box xl:max-w-[80em]" on:click|stopPropagation={() => {}}>
 		<div class="flex flex-col gap-1 max-h-[75vh]">
 			<h2 class="card-title text-lg">
 				#{changeset.id} por {changeset.author_username} -
@@ -39,5 +34,5 @@
 			<span class="grow" />
 			<button class="btn" on:click={close}>Fechar</button>
 		</div>
-	</div>
-</div>
+	</button>
+</button>

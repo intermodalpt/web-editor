@@ -418,33 +418,33 @@
 
 <div class="self-center max-w-[80em] w-full my-4">
 	<div class="tabs">
-		<a
+		<button
 			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.identifier}
 			on:click={() => {
 				$tab = mapTabs.identifier;
-			}}>Identificação</a
+			}}>Identificação</button
 		>
-		<a
+		<button
 			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.position}
 			on:click={() => {
 				$tab = mapTabs.position;
-			}}>Posição</a
+			}}>Posição</button
 		>
-		<a
+		<button
 			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.service}
 			on:click={() => {
 				$tab = mapTabs.service;
-			}}>Serviço</a
+			}}>Serviço</button
 		>
-		<a
+		<button
 			class="tab tab-md lg:tab-lg tab-lifted"
 			class:tab-active={$tab === mapTabs.pics}
 			on:click={() => {
 				$tab = mapTabs.pics;
-			}}>Reg.Fotografico</a
+			}}>Reg.Fotografico</button
 		>
 	</div>
 	<div id="map" class="h-[30em] xl:h-[60em] w-full">

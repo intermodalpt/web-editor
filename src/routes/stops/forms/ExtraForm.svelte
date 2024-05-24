@@ -73,13 +73,9 @@
 			{#each tmpIssues as issue}
 				<div class="border rounded-xl p-1">
 					{tmpIssueLabels[issue]}
-					<div
-						class="btn btn-error btn-circle btn-xs"
-						on:click={() => removeIssue(issue)}
-						on:keypress={() => removeIssue(issue)}
-					>
+					<button class="btn btn-error btn-circle btn-xs" on:click={() => removeIssue(issue)}>
 						✕
-					</div>
+					</button>
 				</div>
 			{/each}
 			<div class="grow">
@@ -93,7 +89,7 @@
 						<ul class="menu bg-base-100 w-full rounded-box">
 							{#each tmpIssuesOptions as tmpIssue}
 								<li>
-									<span
+									<button
 										on:mouseup={() => {
 											selectedTmpIssue = tmpIssue;
 											addIssue();
@@ -101,7 +97,7 @@
 										}}
 									>
 										{tmpIssue.label}
-									</span>
+									</button>
 								</li>
 							{/each}
 						</ul>
@@ -134,13 +130,9 @@
 				{#each tags as tag}
 					<span class="border rounded-xl p-1">
 						{tag}
-						<span
-							class="btn btn-error btn-circle btn-xs"
-							on:click={() => removeTag(tag)}
-							on:keypress={() => removeTag(tag)}
-						>
+						<button class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>
 							✕
-						</span>
+						</button>
 					</span>
 				{/each}
 			</div>

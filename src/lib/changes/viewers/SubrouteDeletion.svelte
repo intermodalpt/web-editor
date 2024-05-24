@@ -4,7 +4,8 @@
 </script>
 
 <h3 class="font-bold">
-	Extinção da variante {change.data?.flag || change.subroute?.flag} ({change.data?.id || change.subroute.id})
+	Extinção da variante {change.data?.flag || change.subroute?.flag} ({change.data?.id ||
+		change.subroute.id})
 </h3>
 
 {#if expand}
@@ -14,10 +15,5 @@
 		{/each}
 	</ul>
 {:else}
-	<span
-		class="link"
-		on:mouseup={() => {
-			expand = true;
-		}}>Mostrar</span
-	>
+	<button class="link" on:click={() => (expand = true)}>Mostrar</button>
 {/if}

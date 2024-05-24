@@ -281,10 +281,9 @@
 					class="absolute bottom-0 right-0 link link-neutral bg-base-100 rounded-tl-lg px-2"
 					>Ver completa</a
 				>
-				<span
+				<button
 					class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
-					on:click={deleteImage}
-					on:keypress={deleteImage}>Apagar</span
+					on:click={deleteImage}>Apagar</button
 				>
 			</div>
 			<div class="w-full hidden lg:block">
@@ -391,10 +390,10 @@
 			<h2 class="text-xl font-bold py-2">Visibilidade</h2>
 			<span>Quão adequada é a fotografia ao público?</span>
 			<div class="form-control mb-4">
-				<label class="label flex-wrap">
+				<span class="label flex-wrap">
 					<span class="label-text">Qualidade da imagem</span>
 					<span class="label-text" bind:this={qualityLabelElem}>Sem informação</span>
-				</label>
+				</span>
 				<input
 					type="range"
 					min="0"
@@ -446,9 +445,7 @@
 			</span>
 			<h2 class="text-xl font-bold py-2">Informação adicional</h2>
 			<div class="form-control">
-				<label class="label">
-					<span class="label-text">Notas</span>
-				</label>
+				<span class="label label-text">Notas</span>
 				<textarea
 					class="textarea textarea-bordered h-12"
 					placeholder="Exemplo: Atrás da paragem encontra-se um gambuzino."
@@ -458,12 +455,14 @@
 			</div>
 			<div>
 				<div class="form-control">
-					<label class="label"><span class="label-text">Etiquetas</span></label>
+					<span class="label label-text"></span>
 					<div>
 						{#each tags as tag}
 							<div class="badge badge-outline badge-lg">
 								{tag}
-								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>✕</div>
+								<button class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}
+									>✕</button
+								>
 							</div>
 						{/each}
 						<input

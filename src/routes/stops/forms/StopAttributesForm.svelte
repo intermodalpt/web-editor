@@ -264,55 +264,47 @@
 
 <div class="flex gap-1 justify-between flex-wrap-reverse p-2">
 	<div class="btn-group btn-group-horizontal tabs tabs-boxed">
-		<span
+		<button
 			class="tab tab-sm"
 			class:tab-active={currentSubform === subforms.info}
 			on:click={() => (currentSubform = subforms.info)}
-			on:keypress={() => (currentSubform = subforms.info)}>Info</span
+			on:keypress={() => (currentSubform = subforms.info)}>Info</button
 		>
-		<span
+		<button
 			class="tab tab-sm"
 			class:tab-active={currentSubform === subforms.pics}
-			on:click={() => (currentSubform = subforms.pics)}
-			on:keypress={() => (currentSubform = subforms.pics)}>Fotos</span
+			on:click={() => (currentSubform = subforms.pics)}>Fotos</button
 		>
-		<span
+		<button
 			class="tab tab-sm"
 			class:tab-active={currentSubform === subforms.service}
-			on:click={() => (currentSubform = subforms.service)}
-			on:keypress={() => (currentSubform = subforms.service)}>Serviço</span
+			on:click={() => (currentSubform = subforms.service)}>Serviço</button
 		>
-		<span
+		<button
 			class="tab tab-sm"
 			class:tab-active={currentSubform === subforms.infra}
-			on:click={() => (currentSubform = subforms.infra)}
-			on:keypress={() => (currentSubform = subforms.infra)}>Infra</span
+			on:click={() => (currentSubform = subforms.infra)}>Infra</button
 		>
-		<span
+		<button
 			class="tab tab-sm"
 			class:tab-active={currentSubform === subforms.extra}
-			on:click={() => (currentSubform = subforms.extra)}
-			on:keypress={() => (currentSubform = subforms.extra)}>Extra</span
+			on:click={() => (currentSubform = subforms.extra)}>Extra</button
 		>
 	</div>
 	<div class="flex gap-2 flex-grow justify-end">
 		<AuthenticityIndicator bind:value={verificationLevel} />
 		<span class="w-2" />
-		<input
+		<button
 			type="button"
 			class="btn btn-success btn-xs"
 			disabled={readOnly}
 			on:click={saveStopMeta}
-			on:keypress={saveStopMeta}
-			value="Guardar"
-		/>
-		<input
-			type="button"
-			class="btn btn-error btn-xs"
-			on:click={() => ($selectedStop = null)}
-			on:keypress={() => ($selectedStop = null)}
-			value="Fechar"
-		/>
+		>
+			Guardar
+		</button>
+		<button type="button" class="btn btn-error btn-xs" on:click={() => ($selectedStop = null)}
+			>Fechar</button
+		>
 	</div>
 </div>
 <div class="w-full overflow-y-auto p-2 pt-0 bg-base-100">

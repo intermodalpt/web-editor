@@ -11,14 +11,14 @@
 	<div class="flex flex-wrap gap-1 grow overflow-y-auto">
 		{#if $stopPictures !== undefined && $stopPictures.length > 0}
 			{#each $stopPictures as picture}
-				<img
-					src={picture.url_medium}
-					rel="noreferrer"
-					alt="Fotografia da paragem"
-					class="rounded-box transition-all hover:scale-150 h-40"
-					on:click={() => dispatch('pictureClick', { picture: picture })}
-					on:keypress={() => dispatch('pictureClick', { picture: picture })}
-				/>
+				<button on:click={() => dispatch('pictureClick', { picture: picture })}>
+					<img
+						src={picture.url_medium}
+						rel="noreferrer"
+						alt="Fotografia da paragem"
+						class="rounded-box transition-all hover:scale-150 h-40"
+					/>
+				</button>
 			{/each}
 		{:else}
 			<div class="flex flex-col items-center justify-center w-full h-40">

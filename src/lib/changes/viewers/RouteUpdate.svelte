@@ -17,15 +17,10 @@
 			<li>
 				{diff.key}:
 				{#if diff.original}<span class="bg-red-300">{diff.original}</span>{/if}
-				-> <span class="bg-green-300">{diff.new}</span>
+				-&gt; <span class="bg-green-300">{diff.new}</span>
 			</li>
 		{/each}
 	</ul>
 {:else}
-	<span
-		class="link"
-		on:mouseup={() => {
-			expand = true;
-		}}>Mostrar</span
-	>
+	<button class="link" on:click={() => (expand = true)}>Mostrar</button>
 {/if}
