@@ -287,6 +287,22 @@
 					on:keypress={deleteImage}>Apagar</span
 				>
 			</div>
+			<div class="w-full hidden lg:block">
+				<table class="w-full table table-compact">
+					<tr>
+						<td>Ficheiro</td>
+						<td>{image?.original_filename}</td>
+					</tr>
+					<tr>
+						<td>Data</td>
+						<td>{image?.capture_date}</td>
+					</tr>
+					<tr>
+						<td>Recebido</td>
+						<td>{image?.upload_date}</td>
+					</tr>
+				</table>
+			</div>
 		</div>
 
 		<div class="flex flex-col">

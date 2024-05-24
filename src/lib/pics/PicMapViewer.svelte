@@ -22,7 +22,7 @@
 	});
 
 	function updateData() {
-		if (!mapLoaded) {
+		if (!mapLoaded || !$stops) {
 			return;
 		}
 
