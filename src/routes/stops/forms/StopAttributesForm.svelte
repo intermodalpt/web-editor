@@ -113,51 +113,51 @@
 		door = stop.door ?? null;
 		notes = stop.notes ?? null;
 		tags = stop.tags ?? null;
-		tmpIssues = stop.tmp_issues ?? [];
+		tmpIssues = stop.a11y.tmp_issues ?? [];
 
-		if (stop.flags === undefined || stop.flags === null) {
+		if (stop.a11y.flags === undefined || stop.a11y.flags === null) {
 			hasFlags = null;
-		} else if (stop.flags.length === 0) {
+		} else if (stop.a11y.flags.length === 0) {
 			hasFlags = false;
 		} else {
 			hasFlags = true;
 		}
-		flagsData = deepCopy(stop.flags) || [];
+		flagsData = deepCopy(stop.a11y.flags) || [];
 
-		if (stop.schedules === undefined || stop.schedules === null) {
+		if (stop.a11y.schedules === undefined || stop.a11y.schedules === null) {
 			hasSchedules = null;
-		} else if (stop.schedules.length === 0) {
+		} else if (stop.a11y.schedules.length === 0) {
 			hasSchedules = false;
 		} else {
 			hasSchedules = true;
 		}
-		schedulesData = deepCopy(stop.schedules) || [];
+		schedulesData = deepCopy(stop.a11y.schedules) || [];
 
-		$hasSidewalk = stop.has_sidewalk ?? null;
-		$hasSidewalkedPath = stop.has_sidewalked_path ?? null;
-		$hasShelter = stop.has_shelter ?? null;
-		$hasCover = stop.has_cover ?? null;
-		$hasBench = stop.has_bench ?? null;
-		$hasTrashCan = stop.has_trash_can ?? null;
-		$hasWaitingTimes = stop.has_waiting_times ?? null;
-		$hasTicketSeller = stop.has_ticket_seller ?? null;
-		$hasCostumerSupport = stop.has_costumer_support ?? null;
-		advertisementQty = stop.advertisement_qty ?? null;
+		$hasSidewalk = stop.a11y.has_sidewalk ?? null;
+		$hasSidewalkedPath = stop.a11y.has_sidewalked_path ?? null;
+		$hasShelter = stop.a11y.has_shelter ?? null;
+		$hasCover = stop.a11y.has_cover ?? null;
+		$hasBench = stop.a11y.has_bench ?? null;
+		$hasTrashCan = stop.a11y.has_trash_can ?? null;
+		$hasWaitingTimes = stop.a11y.has_waiting_times ?? null;
+		$hasTicketSeller = stop.a11y.has_ticket_seller ?? null;
+		$hasCostumerSupport = stop.a11y.has_costumer_support ?? null;
+		advertisementQty = stop.a11y.advertisement_qty ?? null;
 
-		$hasCrossing = stop.has_crossing ?? null;
-		$hasFlatAccess = stop.has_flat_access ?? null;
-		$hasWideAccess = stop.has_wide_access ?? null;
-		$hasTactileAccess = stop.has_tactile_access ?? null;
+		$hasCrossing = stop.a11y.has_crossing ?? null;
+		$hasFlatAccess = stop.a11y.has_flat_access ?? null;
+		$hasWideAccess = stop.a11y.has_wide_access ?? null;
+		$hasTactileAccess = stop.a11y.has_tactile_access ?? null;
 
-		illuminationStrength = stop.illumination_strength ?? null;
-		illuminationPosition = stop.illumination_position ?? null;
-		$hasIlluminatedPath = stop.has_illuminated_path ?? null;
-		$hasVisibilityFromWithin = stop.has_visibility_from_within ?? null;
-		$hasVisibilityFromArea = stop.has_visibility_from_area ?? null;
-		$isVisibleFromOutside = stop.is_visible_from_outside ?? null;
-		parkingVisibilityImpairment = stop.parking_visibility_impairment ?? null;
-		parkingLocalAccessImpairment = stop.parking_local_access_impairment ?? null;
-		parkingAreaAccessImpairment = stop.parking_area_access_impairment ?? null;
+		illuminationStrength = stop.a11y.illumination_strength ?? null;
+		illuminationPosition = stop.a11y.illumination_position ?? null;
+		$hasIlluminatedPath = stop.a11y.has_illuminated_path ?? null;
+		$hasVisibilityFromWithin = stop.a11y.has_visibility_from_within ?? null;
+		$hasVisibilityFromArea = stop.a11y.has_visibility_from_area ?? null;
+		$isVisibleFromOutside = stop.a11y.is_visible_from_outside ?? null;
+		parkingVisibilityImpairment = stop.a11y.parking_visibility_impairment ?? null;
+		parkingLocalAccessImpairment = stop.a11y.parking_local_access_impairment ?? null;
+		parkingAreaAccessImpairment = stop.a11y.parking_area_access_impairment ?? null;
 
 		serviceCheckDate = stop.service_check_date ?? null;
 		infrastructureCheckDate = stop.infrastructure_check_date ?? null;
@@ -220,36 +220,38 @@
 			tags: tags,
 			notes: !notes || notes.trim() === '' ? null : notes.trim(),
 
-			flags: hasFlags === null ? null : hasFlags ? flagsData : [],
-			schedules: hasSchedules === null ? null : hasSchedules ? schedulesData : [],
-			tmp_issues: tmpIssues,
+			a11y: {
+				flags: hasFlags === null ? null : hasFlags ? flagsData : [],
+				schedules: hasSchedules === null ? null : hasSchedules ? schedulesData : [],
+				tmp_issues: tmpIssues,
 
-			has_sidewalk: $hasSidewalk,
-			has_sidewalked_path: $hasSidewalkedPath,
-			has_shelter: $hasShelter,
-			has_cover: $hasCover,
-			has_bench: $hasBench,
-			has_trash_can: $hasTrashCan,
-			has_waiting_times: $hasWaitingTimes,
-			has_ticket_seller: $hasTicketSeller,
-			has_costumer_support: $hasCostumerSupport,
-			advertisement_qty: advertisementQty,
+				has_sidewalk: $hasSidewalk,
+				has_sidewalked_path: $hasSidewalkedPath,
+				has_shelter: $hasShelter,
+				has_cover: $hasCover,
+				has_bench: $hasBench,
+				has_trash_can: $hasTrashCan,
+				has_waiting_times: $hasWaitingTimes,
+				has_ticket_seller: $hasTicketSeller,
+				has_costumer_support: $hasCostumerSupport,
+				advertisement_qty: advertisementQty,
 
-			has_crossing: $hasCrossing,
-			has_flat_access: $hasFlatAccess,
-			has_wide_access: $hasWideAccess,
-			has_tactile_access: $hasTactileAccess,
+				has_crossing: $hasCrossing,
+				has_flat_access: $hasFlatAccess,
+				has_wide_access: $hasWideAccess,
+				has_tactile_access: $hasTactileAccess,
 
-			illumination_strength: illuminationStrength,
-			illumination_position: illuminationPosition,
-			has_illuminated_path: $hasIlluminatedPath,
-			has_visibility_from_within: $hasShelter ? $hasVisibilityFromWithin : null,
-			has_visibility_from_area: $hasVisibilityFromArea,
-			is_visible_from_outside: $isVisibleFromOutside,
+				illumination_strength: illuminationStrength,
+				illumination_position: illuminationPosition,
+				has_illuminated_path: $hasIlluminatedPath,
+				has_visibility_from_within: $hasShelter ? $hasVisibilityFromWithin : null,
+				has_visibility_from_area: $hasVisibilityFromArea,
+				is_visible_from_outside: $isVisibleFromOutside,
 
-			parking_visibility_impairment: parkingVisibilityImpairment,
-			parking_local_access_impairment: parkingLocalAccessImpairment,
-			parking_area_access_impairment: parkingAreaAccessImpairment,
+				parking_visibility_impairment: parkingVisibilityImpairment,
+				parking_local_access_impairment: parkingLocalAccessImpairment,
+				parking_area_access_impairment: parkingAreaAccessImpairment
+			},
 
 			service_check_date: serviceCheckDate || null,
 			infrastructure_check_date: infrastructureCheckDate || null,
