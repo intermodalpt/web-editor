@@ -64,7 +64,7 @@
 
 	async function handleCreate() {
 		isCreating = true;
-		newStopName = newStopName.trim();
+		newStopName = newStopName?.trim() ?? '?';
 
 		const newStop = {
 			lat: $osmStop.lat,
@@ -95,7 +95,7 @@
 			isCreating = false;
 			return;
 		}
-		let newStopId = await res.json().id;
+		const newStopId = (await res.json()).id;
 
 		$nounce++;
 		creationDialog.close();
@@ -342,7 +342,11 @@
 			<div class="form-control w-full">
 				<label class="input-group">
 					<span class="label-text w-24">Nome</span>
-					<input type="text" value={newStopName} class="input input-bordered w-full input-sm" />
+					<input
+						type="text"
+						bind:value={newStopName}
+						class="input input-bordered w-full input-sm"
+					/>
 				</label>
 			</div>
 			<span class="text-xs">Regiões</span>
@@ -356,6 +360,7 @@
 					class="btn btn-primary"
 					on:click={handleCreate}
 					disabled={isCreating || newStopRegions.length == 0}
+					autofocus
 				>
 					{#if isCreating}
 						<span class="loading loading-spinner loading-xs" />
