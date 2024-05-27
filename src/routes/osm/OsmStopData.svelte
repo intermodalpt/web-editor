@@ -141,7 +141,19 @@
 				console.error(e);
 			});
 	}
+
+	function handleKeydown(e) {
+		switch (e.key) {
+			case 'c':
+				if (isCreating || $derivedStop) {
+					return;
+				}
+				handlePrecreate();
+		}
+	}
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="w-full h-full p-4 relative">
 	<input
