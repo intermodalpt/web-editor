@@ -81,7 +81,7 @@
 
 		if (newRoute) {
 			dispatch('route-created', {
-				id: id,
+				id: route.id,
 				route: route
 			});
 		}
