@@ -56,7 +56,7 @@ export const toast = (message, type = 'info', duration = 5000) => {
 		message,
 		type,
 		duration,
-		id: Math.random().toString(36).substr(2, 9)
+		id: Math.random().toString(36)
 	};
 	toasts.update((toasts) => {
 		return [...toasts, newToast];
