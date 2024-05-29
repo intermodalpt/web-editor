@@ -109,7 +109,30 @@
 			return $selectedOperatorStop.stop_ref === $selectedGtfsStop.stop_id;
 		}
 	);
+
+	function handleKeydown(e) {
+		switch (e.key) {
+			case 'p':
+				if (
+					!$selectedImlStop ||
+					!$selectedGtfsStop ||
+					($hasMutualLink && credibleSources.includes($selectedOperatorStop?.source))
+				) {
+					return;
+				}
+
+				dispatch('pair', {
+					stop: $selectedImlStop,
+					pairing: {
+						official_name: $selectedGtfsStop.stop_name,
+						stop_ref: $selectedGtfsStop.stop_id
+					}
+				});
+		}
+	}
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="justify-center w-full">
 	<a class="btn btn-xs shadow-sm p-2 font-bold" href="/operators/{operator.id}-{operator.tag}">
@@ -273,6 +296,7 @@
 			</button>
 			<span class="font-bold">{$selectedGtfsStop?.stop_name}</span>
 		</div>
+		<CoordViewer lat={$selectedGtfsStop.lat} lon={$selectedGtfsStop.lon} />
 		<div class="border border-base-300 rounded-md p-2">
 			<h1 class="text-sm font-semibold text-center">Rotas</h1>
 			<div class="max-h-64 xl:max-h-96 overflow-scroll">
