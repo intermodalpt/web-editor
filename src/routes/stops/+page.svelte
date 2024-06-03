@@ -485,7 +485,7 @@
 		console.log('Foram feitas alterações');
 		let request;
 		if (isAdmin) {
-			request = fetch(`${apiServer}/v1/stops/update/${currStop.id}`, {
+			request = fetch(`${apiServer}/v1/stops/${currStop.id}`, {
 				method: 'PATCH',
 				headers: headers,
 				body: JSON.stringify(newStop)

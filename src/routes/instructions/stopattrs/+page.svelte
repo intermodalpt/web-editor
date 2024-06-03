@@ -1,6 +1,7 @@
 <script>
 	import InstructionCard from '$lib/instructions/InstructionCard.svelte';
 
+	import IsGhost from '$lib/instructions/stopattrs/Ghost.svelte';
 	import Flags from '$lib/instructions/stopattrs/Flags.svelte';
 	import Schedules from '$lib/instructions/stopattrs/Schedules.svelte';
 	import Sidewalk from '$lib/instructions/stopattrs/Sidewalk.svelte';
@@ -26,6 +27,7 @@
 	import ParkingLocalImpairment from '$lib/instructions/stopattrs/ParkingLocalImpairment.svelte';
 	import ParkingAccessImpairment from '$lib/instructions/stopattrs/ParkingAccessImpairment.svelte';
 	import Issues from '$lib/instructions/stopattrs/Issues.svelte';
+	import Ghost from '../../../lib/instructions/stopattrs/Ghost.svelte';
 </script>
 
 <svelte:head>
@@ -38,6 +40,7 @@
 		<div class="card-body">
 			<h1 class="card-title">Indice de atributos de paragens</h1>
 			<ul>
+				<li><a class="link" href="#is_ghost">Fantasma</a></li>
 				<li><a class="link" href="#flags">Postaletes</a></li>
 				<li><a class="link" href="#schedules">Horários</a></li>
 				<li><a class="link" href="#has_sidewalk">Passeio/Passeio no acesso</a></li>
@@ -67,6 +70,7 @@
 		</div>
 	</div>
 
+	<InstructionCard><Ghost /></InstructionCard>
 	<InstructionCard><Flags /></InstructionCard>
 	<InstructionCard><Schedules /></InstructionCard>
 	<InstructionCard><Sidewalk /></InstructionCard>

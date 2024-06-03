@@ -1,6 +1,8 @@
 <script>
 	import BooleanFormAttr from '$lib/components/BooleanFormAttr.svelte';
 
+	export let isGhost;
+
 	export let hasSidewalk;
 	export let hasSidewalkedPath;
 	export let hasShelter;
@@ -39,6 +41,13 @@
 >
 	<div class="flex flex-col gap-1">
 		<span>Infraestrutura</span>
+		<BooleanFormAttr
+			label="Fantasma"
+			bind:state={$isGhost}
+			disabled={readOnly}
+			nullable={false}
+			infoUrl="/instructions/stopattrs#is_ghost"
+		/>
 		<BooleanFormAttr
 			label="Passeio"
 			bind:state={$hasSidewalk}

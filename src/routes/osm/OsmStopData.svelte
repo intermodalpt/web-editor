@@ -70,7 +70,9 @@
 			lat: $osmStop.lat,
 			lon: $osmStop.lon,
 			osm_id: $osmStop.id,
-			name: newStopName
+			name: newStopName,
+			license: 'ODbL',
+			is_ghost: false
 		};
 		let res = await fetch(`${apiServer}/v1/stops`, {
 			method: 'POST',

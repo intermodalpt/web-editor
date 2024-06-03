@@ -32,6 +32,7 @@
 	let serviceCheckDate = null;
 	let infrastructureCheckDate = null;
 
+	const isGhost = writable(null);
 	const hasSidewalk = writable(null);
 	const hasSidewalkedPath = writable(null);
 	const hasShelter = writable(null);
@@ -131,6 +132,7 @@
 		}
 		schedulesData = deepCopy(stop.a11y.schedules) || [];
 
+		$isGhost = stop.is_ghost;
 		$hasSidewalk = stop.a11y.has_sidewalk ?? null;
 		$hasSidewalkedPath = stop.a11y.has_sidewalked_path ?? null;
 		$hasShelter = stop.a11y.has_shelter ?? null;
@@ -210,6 +212,7 @@
 		}
 
 		let newAttrs = {
+			is_ghost: $isGhost,
 			name: name,
 			short_name: shortName,
 			locality: locality,
@@ -337,6 +340,7 @@
 		/>
 	{:else if currentSubform == subforms.infra}
 		<InfraForm
+			{isGhost}
 			{hasSidewalk}
 			{hasSidewalkedPath}
 			{hasShelter}

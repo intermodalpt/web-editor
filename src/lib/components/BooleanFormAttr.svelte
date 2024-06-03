@@ -3,12 +3,13 @@
 
 	export let state = false;
 	export let disabled = false;
+	export let nullable = true;
 	export let label = null;
 	export let infoUrl = null;
 </script>
 
 <div class="flex items-center gap-1">
-	<BooleanToggle bind:state compact={true} {disabled} />
+	<BooleanToggle bind:state compact={true} {disabled} {nullable} />
 	{#if label}
 		<span class="label-text">{label}</span>
 	{/if}
