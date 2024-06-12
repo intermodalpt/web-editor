@@ -4,6 +4,7 @@
 	import { apiServer } from '$lib/settings.js';
 	import { distance } from '$lib/utils.js';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
+	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -16,6 +17,14 @@
 	export let selectedUnusedStop;
 	export let credibleSources;
 	export let previewedTrip;
+
+	let newStopDialog;
+	let newStopIsGhost = true;
+	let newStopShouldPair = true;
+	let newStopName;
+	let newStopRef;
+	let newStopOfficialName;
+	let createAsUnverified = true;
 
 	let pairingDialog;
 	let newPairingOfficialName;
@@ -98,6 +107,12 @@
 					)
 				);
 			});
+	});
+
+	selectedGtfsStop.subscribe((value) => {
+		newStopName = value?.stop_name;
+		newStopOfficialName = value?.stop_name;
+		newStopRef = value?.stop_id;
 	});
 
 	const hasMutualLink = derived(
@@ -296,7 +311,18 @@
 			</button>
 			<span class="font-bold">{$selectedGtfsStop?.stop_name}</span>
 		</div>
-		<CoordViewer lat={$selectedGtfsStop.lat} lon={$selectedGtfsStop.lon} />
+		<div class="flex justify-between">
+			<CoordViewer lat={$selectedGtfsStop.lat} lon={$selectedGtfsStop.lon} />
+			<div>
+				<button
+					class="btn btn-xs btn-secondary btn-outline"
+					class:hidden={$selectedGtfsStop.seen}
+					on:click={() => {
+						newStopDialog.show();
+					}}>Instanciar</button
+				>
+			</div>
+		</div>
 		<div class="border border-base-300 rounded-md p-2">
 			<h1 class="text-sm font-semibold text-center">Rotas</h1>
 			<div class="max-h-64 xl:max-h-96 overflow-scroll">
@@ -409,6 +435,107 @@
 							}
 						});
 						pairingDialog.close();
+					}}>Guardar</button
+				>
+			</div>
+		</form>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>
+
+<dialog bind:this={newStopDialog} class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box relative">
+		<form method="dialog">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">x</button>
+		</form>
+		<h3 class="font-bold text-lg">Emparelhamento</h3>
+		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">
+			<div class="form-control w-full">
+				<label class="input-group">
+					<span class="w-36">Nome</span>
+					<input
+						type="text"
+						bind:value={newStopName}
+						class="input input-bordered w-full input-sm"
+						disabled={!canEdit}
+					/>
+				</label>
+			</div>
+			<div class="form-control">
+				<div class="input-group">
+					<span class="w-24">Emparelhar</span>
+					<BooleanToggle
+						bind:state={newStopShouldPair}
+						disabled={!canEdit}
+						compact={true}
+						nullable={false}
+					/>
+				</div>
+			</div>
+			<div class="form-control w-full">
+				<label class="input-group" class:opacity-50={!newStopShouldPair}>
+					<span class="w-36">Nome oficial</span>
+					<input
+						type="text"
+						bind:value={newStopOfficialName}
+						class="input input-bordered w-full input-sm"
+						disabled={!canEdit || !newStopShouldPair}
+					/>
+				</label>
+			</div>
+			<div class="form-control w-full">
+				<label class="input-group" class:opacity-50={!newStopShouldPair}>
+					<span class="w-36">Referência</span>
+					<input
+						type="text"
+						bind:value={newStopRef}
+						class="input input-bordered w-full input-sm"
+						disabled={!canEdit || !newStopShouldPair}
+					/>
+				</label>
+			</div>
+			<div class="form-control">
+				<div class="input-group">
+					<span class="w-24">Fantasma</span>
+					<BooleanToggle
+						bind:state={newStopIsGhost}
+						disabled={!canEdit}
+						compact={true}
+						nullable={false}
+					/>
+				</div>
+			</div>
+			<div class="form-control">
+				<div class="input-group">
+					<span>Anotar por verificar</span>
+					<BooleanToggle
+						bind:state={createAsUnverified}
+						disabled={!canEdit}
+						compact={true}
+						nullable={false}
+					/>
+				</div>
+			</div>
+			<div class="flex justify-end">
+				<button
+					class="btn btn-primary"
+					on:click={() => {
+						dispatch('create-stop', {
+							stop: {
+								lat: $selectedGtfsStop.lat,
+								lon: $selectedGtfsStop.lon,
+								isGhost: newStopIsGhost,
+								name: newStopName,
+								officialName: newStopShouldPair ? newStopOfficialName : undefined,
+								ref: newStopShouldPair ? newStopRef : undefined
+							},
+							pair: newStopShouldPair,
+							tagUnverified: createAsUnverified
+						});
+
+						newStopDialog.close();
 					}}>Guardar</button
 				>
 			</div>

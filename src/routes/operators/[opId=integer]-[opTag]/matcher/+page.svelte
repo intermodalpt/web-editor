@@ -405,6 +405,148 @@
 		});
 	}
 
+	async function handleCreateStop(e) {
+		console.log(e);
+
+		const newStop = {
+			lat: e.detail.stop.lat,
+			lon: e.detail.stop.lon,
+			name: e.detail.stop.name,
+			license: 'GTFS',
+			is_ghost: e.detail.stop.isGhost,
+			osm_id: null
+		};
+
+		const pairing = {
+			official_name: e.detail.stop.officialName,
+			stop_ref: e.detail.stop.ref,
+			source: 'h1'
+		};
+
+		let res = await fetch(`${apiServer}/v1/stops`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${$token}`
+			},
+			body: JSON.stringify(newStop)
+		});
+
+		if (res.ok) {
+			toast('Paragem criada', 'success');
+
+			await softInvalidateStops();
+			let dummy = await res.json();
+			newStop.id = dummy.id;
+
+			console.log(dummy);
+			console.log(newStop);
+
+			$regionStops.push({
+				id: newStop.id,
+				lat: newStop.lat,
+				lon: newStop.lon,
+				name: newStop.name
+			});
+
+			// Force the recalculation of the unused stops
+			$regionStops = $regionStops;
+		} else {
+			toast('Erro a criar a paragem', 'error');
+			console.error(res);
+			return;
+		}
+
+		console.log('A associar à região');
+		res = await fetch(`${apiServer}/v1/regions/${$selectedRegion.id}/stops/${newStop.id}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			}
+		});
+
+		if (res.ok) {
+			toast('Paragem associada à região', 'success');
+		} else {
+			toast('Erro a associar paragem à região', 'error');
+			console.error(res);
+			return;
+		}
+
+		if (e.detail.tagUnverified) {
+			console.log('A colocar como não verificado');
+			res = await fetch(`${apiServer}/v1/stops/${newStop.id}/todo`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					authorization: `Bearer ${$token}`
+				},
+				body: JSON.stringify(['verifyLocation'])
+			});
+
+			if (res.ok) {
+				toast('Paragem marcada como pendente de verificação', 'success');
+			} else {
+				toast('Erro a ligar a paragem', 'error');
+				console.error(res);
+				return;
+			}
+		}
+
+		if (e.detail.pair) {
+			res = await fetch(`${apiServer}/v1/operators/${operatorId}/stops/${newStop.id}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					authorization: `Bearer ${$token}`
+				},
+				body: JSON.stringify({
+					official_name: e.detail.stop.officialName,
+					stop_ref: e.detail.stop.ref,
+					source: 'h1'
+				})
+			});
+
+			if (res.ok) {
+				toast('Paragem ligada', 'success');
+
+				const gtfsStop = $gtfsStops[e.detail.stop.ref];
+				gtfsStop.seen = true;
+
+				// Add the stop to the "used" collections
+				$operatorStopRels.push({
+					id: newStop.id,
+					official_name: e.detail.stop.officialName,
+					stop_ref: e.detail.stop.ref,
+					source: 'h1',
+					lat: newStop.lat,
+					lon: newStop.lon,
+					gtfsStop: gtfsStop
+				});
+				usedStopIds.add(newStop.id);
+
+				if (usedStopIds.has(stop.id)) {
+					$operatorStopRels = $operatorStopRels.filter((s) => s.id != stop.id);
+					usedStopIds.delete(stop.id);
+				}
+			} else {
+				toast('Erro a ligar a paragem', 'error');
+				console.error(res);
+				return;
+			}
+		}
+
+		// Force the recalculation of the unused stops
+		$regionStops = $regionStops;
+
+		// Change the selected stop to the non-operator one
+		// Do it this way to prevent a data race with the user changing stops in the meantime
+		$selectedOperatorStop = $stopIndex[newStop.id];
+		// Redraw
+		refreshStops();
+	}
+
 	selectedRegion.subscribe((region) => {
 		if (!map || !region) return;
 
@@ -495,6 +637,7 @@
 				}}
 				on:pair={(e) => pairStop(e.detail.stop, e.detail.pairing)}
 				on:unpair={(e) => unpairStop(e.detail.operatorStop)}
+				on:create-stop={handleCreateStop}
 			/>
 		</div>
 	</div>
