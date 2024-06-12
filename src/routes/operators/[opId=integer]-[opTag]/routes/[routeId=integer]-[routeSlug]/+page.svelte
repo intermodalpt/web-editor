@@ -172,18 +172,15 @@
 	stops.subscribe(() => {
 		console.log('stops changed');
 		if (!$stops || !mapLoaded) return;
-		console.log('subrouteStopIds reassigned');
 		$subrouteStopIds = subrouteStopIds;
 		drawStops();
 	});
 
 	route.subscribe(($route) => {
 		$selectedSubrouteId = $route.subroutes[0]?.id;
-		console.log('$selectedSubrouteId', $selectedSubrouteId);
 	});
 
 	subrouteStopIds.subscribe(($subrouteStopIds) => {
-		console.log('subrouteStopIds');
 		if (!$subrouteStopIds || !$stops) return;
 
 		const propagationNeeded = !(
@@ -202,7 +199,6 @@
 				$uniqueSubrouteStopIds.push(uniqueStopId);
 			}
 		}
-		updateRouteLine();
 	});
 
 	uniqueSubrouteStopIds.subscribe(($uniqueSubrouteStopIds) => {
@@ -217,6 +213,7 @@
 		if (propagationNeeded) {
 			$subrouteStopIds = correspondingIds;
 		}
+		updateRouteLine();
 	});
 
 	selectedRegion.subscribe((region) => {
@@ -227,7 +224,7 @@
 	});
 
 	function drawStops() {
-		console.log('Draw call');
+		if (!map || !$stops) return;
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
 			features: Object.values($stops).map((stop) => ({
@@ -251,10 +248,7 @@
 				type: 'Feature',
 				geometry: {
 					type: 'LineString',
-					coordinates: $subrouteStopIds.map((id) => {
-						const stop = $stops[id];
-						return [stop.lon, stop.lat];
-					})
+					coordinates: []
 				}
 			}
 		});
@@ -336,7 +330,7 @@
 			type: 'LineString',
 			coordinates: $uniqueSubrouteStopIds.map((id) => {
 				const stop = $uniqueStopIdsMap[id];
-				return [stop.lon, stop.lat];
+				return [stop?.lon ?? 0.0, stop?.lat ?? 0.0];
 			})
 		});
 	}
@@ -528,9 +522,9 @@
 
 	function highlightStop(stopId, _) {
 		if (!mapLoaded) return;
-		if (stopId) {
-			stopId = $uniqueStopIdsMap[stopId]?.id;
-		}
+
+		stopId = $uniqueStopIdsMap[stopId]?.id;
+		if (!stopId) return;
 
 		map.setFeatureState(
 			{
@@ -603,9 +597,12 @@
 			return;
 		}
 
-		const bounds = coords.reduce((bounds, coord) => {
-			return bounds.extend(coord);
-		}, new LngLatBounds(coords[0], coords[0]));
+		const bounds = coords.reduce(
+			(bounds, coord) => {
+				return bounds.extend(coord);
+			},
+			new LngLatBounds(coords[0], coords[0])
+		);
 
 		map.fitBounds(bounds, { padding: 50 });
 	}
@@ -645,15 +642,14 @@
 	}
 
 	onMount(() => {
+		const mapParams = regionMapParams($selectedRegion);
 		map = new Maplibre({
 			container: mapElem,
 			style: tileStyle,
+			center: mapParams.center,
+			zoom: mapParams.zoom,
 			minZoom: 8,
-			maxZoom: 20,
-			maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]
+			maxZoom: 20
 		});
 
 		if ($subrouteStops) {
@@ -661,7 +657,6 @@
 		}
 
 		map.addControl(new NavigationControl(), 'top-right');
-		map.setPadding({ right: 450 });
 
 		map.on('load', () => {
 			addSourcesAndLayers();
@@ -669,9 +664,8 @@
 
 			mapLoaded = true;
 
-			if ($stops) {
-				drawStops();
-			}
+			drawStops();
+			updateRouteLine();
 
 			if ($selectedSubrouteId) {
 				centerMap();
@@ -830,25 +824,27 @@
 			>
 			<div class="divider my-0 h-2 px-2" />
 			<div class="tabs tabs-boxed flex-col items-stretch">
-				<div
+				<button
 					class="tab transition-colors"
 					class:tab-active={dragMode === 'add'}
-					on:mousedown={() => (dragMode = 'add')}
+					on:click={() => (dragMode = 'add')}
 				>
 					Adicionar
-				</div>
-				<div
+				</button>
+				<button
 					class="tab transition-colors"
 					class:tab-active={dragMode === 'move'}
-					on:mousedown={() => (dragMode = 'move')}
+					on:click={() => (dragMode = 'move')}
 				>
 					Mover
-				</div>
+				</button>
 			</div>
 		</div>
 		<div class="absolute right-0 z-10 flex flex-col justify-center h-full p-2 transition w-[40em]">
 			<div class="bg-base-100 h-full rounded-xl shadow-lg flex flex-col">
 				<div class="pt-2 px-4 overflow-y-auto hide-scrollbar grow">
+					<!-- TODO delete once the derived-not-generating bug is fixed -->
+					<span class="hidden">{$initialSubrouteStopIds?.length}</span>
 					{#key $selectedSubrouteId}
 						<DraggableList
 							bind:data={$uniqueSubrouteStopIds}
