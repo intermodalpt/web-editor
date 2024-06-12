@@ -567,9 +567,9 @@
 		prevView = [stop.lon, stop.lat, 15];
 	}
 
-	document.addEventListener('paste', (event) => {
-		if (tab !== tabs.stops) return;
-		let data = event.clipboardData.getData('text');
+	function handleStopIdImport() {
+		let data = prompt('Stop IDs');
+
 		try {
 			data = JSON.parse(data);
 			if (Array.isArray(data) && data.every((d) => typeof d === 'number')) {
@@ -584,7 +584,7 @@
 			toast('Clipboard does not contain a stop array');
 			console.log(e);
 		}
-	});
+	}
 
 	function centerMap() {
 		const coords = $subrouteStops.map((s) => [s.lon, s.lat]);
@@ -809,17 +809,14 @@
 		<div
 			class="absolute lg:left-4 lg:bottom-4 bottom-2 left-2 z-10 bg-base-100 rounded-xl p-1 flex flex-col gap-1"
 		>
-			<button
-				class="btn btn-sm normal-case"
-				on:click={() => {
-					toast('Just CTRL+V with the stop list in your clipboard');
-				}}>Import</button
+			<button class="btn btn-sm normal-case" class:hidden={!isAdmin} on:click={handleStopIdImport}
+				>Import</button
 			>
 			<button
 				class="btn btn-sm normal-case"
 				on:mousedown={() => {
 					navigator.clipboard.writeText(JSON.stringify($subrouteStopIds));
-					toast('Route stop IDs copied to the clipboard');
+					toast('Subroute IDs copied to the clipboard');
 				}}>Export</button
 			>
 			<div class="divider my-0 h-2 px-2" />
