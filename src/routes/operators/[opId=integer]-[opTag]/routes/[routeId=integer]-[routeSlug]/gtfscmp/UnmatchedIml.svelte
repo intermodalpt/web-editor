@@ -1,6 +1,9 @@
 <script>
+	import { createEventDispatcher } from 'svelte';
 	import { subrouteTitle } from '../../aux.js';
 	import GtfsCmpMap from './GtfsCmpMap.svelte';
+
+	const dispatch = createEventDispatcher();
 
 	export let unpaired;
 	export let unpairedGtfs;
@@ -57,7 +60,11 @@
 					{/each}
 				</select>
 				{#if pairRef}
-					<button class="btn btn-sm btn-primary">Emparelhar</button>
+					<button
+						class="btn btn-sm btn-primary"
+						on:click={() => dispatch('pair', { subroute: unpaired.subroute, pairRef: pairRef })}
+						>Emparelhar</button
+					>
 				{/if}
 			</label>
 		</div>

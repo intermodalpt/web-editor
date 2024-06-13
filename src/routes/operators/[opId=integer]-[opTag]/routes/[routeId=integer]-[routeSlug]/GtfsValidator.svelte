@@ -43,6 +43,10 @@
 
 			for (const subroute of $route.subroutes) {
 				const currentImlStops = $routeStops[subroute.id] || [];
+				const currentGtfsStops = currentImlStops.map(
+					(stopId) =>
+						$stops[stopId]?.operators?.find((op) => op.operator_id == operatorId)?.stop_ref || '?'
+				);
 
 				if (subroute.validation.gtfs) {
 					let [imlSeq, gtfsSeq] = needlemanWunsch(
@@ -51,6 +55,11 @@
 					);
 
 					const stopsCacheMatches = isDeepEqual(currentImlStops, subroute.validation.current);
+					const stopsCacheMatchesGtfs = isDeepEqual(
+						currentGtfsStops,
+						subroute.validation.gtfs.stops
+					);
+
 					const everyCorrespondedStopExists = subroute.validation.correspondence.every(
 						(stopId) => $stops[stopId]
 					);
@@ -79,13 +88,13 @@
 						isCorrespondenceValidated: isCorrespondenceValidated,
 						isCurrentValidated: isCurrentValidated,
 						isValidated: isValidated,
-						hasCacheDisagreement: !stopsCacheMatches
+						hasCacheDisagreement: !stopsCacheMatches || !stopsCacheMatchesGtfs
 					});
 				} else {
 					unpairedSubroutes.push({
 						subroute: subroute,
 						imlStops: currentImlStops,
-						gtfsStops: subroute.validation.gtfs.stops
+						gtfsStops: currentGtfsStops
 					});
 				}
 			}
@@ -123,6 +132,7 @@
 			subroute.validation.correspondence_ack = subroute.validation.correspondence;
 		} else {
 			toast(`Erro a confirmar ids`, 'error');
+			console.error(res);
 		}
 	}
 
@@ -148,6 +158,7 @@
 			subroute.validation.current_ack = subroute.validation.current;
 		} else {
 			toast(`Erro a confirmar ids`, 'error');
+			console.error(res);
 		}
 	}
 
@@ -177,6 +188,34 @@
 			subroute.validation.current_ack = subroute.validation.current;
 		} else {
 			toast(`Erro a sincronizar (${subroute.id})`, 'error');
+			console.error(res);
+		}
+	}
+
+	async function handlePair(e) {
+		const subroute = e.detail.subroute;
+		const pairRef = e.detail.pairRef;
+
+		if (!confirm(`Emparelhar IML ${subroute.id} com GTFS ${pairRef}?`)) return;
+
+		const res = await fetch(`${apiServer}/v1/routes/${$route.id}/assign_unmatched_validation`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${$token}`
+			},
+			body: JSON.stringify({
+				subroute_id: subroute.id,
+				pattern_id: pairRef,
+				sync: true
+			})
+		});
+
+		if (res.ok) {
+			toast(`Subrota ${subroute.id} emparelhada com GTFS ${pairRef}`, 'info');
+		} else {
+			toast(`Erro a emparelhar`, 'error');
+			console.error(res);
 		}
 	}
 </script>
@@ -229,6 +268,7 @@
 					{showName}
 					{idType}
 					{canEdit}
+					on:pair={handlePair}
 				/>
 			{/each}
 			<h2 class="text-lg">GTFS sem correspondente</h2>
