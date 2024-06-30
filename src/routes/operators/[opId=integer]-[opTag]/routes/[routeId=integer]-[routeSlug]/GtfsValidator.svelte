@@ -167,19 +167,15 @@
 
 		const subroute = e.detail.pairing.subroute;
 
-		const res = await fetch(`${apiServer}/v1/routes/${$route.id}/stops/subroutes/${subroute.id}`, {
+		const res = await fetch(`${apiServer}/v1/subroutes/${subroute.id}/stops`, {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${$token}`
 			},
 			body: JSON.stringify({
-				from: {
-					stops: subroute.validation.current
-				},
-				to: {
-					stops: subroute.validation.correspondence
-				}
+				from: subroute.validation.current,
+				to: subroute.validation.correspondence
 			})
 		});
 

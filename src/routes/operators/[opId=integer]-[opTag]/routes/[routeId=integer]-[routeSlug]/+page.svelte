@@ -611,19 +611,15 @@
 		let originalStops = routeStops[$selectedSubrouteId] || [];
 		let newStops = $subrouteStopIds;
 
-		fetch(`${apiServer}/v1/routes/${$route.id}/stops/subroutes/${$selectedSubrouteId}`, {
+		fetch(`${apiServer}/v1/subroutes/${$selectedSubrouteId}/stops`, {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				authorization: `Bearer ${$token}`
 			},
 			body: JSON.stringify({
-				from: {
-					stops: originalStops
-				},
-				to: {
-					stops: newStops
-				}
+				from: originalStops,
+				to: newStops
 			})
 		})
 			.then((resp) => {
