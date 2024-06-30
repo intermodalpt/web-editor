@@ -238,39 +238,39 @@
 	</div>
 </div>
 {#if $validationInfo}
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
-		<div class="flex flex-col gap-2">
-			<h2 class="text-lg">Emparelhadas com GTFS</h2>
-			{#each $validationInfo.paired as pairing}
-				<Matched
-					{pairing}
-					{stops}
-					{showName}
-					{idType}
-					{canEdit}
-					on:gtfs-ack={handleGtfsAck}
-					on:iml-ack={handleImlAck}
-					on:gtfs-replace={handleGtfsReplace}
-				/>
-			{/each}
-		</div>
-		<div class="flex flex-col gap-2">
-			<h2 class="text-lg">Intermodal sem correspondente</h2>
-			{#each $validationInfo.unpairedSubroutes as unpaired}
-				<UnmatchedIml
-					{unpaired}
-					unpairedGtfs={$validationInfo.unpairedGtfs}
-					{stops}
-					{showName}
-					{idType}
-					{canEdit}
-					on:pair={handlePair}
-				/>
-			{/each}
-			<h2 class="text-lg">GTFS sem correspondente</h2>
-			{#each $validationInfo.unpairedGtfs as unpaired}
-				<UnmatchedGtfs {unpaired} {stops} {stopsByRef} {showName} {idType} {canEdit} />
-			{/each}
-		</div>
+	<div class="flex flex-col gap-2">
+		<h2 class="text-lg">Emparelhadas com GTFS</h2>
+		{#each $validationInfo.paired as pairing}
+			<Matched
+				{pairing}
+				{stops}
+				{showName}
+				{idType}
+				{canEdit}
+				on:gtfs-ack={handleGtfsAck}
+				on:iml-ack={handleImlAck}
+				on:gtfs-replace={handleGtfsReplace}
+			/>
+		{/each}
+		<h2 class="text-lg" class:hidden={$validationInfo.unpairedSubroutes.length == 0}>
+			Intermodal sem correspondente
+		</h2>
+		{#each $validationInfo.unpairedSubroutes as unpaired}
+			<UnmatchedIml
+				{unpaired}
+				unpairedGtfs={$validationInfo.unpairedGtfs}
+				{stops}
+				{showName}
+				{idType}
+				{canEdit}
+				on:pair={handlePair}
+			/>
+		{/each}
+		<h2 class="text-lg" class:hidden={$validationInfo.unpairedGtfs.length == 0}>
+			GTFS sem correspondente
+		</h2>
+		{#each $validationInfo.unpairedGtfs as unpaired}
+			<UnmatchedGtfs {unpaired} {stops} {stopsByRef} {showName} {idType} {canEdit} />
+		{/each}
 	</div>
 {/if}
