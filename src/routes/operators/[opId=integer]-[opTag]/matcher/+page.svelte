@@ -22,6 +22,7 @@
 	const regionStops = writable(data.regionStops);
 	const gtfsStops = writable(data.gtfsStops);
 	const gtfsRoutes = writable(data.gtfsRoutes);
+	const osmStops = writable({});
 
 	const knownGtfsIds = new Set(Object.values(data.gtfsStops).map((stop) => stop.stop_id));
 
@@ -32,7 +33,39 @@
 	// Get rid of these if we decide to stay with page.js's load()
 	let gtfsStopsLoaded = true;
 	let gtfsTripsLoaded = true;
+	let osmStopsLoaded = false;
 	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
+
+	async function loadData() {
+		Promise.all([
+			fetch(`${apiServer}/v1/osm/stops`)
+				.then((r) => r.json())
+				.then((r) => {
+					$osmStops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
+					console.log('Sup?');
+					osmStopsLoaded = true;
+				})
+		])
+			.then(async ([osmStops]) => {
+				if (mapLoaded) {
+					// loadStops();
+					loadOsmStops();
+				}
+			})
+			.catch((e) => {
+				toast('Failed to load the OSM stops', 'error');
+				console.log(e);
+			})
+			.then(async () => {
+				console.log('data loaded');
+				await loadMissing();
+			});
+	}
+
+	loadData().then(async () => {
+		console.log('data loaded');
+		await loadMissing();
+	});
 
 	const genericNames = derived(regionStops, ($regionStops) => {
 		if (!$regionStops) return {};
@@ -89,8 +122,10 @@
 	const selectedOperatorStop = writable(null);
 	const selectedUnusedStop = writable(null);
 	const selectedGtfsStop = writable(null);
+	const selectedOsmStop = writable(null);
 
-	$: areStopsSelected = $selectedGtfsStop || $selectedUnusedStop || $selectedOperatorStop;
+	$: areStopsSelected =
+		$selectedGtfsStop || $selectedUnusedStop || $selectedOperatorStop || $selectedOsmStop;
 
 	const previewedTrip = writable(null);
 
@@ -292,7 +327,31 @@
 		map.redrawStops(usedFeatures, unusedFeatures, gtfsFeatures);
 	}
 
-	function pairStop(stop, pairing) {
+	function loadOsmStops() {
+		const lines = [];
+
+		for (const osmStop of Object.values($osmStops)) {
+			if (osmStop.lon == 0.0) {
+				continue;
+			}
+			if (osmStop.iml_id) {
+				const imlStop = $stopIndex[osmStop.iml_id];
+				if (imlStop) {
+					lines.push([
+						[osmStop.lon, osmStop.lat],
+						[imlStop.lon, imlStop.lat]
+					]);
+				}
+			}
+		}
+
+		map.redrawOsmStops(Object.values($osmStops), lines);
+	}
+
+	async function handlePairStop(e) {
+		const stop = e.detail.stop;
+		const pairing = e.detail.pairing;
+
 		if (usedStopIds.has(stop.id)) {
 			const originalStop = $operatorStopRels.find((s) => s.id == stop.id);
 			const gtfsStop = stop.gtfsStop;
@@ -412,9 +471,9 @@
 			lat: e.detail.stop.lat,
 			lon: e.detail.stop.lon,
 			name: e.detail.stop.name,
-			license: 'GTFS',
+			license: e.detail.stop.license,
 			is_ghost: e.detail.stop.isGhost,
-			osm_id: null
+			osm_id: e.detail.stop.osmId
 		};
 
 		const pairing = {
@@ -568,6 +627,7 @@
 
 		if (!loading) {
 			refreshStops();
+			loadOsmStops();
 		}
 	}}
 	on:used-click={(e) => ($selectedOperatorStop = $stopIndex[e.detail.id])}
@@ -575,6 +635,10 @@
 	on:gtfs-click={(e) => {
 		$selectedGtfsStop = $gtfsStops[e.detail.id];
 		refreshGtfsStopFlows();
+	}}
+	on:osm-click={(e) => {
+		$selectedOsmStop = $osmStops[e.detail.id];
+		console.log(e.detail.id);
 	}}
 >
 	{#if loading}
@@ -628,6 +692,7 @@
 				{selectedGtfsStop}
 				{selectedOperatorStop}
 				{selectedUnusedStop}
+				{selectedOsmStop}
 				{credibleSources}
 				{previewedTrip}
 				on:fly-to={(e) => map.flyTo(...e.detail)}
@@ -635,10 +700,11 @@
 					const trip = e.detail.trip;
 					map.flyToTrip(trip.stops.map((s) => $gtfsStops[s]));
 				}}
-				on:pair={(e) => pairStop(e.detail.stop, e.detail.pairing)}
-				on:unpair={(e) => unpairStop(e.detail.operatorStop)}
+				on:pair={handlePairStop}
+				on:unpair={handleUnpairStop}
 				on:create-stop={handleCreateStop}
 			/>
+			<button class="btn btn-sm btn-outline">Mostrar OSM</button>
 		</div>
 	</div>
 

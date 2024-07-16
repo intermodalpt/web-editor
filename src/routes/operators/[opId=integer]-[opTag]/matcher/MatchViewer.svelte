@@ -15,16 +15,30 @@
 	export let selectedGtfsStop;
 	export let selectedOperatorStop;
 	export let selectedUnusedStop;
+	export let selectedOsmStop;
 	export let credibleSources;
 	export let previewedTrip;
 
 	let newStopDialog;
+	let newStopSource = null;
 	let newStopIsGhost = true;
 	let newStopShouldPair = true;
 	let newStopName;
 	let newStopRef;
 	let newStopOfficialName;
 	let createAsUnverified = true;
+	$: newStopLon =
+		newStopSource == 'osm'
+			? $selectedOsmStop?.lon
+			: newStopSource == 'gtfs'
+				? $selectedGtfsStop?.lon
+				: null;
+	$: newStopLat =
+		newStopSource == 'osm'
+			? $selectedOsmStop?.lat
+			: newStopSource == 'gtfs'
+				? $selectedGtfsStop?.lat
+				: null;
 
 	let pairingDialog;
 	let newPairingOfficialName;
@@ -113,7 +127,31 @@
 		newStopName = value?.stop_name;
 		newStopOfficialName = value?.stop_name;
 		newStopRef = value?.stop_id;
+		newStopSource = 'gtfs';
 	});
+
+	selectedOsmStop.subscribe((osmStop) => {
+		newStopName = osmStop?.name;
+		newStopOfficialName = osmStop?.name;
+		newStopRef = null;
+		newStopSource = 'osm';
+	});
+
+	function setNewStopSource(source) {
+		switch (source) {
+			case 'gtfs':
+				newStopName = $selectedGtfsStop?.stop_name;
+				newStopOfficialName = $selectedGtfsStop?.stop_name;
+				newStopRef = $selectedGtfsStop?.stop_id;
+				newStopSource = 'gtfs';
+				break;
+			case 'osm':
+				newStopName = $selectedOsmStop?.name;
+				newStopOfficialName = $selectedOsmStop?.name;
+				newStopRef = null;
+				newStopSource = 'osm';
+		}
+	}
 
 	const hasMutualLink = derived(
 		[selectedOperatorStop, selectedGtfsStop],
@@ -369,6 +407,56 @@
 	{/if}
 </div>
 
+<div class="flex flex-col gap-2 p-2 rounded-lg border-2 border-green-600 relative">
+	{#if $selectedOsmStop}
+		<button
+			class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
+			on:click={() => ($selectedOsmStop = null)}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M6 18L18 6M6 6l12 12"
+				/></svg
+			>
+		</button>
+		<div class="flex gap-2 items-center">
+			<button
+				class="btn btn-xs text-green-200 bg-green-600 border-green-600"
+				on:click={() => {
+					dispatch('fly-to', [$selectedOsmStop.lon, $selectedOsmStop.lat]);
+				}}
+			>
+				{$selectedOsmStop?.id}
+			</button>
+			<span class="font-bold">{$selectedOsmStop?.name}</span>
+		</div>
+		<div class="flex justify-between">
+			<CoordViewer lat={$selectedOsmStop.lat} lon={$selectedOsmStop.lon} />
+			<div>
+				<button
+					class="btn btn-xs btn-secondary btn-outline"
+					class:hidden={$selectedOsmStop.tml_id}
+					on:click={() => {
+						newStopDialog.show();
+					}}>Instanciar</button
+				>
+			</div>
+		</div>
+	{:else}
+		<div class="text-slate-500 font-semibold text-lg">
+			Pontos <span class="border-b-2 border-green-600">verdes</span> denotam paragens no OpenStreetMap.
+		</div>
+	{/if}
+</div>
+
 <dialog bind:this={pairingDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative">
 		<form method="dialog">
@@ -453,6 +541,20 @@
 		<h3 class="font-bold text-lg">Emparelhamento</h3>
 		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">
 			<div class="form-control w-full">
+				{#if $selectedGtfsStop && $selectedOsmStop}
+					<div class="join my-2">
+						<button
+							class="btn join-item btn-xs"
+							class:btn-primary={newStopSource == 'osm'}
+							on:click|preventDefault={() => setNewStopSource('osm')}>OSM</button
+						>
+						<button
+							class="btn join-item btn-xs"
+							class:btn-primary={newStopSource == 'gtfs'}
+							on:click|preventDefault={() => setNewStopSource('gtfs')}>GTFS</button
+						>
+					</div>
+				{/if}
 				<label class="input-group">
 					<span class="w-36">Nome</span>
 					<input
@@ -524,12 +626,14 @@
 					on:click={() => {
 						dispatch('create-stop', {
 							stop: {
-								lat: $selectedGtfsStop.lat,
-								lon: $selectedGtfsStop.lon,
+								lat: newStopLat,
+								lon: newStopLon,
 								isGhost: newStopIsGhost,
 								name: newStopName,
 								officialName: newStopShouldPair ? newStopOfficialName : undefined,
-								ref: newStopShouldPair ? newStopRef : undefined
+								ref: newStopShouldPair ? newStopRef : undefined,
+								osmId: newStopSource == 'osm' ? $selectedOsmStop?.id : null,
+								license: newStopSource == 'osm' ? 'ODbL' : 'GTFS'
 							},
 							pair: newStopShouldPair,
 							tagUnverified: createAsUnverified

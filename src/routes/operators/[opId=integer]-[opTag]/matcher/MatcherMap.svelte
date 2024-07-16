@@ -90,6 +90,40 @@
 		});
 	}
 
+	export function redrawOsmStops(osmStops, matches) {
+		const osmStopFeatures = {
+			type: 'FeatureCollection',
+			features: osmStops.map((stop) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [stop.lon, stop.lat]
+					},
+					properties: {
+						id: stop.id,
+						label: `${stop.id} - ${stop.name}`
+					}
+				};
+			})
+		};
+		map.getSource('osm-stops').setData(osmStopFeatures);
+
+		const osmMatchesLineFeatures = {
+			type: 'FeatureCollection',
+			features: matches.map((line) => {
+				return {
+					type: 'Feature',
+					geometry: {
+						type: 'LineString',
+						coordinates: line
+					}
+				};
+			})
+		};
+		map.getSource('osm-iml-matches').setData(osmMatchesLineFeatures);
+	}
+
 	export function flyToTrip(coords) {
 		const bounds = new LngLatBounds();
 
@@ -150,6 +184,69 @@
 			}
 		});
 
+		// The IML stops that have been matched to OSM stops
+		map.addSource('osm-iml-matches', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+		map.addLayer({
+			id: 'osm-iml-matches',
+			type: 'line',
+			source: 'osm-iml-matches',
+			paint: {
+				'line-color': '#aa7777',
+				'line-width': 3
+			}
+		});
+
+		// The OSM stops (as a base layer to provide a fallback)
+		map.addSource('osm-stops', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+
+		// map.addLayer({
+		// 	id: 'osm-stop-labels',
+		// 	type: 'symbol',
+		// 	source: 'osm-stops',
+		// 	layout: {
+		// 		'text-field': ['get', 'label'],
+		// 		'text-font': ['Open Sans', 'Arial Unicode MS'],
+		// 		'text-size': 10,
+		// 		'text-offset': [2, 0],
+		// 		'text-anchor': 'left',
+		// 		'text-max-width': 150,
+		// 		'text-allow-overlap': false
+		// 	},
+		// 	minzoom: 16
+		// });
+
+		map.addLayer({
+			id: 'osm-stops',
+			type: 'circle',
+			source: 'osm-stops',
+			paint: {
+				'circle-color': 'rgb(0, 170, 0)',
+				'circle-radius': {
+					base: 1.75,
+					stops: [
+						[0, 1.5],
+						[11, 2],
+						[17, 7],
+						[18, 15]
+					]
+				},
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
+			}
+		});
+
 		// THE GTFS stops
 		map.addSource('gtfs', {
 			type: 'geojson',
@@ -178,7 +275,7 @@
 			}
 		});
 		map.addLayer({
-			id: 'gtfsLabels',
+			id: 'gtfs-labels',
 			type: 'symbol',
 			source: 'gtfs',
 			layout: {
@@ -189,7 +286,6 @@
 				'text-anchor': 'left',
 				'text-max-width': 150,
 				'text-allow-overlap': false
-				// 'text-ignore-placement': true
 			},
 			minzoom: 18
 		});
@@ -224,6 +320,22 @@
 			}
 		});
 
+		map.addLayer({
+			id: 'used-stop-labels',
+			type: 'symbol',
+			source: 'used-stops',
+			layout: {
+				'text-field': ['get', 'label'],
+				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+				'text-size': 8,
+				'text-offset': [5, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+			},
+			minzoom: 16
+		});
+
 		// The unused region IML stops
 		map.addSource('unused-stops', {
 			type: 'geojson',
@@ -251,6 +363,22 @@
 				'circle-stroke-width': 0.5,
 				'circle-stroke-color': '#fff'
 			}
+		});
+
+		map.addLayer({
+			id: 'unused-stop-labels',
+			type: 'symbol',
+			source: 'unused-stops',
+			layout: {
+				'text-field': ['get', 'label'],
+				'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+				'text-size': 8,
+				'text-offset': [5, 0],
+				'text-anchor': 'left',
+				'text-max-width': 150,
+				'text-allow-overlap': false
+			},
+			minzoom: 16
 		});
 
 		map.addLayer(
@@ -334,6 +462,12 @@
 		map.on('mouseleave', 'stops', () => {
 			style.cursor = '';
 		});
+		map.on('mouseenter', 'osm-stops', () => {
+			style.cursor = 'pointer';
+		});
+		map.on('mouseleave', 'osm-stops', () => {
+			style.cursor = '';
+		});
 
 		map.on('click', 'used-stops', (e) => {
 			dispatch('used-click', { id: e.features[0].properties.id });
@@ -346,6 +480,12 @@
 		map.on('click', 'gtfs', (e) => {
 			if (map.getZoom() < 15) return;
 			dispatch('gtfs-click', { id: e.features[0].properties.id });
+		});
+
+		map.on('click', 'osm-stops', (e) => {
+			if (map.getZoom() < 15) return;
+			console.log(e.features[0].properties.id);
+			dispatch('osm-click', { id: e.features[0].properties.id });
 		});
 	}
 

@@ -26,7 +26,7 @@
 			<tr>
 				{#each unpaired.stops as stopId}
 					<td class="badge badge-sm border-y-2 bg-orange-200 font-bold">
-						{#if idType == 2}{stopId}{:else}{$stopsByRef[stopId]?.id ?? `&${stopId}`}{/if}
+						{#if idType == 2}{stopId}{:else}{$stopsByRef[stopId]?.id ?? `${stopId}`}{/if}
 						{#if showName}: {$stopsByRef[stopId]?.name ?? ''}{/if}
 					</td>
 				{/each}
