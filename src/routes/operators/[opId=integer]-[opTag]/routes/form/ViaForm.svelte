@@ -94,11 +94,10 @@
 			<div class="flex flex-col overflow-y-scroll">
 				{#if stops}
 					{#each subrouteStops as stopId, i}
-						<div
+						<button
 							class="flex gap-1"
 							on:mouseenter={() => (hoveredIndex = i)}
 							on:mouseleave={() => (hoveredIndex = null)}
-							on:keydown={() => handleClick(i)}
 							on:click={() => handleClick(i)}
 						>
 							<span
@@ -114,7 +113,7 @@
 
 							<b>{stopNames[stopId]}</b>
 							<span>({stopId})</span>
-						</div>
+						</button>
 					{/each}
 				{/if}
 			</div>

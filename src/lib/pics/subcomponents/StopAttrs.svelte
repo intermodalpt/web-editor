@@ -100,13 +100,9 @@
 		{stop ? '' : '(⚠️)'}
 	</div>
 	{#if editable}
-		<div
-			class="btn btn-error btn-circle btn-xs absolute top-0 right-0"
-			on:click={issueDelete}
-			on:keypress={issueDelete}
-		>
+		<button class="btn btn-error btn-circle btn-xs absolute top-0 right-0" on:click={issueDelete}>
 			✕
-		</div>
+		</button>
 	{/if}
 
 	<div class="join join-vertical sm:join-horizontal">

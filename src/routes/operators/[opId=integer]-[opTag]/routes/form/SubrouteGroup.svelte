@@ -34,6 +34,7 @@
 	on:dragleave={() => (hoveredIndex = null)}
 	on:drop|stopPropagation={(event) => drop(event)}
 	ondragover="return false"
+	role="list"
 >
 	{#each subroutes as subroute, i (subroute.id)}
 		{#if subroute._deleted}

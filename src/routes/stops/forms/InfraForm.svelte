@@ -239,29 +239,19 @@
 				class="input input-xs input-bordered"
 				bind:value={infrastructureCheckDate}
 			/>
-			<input
-				type="button"
+			<button
 				class="btn btn-primary btn-xs"
-				value="Hoje"
 				on:click={() => {
 					infrastructureCheckDate = new Date().toISOString().split('T')[0];
-				}}
-				on:keypress={() => {
-					infrastructureCheckDate = new Date().toISOString().split('T')[0];
-				}}
-			/>
+				}}>Hoje</button
+			>
 			{#if $latestPictureDate}
-				<input
-					type="button"
+				<button
 					class="btn btn-info btn-xs"
-					value="Fotos"
 					on:click={() => {
 						infrastructureCheckDate = $latestPictureDate.toISOString().split('T')[0];
-					}}
-					on:keypress={() => {
-						infrastructureCheckDate = $latestPictureDate.toISOString().split('T')[0];
-					}}
-				/>
+					}}>Fotos</button
+				>
 			{/if}
 		</div>
 	</div>

@@ -30,7 +30,7 @@
 			let req = $decodedToken
 				? fetch(`${apiServer}/v1/stops/${$stop.id}/pictures/all`, {
 						headers: { authorization: `Bearer ${$token}` }
-				  })
+					})
 				: fetch(`${apiServer}/v1/stops/${$stop.id}/pictures`);
 
 			req
@@ -95,13 +95,10 @@
 	<div class="flex justify-between bg-base-100 p-1 shadow-sm">
 		<span class="px-2 font-semibold text-lg">{$stop?.name}</span>
 		<div class="flex gap-3">
-			<input
-				type="button"
-				class="btn btn-secondary btn-sm"
-				value="Enviar"
-				on:click={() => (sendingPictures = true)}
-			/>
-			<input type="button" class="btn btn-error btn-sm" value="Fechar" on:click={closeEditor} />
+			<button class="btn btn-secondary btn-sm" on:click={() => (sendingPictures = true)}
+				>Enviar</button
+			>
+			<button class="btn btn-error btn-sm" on:click={closeEditor}>Fechar</button>
 		</div>
 	</div>
 	<div
@@ -111,7 +108,7 @@
 		<div class="md:h-full md:overflow-y-scroll w-full max-w-full overflow-x-hidden h-24">
 			<div class="flex md:flex-col gap-2 w-full max-w-full overflow-x-scroll">
 				{#each $editedStopPictures || [] as picture}
-					<div class="relative">
+					<button class="relative" on:click={() => gotoPicture(picture)}>
 						{#if picture.metaCompleteness.total || !picture.metaCompleteness.fixable}
 							<span
 								class="absolute bottom-0 right-0 text-success-content bg-success rounded-full w-8 h-8 text-center text-lg"
@@ -134,9 +131,8 @@
 							class="rounded-box transition-all h-24 md:h-auto md:w-40 max-w-xl border-primary cursor-pointer"
 							class:border-b-4={selectedImageId === picture.id}
 							on:click={() => gotoPicture(picture)}
-							on:keypress={() => gotoPicture(picture)}
 						/>
-					</div>
+					</button>
 				{/each}
 			</div>
 		</div>
@@ -179,11 +175,7 @@
 			<div class="card-body">
 				<div class="flex justify-between">
 					<h2 class="card-title">Enviar imagens</h2>
-					<span
-						class="link link-error"
-						on:click={() => (sendingPictures = false)}
-						on:keypress={() => (sendingPictures = false)}>Voltar</span
-					>
+					<button class="link link-error" on:click={() => (sendingPictures = false)}>Voltar</button>
 				</div>
 				<PicUploader
 					stopId={$stop?.id}

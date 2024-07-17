@@ -97,11 +97,7 @@
 		</div>
 		<div class="modal-action">
 			{#if isEvaluation}
-				<button
-					class="btn btn-error"
-					on:click={declineContribution}
-					on:keypress={declineContribution}>Recusar</button
-				>
+				<button class="btn btn-error" on:click={declineContribution}>Recusar</button>
 			{/if}
 			<span class="grow" />
 			{#if isEvaluation}

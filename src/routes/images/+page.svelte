@@ -238,37 +238,32 @@
 
 <div class="self-center w-full sm:w-11/12 my-4">
 	<div class="tabs ml-4">
-		<span
+		<button
 			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.map}
-			on:click={() => ($tab = tabs.map)}
-			on:keypress={() => ($tab = tabs.map)}>Mapa</span
+			on:click={() => ($tab = tabs.map)}>Mapa</button
 		>
-		<span
+		<button
 			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.tagged}
-			on:click={() => ($tab = tabs.tagged)}
-			on:keypress={() => ($tab = tabs.tagged)}>Catalogadas</span
+			on:click={() => ($tab = tabs.tagged)}>Catalogadas</button
 		>
-		<span
+		<button
 			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.untagged}
-			on:click={() => ($tab = tabs.untagged)}
-			on:keypress={() => ($tab = tabs.untagged)}>Por catalogar</span
+			on:click={() => ($tab = tabs.untagged)}>Por catalogar</button
 		>
 		{#if $token}
-			<span
+			<button
 				class="tab tab-bordered lg:tab-lifted"
 				class:tab-active={$tab === tabs.unpositioned}
-				on:click={() => ($tab = tabs.unpositioned)}
-				on:keypress={() => ($tab = tabs.unpositioned)}>Por posicionar</span
+				on:click={() => ($tab = tabs.unpositioned)}>Por posicionar</button
 			>
 		{/if}
-		<span
+		<button
 			class="tab tab-bordered lg:tab-lifted"
 			class:tab-active={$tab === tabs.upload}
-			on:click={() => ($tab = tabs.upload)}
-			on:keypress={() => ($tab = tabs.upload)}>Enviar</span
+			on:click={() => ($tab = tabs.upload)}>Enviar</button
 		>
 	</div>
 	<div
@@ -322,30 +317,23 @@
 					{/if}
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
 						{#each taggedGallery.pictures as pic (pic.id)}
-							<div
+							<button
 								class="p-2 flex justify-center items-center cursor-pointer max-h-72 overflow-y-hidden hover:overflow-y-visible"
+								on:click={() => {
+									openPicEditor(pic.id);
+								}}
 							>
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
 									alt="Tagged"
-									on:click={() => {
-										openPicEditor(pic.id);
-									}}
-									on:keypress={() => {
-										openPicEditor(pic.id);
-									}}
 								/>
-							</div>
+							</button>
 						{/each}
 					</div>
-					<div
-						class="btn btn-secondary w-full"
-						on:click={() => loadMoreTaggedStops()}
-						on:keypress={() => loadMoreTaggedStops()}
-					>
+					<button class="btn btn-secondary w-full" on:click={() => loadMoreTaggedStops()}>
 						Listar mais
-					</div>
+					</button>
 				</div>
 			</div>
 		{:else if $tab === tabs.untagged}
@@ -357,26 +345,21 @@
 					{/if}
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
 						{#each untaggedGallery.pictures as pic (pic.id)}
-							<div
+							<button
 								class="p-2 flex justify-center items-center cursor-pointer max-h-72 overflow-y-hidden hover:overflow-y-visible"
+								on:click={() => openPicEditor(pic.id)}
 							>
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-125"
 									alt="Untagged"
-									on:click={() => openPicEditor(pic.id)}
-									on:keypress={() => openPicEditor(pic.id)}
 								/>
-							</div>
+							</button>
 						{/each}
 					</div>
-					<div
-						class="btn btn-secondary w-full"
-						on:click={() => loadMoreUntaggedStops()}
-						on:keypress={() => loadMoreUntaggedStops()}
-					>
+					<button class="btn btn-secondary w-full" on:click={() => loadMoreUntaggedStops()}>
 						Listar mais
-					</div>
+					</button>
 				</div>
 			</div>
 		{:else if $tab === tabs.unpositioned}
@@ -388,26 +371,24 @@
 					{/if}
 					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
 						{#each unpositionedGallery.pictures as pic (pic.id)}
-							<div
+							<button
 								class="flex justify-center items-center cursor-pointer max-h-72 overflow-y-hidden hover:overflow-y-visible"
+								on:click={() => openPicEditor(pic.id)}
 							>
 								<img
 									src={pic.url_medium}
 									class="rounded-box transition-all hover:scale-105"
 									alt="Unpositioned"
-									on:click={() => openPicEditor(pic.id)}
-									on:keypress={() => openPicEditor(pic.id)}
 								/>
-							</div>
+							</button>
 						{/each}
 					</div>
-					<div
+					<button
 						class="btn btn-secondary w-full"
 						on:click={() => loadMoreUnpositionedStops()}
-						on:keypress={() => loadMoreUnpositionedStops()}
 					>
 						Listar mais
-					</div>
+					</button>
 				</div>
 			</div>
 		{:else if $tab === tabs.upload}

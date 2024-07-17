@@ -250,31 +250,32 @@
 						bind:value={pendingRoute}
 						class="input input-bordered w-full input-md"
 					/>
-					<input
-						type="button"
-						value="Adicionar"
+					<button
 						disabled={!$routes || !$routes[parseInt(pendingRoute)]}
 						on:click={() => {
 							issueRoutes.push(parseInt(pendingRoute));
 							issueRoutes = issueRoutes;
 							pendingRoute = null;
 						}}
-						class="btn btn-md btn-success"
-					/>
+						class="btn btn-md btn-success">Adicionar</button
+					>
 				</label>
 			</div>
 			{#if issueRoutes.length > 0}
 				<div class="form-control">
-					<label class="label">
+					<span class="label">
 						<span class="label-text">Referenciadas</span>
-					</label>
+					</span>
 					<div>
 						{#each issueRoutes as routeId}
 							<div class="badge badge-outline badge-lg">
 								{routeId} - {$routes[routeId].name}
-								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeRoute(routeId)}>
+								<button
+									class="btn btn-error btn-circle btn-xs"
+									on:click={() => removeRoute(routeId)}
+								>
 									✕
-								</div>
+								</button>
 							</div>
 						{/each}
 					</div>
@@ -289,31 +290,29 @@
 						bind:value={pendingStop}
 						class="input input-bordered w-full input-md"
 					/>
-					<input
-						type="button"
-						value="Adicionar"
+					<button
 						disabled={!$stops || !$stops[parseInt(pendingStop)]}
 						on:click={() => {
 							issueStops.push(parseInt(pendingStop));
 							issueStops = issueStops;
 							pendingStop = null;
 						}}
-						class="btn btn-md btn-success"
-					/>
+						class="btn btn-md btn-success">Adicionar</button
+					>
 				</label>
 			</div>
 			{#if issueStops.length > 0}
 				<div class="form-control">
-					<label class="label">
+					<span class="label">
 						<span class="label-text">Referenciadas</span>
-					</label>
+					</span>
 					<div>
 						{#each issueStops as stopId}
 							<div class="badge badge-outline badge-lg">
 								{stopId} - {$stops[stopId].name}
-								<div class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
+								<button class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
 									✕
-								</div>
+								</button>
 							</div>
 						{/each}
 					</div>
@@ -328,34 +327,32 @@
 						bind:value={pendingOperator}
 						class="input input-bordered w-full input-md"
 					/>
-					<input
-						type="button"
-						value="Adicionar"
+					<button
+						class="btn btn-md btn-success"
 						disabled={!parseInt(pendingOperator)}
 						on:click={() => {
 							issueOperators.push(parseInt(pendingOperator));
 							issueOperators = issueOperators;
 							pendingOperator = null;
-						}}
-						class="btn btn-md btn-success"
-					/>
+						}}>Adicionar</button
+					>
 				</label>
 			</div>
 			{#if issueOperators.length > 0}
 				<div class="form-control">
-					<label class="label">
+					<span class="label">
 						<span class="label-text">Referenciadas</span>
-					</label>
+					</span>
 					<div>
 						{#each issueOperators as operatorId}
 							<div class="badge badge-outline badge-lg">
 								{operatorId} - {$operators[operatorId]?.name ?? '?'}
-								<div
+								<button
 									class="btn btn-error btn-circle btn-xs"
 									on:click={() => removeOperator(operatorId)}
 								>
 									✕
-								</div>
+								</button>
 							</div>
 						{/each}
 					</div>

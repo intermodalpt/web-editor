@@ -471,20 +471,18 @@
 							class="input input-bordered"
 							placeholder="Creche ABC123"
 						/>
-						<input class="btn btn-secondary" type="button" value="Add" on:click={addTag} />
+						<button class="btn btn-secondary" on:click={addTag}>Add</button>
 					</div>
 				</div>
 			</div>
 
 			{#if editable}
 				<div class="flex justify-end">
-					<input
-						type="button"
+					<button
 						class="btn btn-primary my-4"
-						value="Guardar"
 						disabled={(image.tagged && !changed) || saveInProgress}
-						on:mouseup={saveChanges}
-					/>
+						on:mouseup={saveChanges}>Guardar</button
+					>
 				</div>
 			{/if}
 		</div>

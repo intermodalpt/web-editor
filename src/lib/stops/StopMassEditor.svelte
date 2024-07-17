@@ -275,4 +275,4 @@
 	{/each}
 </ul>
 
-<input type="button" value="Save" class="input btn btn-primary" on:click={save} />
+<button class="input btn btn-primary" on:click={save}>Save</button>

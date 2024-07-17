@@ -117,14 +117,7 @@
 					placeholder="Creche ABC123"
 					disabled={readOnly}
 				/>
-				<input
-					class="btn btn-sm btn-primary"
-					type="button"
-					value="+"
-					on:click={addTag}
-					on:keypress={addTag}
-					disabled={readOnly}
-				/>
+				<button class="btn btn-sm btn-primary" on:click={addTag} disabled={readOnly}>+</button>
 			</div>
 			<div class="flex flex-row flex-wrap gap-1">
 				{#each tags as tag}

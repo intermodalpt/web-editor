@@ -174,15 +174,14 @@
 		<input bind:files multiple accept="image/*" id="dropzone-file-2" type="file" class="hidden" />
 	</label>
 </div>
-<div
+<button
 	class="btn float-right mt-3 btn-primary"
 	class:btn-disabled={uploading || pendingUploadCount === 0}
 	on:click={upload}
-	on:keypress={upload}
 >
 	{#if uploading}
 		<span class="loading loading-spinner loading-xs" /> A enviar
 	{:else}
 		Enviar
 	{/if}
-</div>
+</button>

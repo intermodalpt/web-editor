@@ -18,7 +18,7 @@
 >
 	<div class="flex gap-3 justify-between">
 		<span class="text-xs">{selectedPicId}</span>
-		<input type="button" class="btn btn-error btn-sm" value="Fechar" on:click={closeEditor} />
+		<button class="btn btn-error btn-sm" on:click={closeEditor}>Fechar</button>
 	</div>
 	<div class="bg-base-100 border-base-300 border-2 rounded-md shadow-sm flex justify-center">
 		<div class="max-w-[100em] p-2">

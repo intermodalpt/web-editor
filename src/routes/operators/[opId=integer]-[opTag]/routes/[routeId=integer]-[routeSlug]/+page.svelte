@@ -851,13 +851,11 @@
 				{#if isAdmin}
 					<div class="divider px-6 m-2" />
 					<div class="flex">
-						<input
+						<button
 							disabled={!subrouteStopsChanged}
-							type="button"
-							value="Guardar"
 							class="btn btn-md btn-primary flex-1"
-							on:click={saveStops}
-						/>
+							on:click={saveStops}>Guardar</button
+						>
 					</div>
 				{/if}
 			</div>

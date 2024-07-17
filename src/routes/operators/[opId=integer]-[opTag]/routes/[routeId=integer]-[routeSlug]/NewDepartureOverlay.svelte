@@ -30,7 +30,7 @@
 			let req = $decodedToken
 				? fetch(`${apiServer}/v1/stops/${$stop.id}/pictures/all`, {
 						headers: { authorization: `Bearer ${$token}` }
-				  })
+					})
 				: fetch(`${apiServer}/v1/stops/${$stop.id}/pictures`);
 
 			req
@@ -76,17 +76,6 @@
 		}
 		dispatch('close');
 	}
-
-	function gotoPicture(picture) {
-		if (currentImageHasChanges) {
-			if (!confirm('Descartar alterações à imagem atual?')) {
-				return;
-			}
-		}
-
-		currentImageHasChanges = false;
-		selectedImageId = picture.id;
-	}
 </script>
 
 <div
@@ -95,19 +84,12 @@
 	<div class="flex justify-between bg-base-100 p-1 shadow-sm">
 		<span class="px-2 font-semibold text-lg">{$stop?.name}</span>
 		<div class="flex gap-3">
-			<input
-				type="button"
-				class="btn btn-secondary btn-sm"
-				value="Enviar"
-				on:click={() => (sendingPictures = true)}
-			/>
-			<input type="button" class="btn btn-error btn-sm" value="Fechar" on:click={closeEditor} />
+			<button class="btn btn-secondary btn-sm" on:click={() => (sendingPictures = true)}
+				>Enviar</button
+			>
+			<button class="btn btn-error btn-sm" on:click={closeEditor}>Fechar</button>
 		</div>
 	</div>
-	<div
-		class="p-2 grid gap-2 bg-base-300 grid-rows-[auto_1fr] md:grid-cols-[auto_1fr] overflow-y-scroll"
-	>
-		
 </div>
 
 <div class="modal" class:modal-open={sendingPictures}>
@@ -116,11 +98,7 @@
 			<div class="card-body">
 				<div class="flex justify-between">
 					<h2 class="card-title">Enviar imagens</h2>
-					<span
-						class="link link-error"
-						on:click={() => (sendingPictures = false)}
-						on:keypress={() => (sendingPictures = false)}>Voltar</span
-					>
+					<button class="link link-error" on:click={() => (sendingPictures = false)}>Voltar</button>
 				</div>
 				<PicUploader
 					stopId={$stop?.id}

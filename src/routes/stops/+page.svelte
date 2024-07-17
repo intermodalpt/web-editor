@@ -707,13 +707,10 @@
 		</div>
 	{/if}
 	<div class="absolute top-2 left-2 z-10">
-		<input
-			type="button"
+		<button
 			class="btn btn-sm bg-base-100 border-2 shadow-md"
-			value="Visualização"
 			on:click={() => (showVisualizationSettings = true)}
-			on:keypress={() => (showVisualizationSettings = true)}
-		/>
+		>Visualização</button>
 	</div>
 	<div
 		class="absolute lg:left-3 lg:top-3 left-0 top-0 z-[11] flex justify-center h-96 lg:w-72 w-full transition"
@@ -732,13 +729,9 @@
 				/>
 			</div>
 			<div class="flex justify-end">
-				<input
-					type="button"
-					class="btn btn-error btn-xs"
-					on:click={() => (showVisualizationSettings = false)}
-					on:keypress={() => (showVisualizationSettings = false)}
-					value="Fechar"
-				/>
+				<button class="btn btn-error btn-xs" on:click={() => (showVisualizationSettings = false)}
+					>Fechar</button
+				>
 			</div>
 		</div>
 	</div>

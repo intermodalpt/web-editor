@@ -270,8 +270,7 @@
 		<button
 			class="tab tab-sm"
 			class:tab-active={currentSubform === subforms.info}
-			on:click={() => (currentSubform = subforms.info)}
-			on:keypress={() => (currentSubform = subforms.info)}>Info</button
+			on:click={() => (currentSubform = subforms.info)}>Info</button
 		>
 		<button
 			class="tab tab-sm"
@@ -297,17 +296,10 @@
 	<div class="flex gap-2 flex-grow justify-end">
 		<AuthenticityIndicator bind:value={verificationLevel} />
 		<span class="w-2" />
-		<button
-			type="button"
-			class="btn btn-success btn-xs"
-			disabled={readOnly}
-			on:click={saveStopMeta}
-		>
+		<button class="btn btn-success btn-xs" disabled={readOnly} on:click={saveStopMeta}>
 			Guardar
 		</button>
-		<button type="button" class="btn btn-error btn-xs" on:click={() => ($selectedStop = null)}
-			>Fechar</button
-		>
+		<button class="btn btn-error btn-xs" on:click={() => ($selectedStop = null)}>Fechar</button>
 	</div>
 </div>
 <div class="w-full overflow-y-auto p-2 pt-0 bg-base-100">

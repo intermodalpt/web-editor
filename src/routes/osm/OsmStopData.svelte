@@ -158,13 +158,10 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="w-full h-full p-4 relative">
-	<input
-		type="button"
+	<button
 		class="btn btn-error btn-xs absolute right-2 top-2 z-50"
-		on:click={() => ($osmStop = null)}
-		on:keypress={() => ($osmStop = null)}
-		value="X"
-	/>
+		on:click={() => ($osmStop = null)}>X</button
+	>
 	<div class="w-full h-full overflow-y-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 		<div class="flex flex-col gap-1 items-start">
 			<div class="flex flex-wrap gap-2 items-center">

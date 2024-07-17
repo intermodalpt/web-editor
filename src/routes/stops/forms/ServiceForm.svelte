@@ -89,20 +89,17 @@
 					<button
 						class="btn btn-xs px-4 join-item"
 						class:btn-active={hasFlags === true}
-						on:click={() => (hasFlags = true)}
-						on:keypress={() => (hasFlags = true)}>Sim</button
+						on:click={() => (hasFlags = true)}>Sim</button
 					>
 					<button
 						class="btn btn-xs px-6 join-item"
 						class:btn-active={hasFlags === null}
-						on:click={() => (hasFlags = null)}
-						on:keypress={() => (hasFlags = null)}>?</button
+						on:click={() => (hasFlags = null)}>?</button
 					>
 					<button
 						class="btn btn-xs px-4 join-item"
 						class:btn-active={hasFlags === false}
-						on:click={() => (hasFlags = false)}
-						on:keypress={() => (hasFlags = false)}>Não</button
+						on:click={() => (hasFlags = false)}>Não</button
 					>
 				</div>
 			</div>
@@ -120,14 +117,11 @@
 									/>
 								</th>
 								<th>
-									<input
-										type="button"
+									<button
 										class="btn btn-error btn-xs"
-										value="-"
 										disabled={readOnly}
-										on:click={() => removeFlag(i)}
-										on:keypress={() => removeFlag(i)}
-									/>
+										on:click={() => removeFlag(i)}>-</button
+									>
 								</th>
 							</tr>
 							<tr>
@@ -140,14 +134,11 @@
 									/>
 								</th>
 								<th>
-									<input
-										type="button"
+									<button
 										class="btn btn-success btn-xs"
-										value="+linha"
 										disabled={readOnly}
-										on:click={() => addFlagRoute(i)}
-										on:keypress={() => addFlagRoute(i)}
-									/>
+										on:click={() => addFlagRoute(i)}>+linha</button
+									>
 								</th>
 							</tr>
 						</thead>
@@ -169,13 +160,7 @@
 				{/each}
 
 				<div class="flex justify-end">
-					<input
-						type="button"
-						class="btn btn-success btn-xs"
-						value="+ postalete"
-						on:click={addFlag}
-						on:keypress={addFlag}
-					/>
+					<button class="btn btn-success btn-xs" on:click={addFlag}>+ postalete</button>
 				</div>
 			{/if}
 		</div>
@@ -205,20 +190,17 @@
 					<button
 						class="btn btn-xs px-4"
 						class:btn-active={hasSchedules === true}
-						on:click={() => (hasSchedules = true)}
-						on:keypress={() => (hasSchedules = true)}>Sim</button
+						on:click={() => (hasSchedules = true)}>Sim</button
 					>
 					<button
 						class="btn btn-xs px-6"
 						class:btn-active={hasSchedules === null}
-						on:click={() => (hasSchedules = null)}
-						on:keypress={() => (hasSchedules = null)}>?</button
+						on:click={() => (hasSchedules = null)}>?</button
 					>
 					<button
 						class="btn btn-xs px-4"
 						class:btn-active={hasSchedules === false}
-						on:click={() => (hasSchedules = false)}
-						on:keypress={() => (hasSchedules = false)}>Não</button
+						on:click={() => (hasSchedules = false)}>Não</button
 					>
 				</div>
 			</div>
@@ -230,14 +212,11 @@
 							<th class="text-xs">Tipo</th>
 							<th class="text-xs">Discrim.</th>
 							<th>
-								<input
-									type="button"
+								<button
 									class="btn btn-success btn-xs"
-									value="+"
 									on:click={addScheduleEntry}
-									on:keypress={addScheduleEntry}
-									disabled={readOnly}
-								/>
+									disabled={readOnly}>+</button
+								>
 							</th>
 						</tr>
 					</thead>
@@ -271,14 +250,11 @@
 									/>
 								</td>
 								<td>
-									<input
-										type="button"
+									<button
 										class="btn btn-error btn-xs"
-										value="-"
 										on:click={() => removeScheduleEntry(i)}
-										on:keypress={() => removeScheduleEntry(i)}
-										disabled={readOnly}
-									/>
+										disabled={readOnly}>-</button
+									>
 								</td>
 							</tr>
 						{/each}
@@ -290,29 +266,19 @@
 			<div class="flex gap-2">
 				<div class="label-text">Verificação</div>
 				<input type="date" class="input input-xs input-bordered" bind:value={serviceCheckDate} />
-				<input
-					type="button"
+				<button
 					class="btn btn-primary btn-xs"
-					value="Hoje"
 					on:click={() => {
 						serviceCheckDate = new Date().toISOString().split('T')[0];
-					}}
-					on:keypress={() => {
-						serviceCheckDate = new Date().toISOString().split('T')[0];
-					}}
-				/>
+					}}>Hoje</button
+				>
 				{#if $latestPictureDate}
-					<input
-						type="button"
+					<button
 						class="btn btn-info btn-xs"
-						value="Fotos"
 						on:click={() => {
 							serviceCheckDate = $latestPictureDate.toISOString().split('T')[0];
-						}}
-						on:keypress={() => {
-							serviceCheckDate = $latestPictureDate.toISOString().split('T')[0];
-						}}
-					/>
+						}}>Fotos</button
+					>
 				{/if}
 			</div>
 		</div>

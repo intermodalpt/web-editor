@@ -27,13 +27,10 @@
 		{/if}
 	</div>
 	<div class="flex justify-end">
-		<input
+		<button
 			class="btn btn-sm btn-primary"
-			type="button"
-			value="Editar fotos"
 			on:click={() => dispatch('pictureEditorRequest')}
-			on:keypress={() => dispatch('pictureEditorRequest')}
-			disabled={readOnly}
-		/>
+			disabled={readOnly}>Editar fotos</button
+		>
 	</div>
 </div>

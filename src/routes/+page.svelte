@@ -79,7 +79,6 @@
 			</p>
 			<div>
 				<button
-					type="button"
 					class="btn btn-neutral"
 					on:click={wipeCache}
 					disabled={cacheRebuilding}

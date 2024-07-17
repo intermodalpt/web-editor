@@ -180,7 +180,7 @@
 							bind:this={newTimeInput}
 							bind:value={newTime}
 						/>
-						<input type="button" class="btn btn-success" value="+" on:mouseup={addAdditionalTime} />
+						<button class="btn btn-success" on:click={addAdditionalTime}>+</button>
 					</label>
 				</div>
 				<div class="flex flex-wrap gap-2">
