@@ -4,37 +4,22 @@
 </script>
 
 <div class="join">
-	<input
+	<button
 		class="join-item p-1 btn btn-xs"
-		type="button"
-		value={lat.toFixed(6)}
 		on:click={() => {
-			navigator.clipboard.writeText(lat.toFixed(6));
-		}}
-		on:keypress={() => {
-			navigator.clipboard.writeText(lat.toFixed(6));
-		}}
-	/>
-	<input
+			navigator.clipboard.writeText(lat?.toFixed(6));
+		}}>{lat?.toFixed(6)}</button
+	>
+	<button
 		class="join-item p-1 btn btn-xs"
-		type="button"
-		value={lon.toFixed(6)}
 		on:click={() => {
-			navigator.clipboard.writeText(lon.toFixed(6));
-		}}
-		on:keypress={() => {
-			navigator.clipboard.writeText(lon.toFixed(6));
-		}}
-	/>
-	<input
+			navigator.clipboard.writeText(lon?.toFixed(6));
+		}}>{lon?.toFixed(6)}</button
+	>
+	<button
 		class="btn btn-info btn-xs join-item"
-		type="button"
-		value="Copiar"
 		on:click={() => {
-			navigator.clipboard.writeText(lat.toFixed(6) + ',' + lon.toFixed(6));
-		}}
-		on:keypress={() => {
-			navigator.clipboard.writeText(lat.toFixed(6) + ',' + lon.toFixed(6));
-		}}
-	/>
+			navigator.clipboard.writeText(lat?.toFixed(6) + ',' + lon?.toFixed(6));
+		}}>Copiar</button
+	>
 </div>

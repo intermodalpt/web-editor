@@ -1,5 +1,6 @@
 <script>
 	import AuthenticitySelectors from './AuthenticitySelectors.svelte';
+	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
 	export let selectedStop;
 
@@ -23,45 +24,9 @@
 	<div class="flex flex-col gap-1 items-start">
 		<div class="flex gap-2 items-center">
 			<span class=" text-lg">#{$selectedStop?.id}</span>
-			<div class="join">
-				<input
-					class="join-item p-1 btn btn-xs"
-					type="button"
-					value={$selectedStop?.lat.toFixed(6)}
-					on:click={() => {
-						navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
-					}}
-					on:keypress={() => {
-						navigator.clipboard.writeText($selectedStop?.lat.toFixed(6));
-					}}
-				/>
-				<input
-					class="join-item p-1 btn btn-xs"
-					type="button"
-					value={$selectedStop?.lon.toFixed(6)}
-					on:click={() => {
-						navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
-					}}
-					on:keypress={() => {
-						navigator.clipboard.writeText($selectedStop?.lon.toFixed(6));
-					}}
-				/>
-				<input
-					class="btn btn-info btn-xs join-item"
-					type="button"
-					value="Copiar"
-					on:click={() => {
-						navigator.clipboard.writeText(
-							$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
-						);
-					}}
-					on:keypress={() => {
-						navigator.clipboard.writeText(
-							$selectedStop?.lat.toFixed(6) + ',' + $selectedStop?.lon.toFixed(6)
-						);
-					}}
-				/>
-			</div>
+			{#if $selectedStop}
+				<CoordViewer lat={$selectedStop.lat} lon={$selectedStop.lon} />
+			{/if}
 		</div>
 		<span>OpenStreetMap</span>
 		<a

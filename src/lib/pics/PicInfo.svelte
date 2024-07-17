@@ -3,6 +3,7 @@
 	import { derived } from 'svelte/store';
 	import { token } from '$lib/stores';
 	import { apiServer } from '$lib/settings';
+	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -57,46 +58,17 @@
 					}}>Editar</button
 				>
 			</span>
-			<div class="flex gap-2">
-				<div class="flex">
-					<input
-						class="btn btn-neutral btn-xs rounded-r-none"
-						type="button"
-						value={$data?.lat.toFixed(6)}
-						on:click={() => {
-							navigator.clipboard.writeText($data?.lat.toFixed(6));
-						}}
-					/>
-					<input
-						class="btn btn-neutral btn-xs rounded-l-none"
-						type="button"
-						value={$data?.lon.toFixed(6)}
-						on:click={() => {
-							navigator.clipboard.writeText($data?.lon.toFixed(6));
-						}}
-					/>
-				</div>
-				<input
-					class="btn btn-secondary btn-xs"
-					type="button"
-					value="Copiar"
-					on:click={() => {
-						navigator.clipboard.writeText($data?.lat.toFixed(6) + '\t' + $data?.lon.toFixed(6));
-					}}
-				/>
-			</div>
+			<CoordViewer lat={$data?.lat} lon={$data?.lon} />
 			<div class="flex flex-col">
 				<span class="label-text">Paragens</span>
 				<div class="flex flex-col gap-1 ml-2">
 					{#each $picStops as stop}
-						<span
+						<button
 							class="badge badge-md badge-secondary cursor-pointer whitespace-nowrap"
 							on:click={() => {
 								dispatch('select-stop', { id: stop?.id });
-							}}
+							}}>{stop?.id}: {stop?.short_name || stop?.name}</button
 						>
-							{stop?.id}: {stop?.short_name || stop?.name}
-						</span>
 					{/each}
 				</div>
 			</div>
