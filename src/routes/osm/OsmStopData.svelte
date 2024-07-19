@@ -160,8 +160,10 @@
 <div class="w-full h-full p-4 relative">
 	<button
 		class="btn btn-error btn-xs absolute right-2 top-2 z-50"
-		on:click={() => ($osmStop = null)}>X</button
+		on:click={() => ($osmStop = null)}
 	>
+		<Icon name="close" class="h-4 stroke-current" />
+	</button>
 	<div class="w-full h-full overflow-y-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 		<div class="flex flex-col gap-1 items-start">
 			<div class="flex flex-wrap gap-2 items-center">
@@ -347,7 +349,9 @@
 <dialog bind:this={creationDialog} class="modal modal-bottom sm:modal-middle z-30">
 	<div class="modal-box z-30 max-w-5xl grid grid-cols-1" style="grid-template-rows: auto 1fr;">
 		<form method="dialog">
-			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<Icon name="close" class="h-4 stroke-current" />
+			</button>
 		</form>
 		<div class="flex flex-col gap-1 mt-2 overflow-y-scroll">
 			<div class="form-control w-full">

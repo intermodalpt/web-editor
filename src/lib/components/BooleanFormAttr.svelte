@@ -1,5 +1,6 @@
 <script>
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
 	export let state = false;
 	export let disabled = false;
@@ -15,19 +16,7 @@
 	{/if}
 	{#if infoUrl}
 		<a class="btn btn-circle btn-ghost btn-xs text-info" href={infoUrl} target="_blank">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				class="w-4 h-4 stroke-current"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-				/>
-			</svg>
+			<Icon name="info" class="h-4 w-4" />
 		</a>
 	{/if}
 </div>

@@ -2,6 +2,7 @@
 	import { derived } from 'svelte/store';
 	import { token, toast } from '$lib/stores.js';
 	import { timeToTimestamp, timestampToTime } from '$lib/utils.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import { getDeparturesAndCalendars } from '../aux.js';
 
 	export let canEdit = false;
@@ -186,19 +187,9 @@
 				<div class="flex flex-wrap gap-2">
 					{#each additionalNewTimes as time}
 						<div class="badge badge-info gap-2">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								class="inline-block w-4 h-4 stroke-current"
-								on:mouseup={() => removeAdditionalTime(time)}
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
+							<button on:click={() => removeAdditionalTime(time)}>
+								<Icon name="close" class="inline-block w-4 h-4 stroke-current" />
+							</button>
 							{time}
 						</div>
 					{/each}

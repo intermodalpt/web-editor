@@ -1,6 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { onMount } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -101,7 +102,7 @@
 	</div>
 	{#if editable}
 		<button class="btn btn-error btn-circle btn-xs absolute top-0 right-0" on:click={issueDelete}>
-			✕
+			<Icon name="close" class="h-4 stroke-current" />
 		</button>
 	{/if}
 
@@ -150,36 +151,7 @@
 			aria-label="Perfil"
 		/>
 		<div class="w-full flex justify-center">
-			<svg
-				class="w-24 h-16"
-				xmlns="http://www.w3.org/2000/svg"
-				width="31.665"
-				height="24.314"
-				viewBox="0 0 8.378 6.433"
-				xmlns:v="https://vecta.io/nano"
-				><path d="M.175.175h7.322v6.083H.175z" fill="#666" paint-order="fill markers stroke" /><g
-					stroke-width=".35"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					><path
-						d="M7.497 6.215V.175"
-						fill="none"
-						stroke="#ccc"
-						paint-order="fill markers stroke"
-					/><path
-						d="M8.203 5.807V.28L5.295 1.96l2.751 1.588"
-						fill="#ff0"
-						stroke="#540"
-						paint-order="fill markers stroke"
-					/><g fill="none" stroke="#ccc"
-						><path d="M.175 6.258V.175" paint-order="fill markers stroke" /><path
-							d="M3.836 6.258V.175"
-							stroke-dasharray="0.349999, 1.05"
-							paint-order="fill markers stroke"
-						/></g
-					></g
-				></svg
-			>
+			<Icon name="bus-stop" class="w-24 h-16" />
 		</div>
 		<input
 			class="join-item btn btn-sm h-full"

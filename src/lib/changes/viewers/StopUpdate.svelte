@@ -5,6 +5,7 @@
 	import { tileStyle } from '$lib/settings.js';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { derived } from 'svelte/store';
+	import Icon from '$lib/components/Icon.svelte';
 	import FlagsWidget from '$lib/instructions/widgets/Flags.svelte';
 	import SchedulesWidget from '$lib/instructions/widgets/Schedules.svelte';
 	import AdvertisementQtySelector from '$lib/changes/selectors/AdvertisementQtySelector.svelte';
@@ -155,8 +156,10 @@
 							on:click={() => {
 								ignoredKeys.push(diff.key);
 								ignoredKeys = ignoredKeys;
-							}}>✕</button
+							}}
 						>
+							<Icon name="close" class="h-4 stroke-current" />
+						</button>
 						{#if problematic_fields.indexOf(diff.key) != -1}⚠️{/if}{/if}
 					{diff.key}:
 					{#if diff.key === 'flags'}
@@ -215,7 +218,7 @@
 						ignoredKeys = ignoredKeys.filter((ignored) => ignored != key);
 					}}
 				>
-					✕
+					<Icon name="close" class="h-4 stroke-current" />
 				</button>
 			</span>
 		{/each}

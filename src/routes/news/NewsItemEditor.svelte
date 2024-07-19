@@ -4,6 +4,7 @@
 	import Select from 'svelte-select';
 	import { apiServer } from '$lib/settings.js';
 	import { token, toast } from '$lib/stores.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 	import ContentBlock from './content/ContentBlock.svelte';
@@ -535,7 +536,9 @@
 	<div class="modal-box relative z-30 sm:max-w-5xl">
 		<div>
 			<form method="dialog">
-				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
+				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
+					<Icon name="close" class="h-4 stroke-current" />
+				</button>
 			</form>
 			<div class="form-control mb-2">
 				<label class="input-group">

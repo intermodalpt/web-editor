@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -180,14 +181,16 @@
 			{#each filters as filter, i}
 				<div class="w-full border rounded-lg p-1 pl-2 flex justify-between items-center">
 					{filter.type}{#if filter.type === 'attr'}: {filter.attr}{/if}
-					<span
+					<button
 						class="btn btn-square btn-error btn-xs"
 						on:click={() => {
 							filters.splice(i, 1);
 							filters = filters;
 							dispatch('filter_change');
-						}}>X</span
+						}}
 					>
+						<Icon name="close" class="h-4 stroke-current" />
+					</button>
 				</div>
 			{/each}
 		</div>
@@ -198,7 +201,9 @@
 <input type="checkbox" id="new-filter-modal" class="modal-toggle" />
 <div class="modal z-[11]">
 	<div class="modal-box relative z-[11]">
-		<label for="new-filter-modal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+		<label for="new-filter-modal" class="btn btn-sm btn-circle absolute right-2 top-2">
+			<Icon name="close" class="h-4 stroke-current" />
+		</label>
 		<h3 class="text-lg font-bold">Novo filtro</h3>
 		<div class="flex flex-col">
 			<span class="text-md">Tipo de filtro</span>

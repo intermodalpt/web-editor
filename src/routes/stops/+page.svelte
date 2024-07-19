@@ -17,6 +17,7 @@
 		linearStopScore,
 		weightedStopScore
 	} from './scoring.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import StopPicsMetaEditor from '$lib/pics/wrappers/StopPicsMetaEditor.svelte';
 	import PicDialog from '$lib/pics/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
@@ -709,8 +710,8 @@
 	<div class="absolute top-2 left-2 z-10">
 		<button
 			class="btn btn-sm bg-base-100 border-2 shadow-md"
-			on:click={() => (showVisualizationSettings = true)}
-		>Visualização</button>
+			on:click={() => (showVisualizationSettings = true)}>Visualização</button
+		>
 	</div>
 	<div
 		class="absolute lg:left-3 lg:top-3 left-0 top-0 z-[11] flex justify-center h-96 lg:w-72 w-full transition"
@@ -743,9 +744,9 @@
 				style="grid-template-rows: auto 1fr;"
 			>
 				<div>
-					<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2"
-						>✕</label
-					>
+					<label for="stop-search-modal" class="btn btn-sm btn-circle absolute right-2 top-2">
+						<Icon name="close" class="h-4 stroke-current" />
+					</label>
 					<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
 					<input
 						type="text"

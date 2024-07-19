@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -119,7 +120,9 @@
 			</div>
 			<div>
 				<form method="dialog">
-					<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+					<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+						<Icon name="close" class="h-4 stroke-current" />
+					</button>
 				</form>
 				<label class="form-control">
 					<div class="label py-0">

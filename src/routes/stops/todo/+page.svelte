@@ -5,7 +5,7 @@
 	import { selectedRegion } from '$lib/db';
 	import { regionMapParams } from '$lib/utils.js';
 	import { decodedToken, token, toast } from '$lib/stores.js';
-	import { apiServer, credibleSources } from '$lib/settings.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import StopTodoViewer from './StopTodoViewer.svelte';
 	import TodoMap from './TodoMap.svelte';
 
@@ -53,8 +53,6 @@
 
 	function refreshStops() {
 		if (!map) return;
-
-		console.log('Refreshing stops');
 
 		const unpositionedStops = [];
 		const underpositionedStops = [];
@@ -202,19 +200,7 @@
 						class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
 						on:click={() => ($selectedStop = null)}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/></svg
-						>
+						<Icon name="close" class="h-6 w-6" />
 					</button>
 					<StopTodoViewer
 						canEdit={$decodedToken?.permissions?.is_admin}
@@ -234,7 +220,9 @@
 	>
 		<div>
 			<form method="dialog">
-				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
+				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
+					<Icon name="close" class="h-4 stroke-current" />
+				</button>
 			</form>
 			<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
 			<input

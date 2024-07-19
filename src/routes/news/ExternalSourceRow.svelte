@@ -2,6 +2,7 @@
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { token, toast } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import ExternalNewsItemImporter from './ExternalNewsItemImporter.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -47,21 +48,18 @@
 		}}>#{externalId}</button
 	>
 	<span class="grow text-lg font-bold text-left">{externalItem?.title ?? 'Sem título'}</span>
-	<button
-		class="btn btn-xs btn-error"
-		on:click={() => {
-			dispatch('delete', {
-				id: externalId
-			});
-		}}>x</button
-	>
+	<button class="btn btn-xs btn-error" on:click={() => dispatch('delete', { id: externalId })}>
+		<Icon name="close" class="h-4 stroke-current" />
+	</button>
 </div>
 
 <dialog bind:this={externalDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative z-30 sm:max-w-5xl">
 		<div>
 			<form method="dialog">
-				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
+				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
+					<Icon name="close" class="h-4 stroke-current" />
+				</button>
 			</form>
 			{#key externalId}
 				{#if externalItem}

@@ -14,6 +14,7 @@
 		loadMissing
 	} from '$lib/db';
 	import { apiServer, tileStyle } from '$lib/settings.js';
+	import Icon from '$lib/components/Icon.svelte';
 
 	const operators = liveQuery(() => getOperators());
 	const stops = liveQuery(() => getStops());
@@ -274,7 +275,7 @@
 									class="btn btn-error btn-circle btn-xs"
 									on:click={() => removeRoute(routeId)}
 								>
-									✕
+									<Icon name="close" class="h-4 stroke-current" />
 								</button>
 							</div>
 						{/each}
@@ -311,7 +312,7 @@
 							<div class="badge badge-outline badge-lg">
 								{stopId} - {$stops[stopId].name}
 								<button class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
-									✕
+									<Icon name="close" class="h-4 stroke-current" />
 								</button>
 							</div>
 						{/each}
@@ -351,7 +352,7 @@
 									class="btn btn-error btn-circle btn-xs"
 									on:click={() => removeOperator(operatorId)}
 								>
-									✕
+									<Icon name="close" class="h-4 stroke-current" />
 								</button>
 							</div>
 						{/each}

@@ -4,6 +4,7 @@
 	import { apiServer } from '$lib/settings.js';
 	import { isDeepEqual } from '$lib/utils.js';
 	import { toast } from '$lib/stores.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
@@ -233,7 +234,9 @@
 <dialog bind:this={newTodoDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative">
 		<form method="dialog">
-			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">x</button>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<Icon name="close" class="h-4 stroke-current" />
+			</button>
 		</form>
 		<h3 class="font-bold text-lg">{newTodoType ? todoTypeNames[newTodoType] : 'Nova tarefa'}</h3>
 		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">

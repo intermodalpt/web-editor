@@ -3,6 +3,7 @@
 	import { derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
 	import { distance } from '$lib/utils.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
@@ -201,19 +202,7 @@
 				$selectedUnusedStop = null;
 			}}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M6 18L18 6M6 6l12 12"
-				/></svg
-			>
+			<Icon name="close" class="h-6 w-6" />
 		</button>
 		<div class="flex gap-1 items-center">
 			<button
@@ -324,19 +313,7 @@
 			class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
 			on:click={() => ($selectedGtfsStop = null)}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M6 18L18 6M6 6l12 12"
-				/></svg
-			>
+			<Icon name="close" class="h-6 w-6" />
 		</button>
 		<div class="flex gap-2 items-center">
 			<button
@@ -413,19 +390,7 @@
 			class="btn btn-circle btn-xs btn-error self-start absolute -top-2 -right-2"
 			on:click={() => ($selectedOsmStop = null)}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M6 18L18 6M6 6l12 12"
-				/></svg
-			>
+			<Icon name="close" class="h-6 w-6" />
 		</button>
 		<div class="flex gap-2 items-center">
 			<button
@@ -460,7 +425,9 @@
 <dialog bind:this={pairingDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative">
 		<form method="dialog">
-			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">x</button>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<Icon name="close" class="h-4 stroke-current" />
+			</button>
 		</form>
 		<h3 class="font-bold text-lg">Emparelhamento</h3>
 		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">
@@ -536,7 +503,9 @@
 <dialog bind:this={newStopDialog} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box relative">
 		<form method="dialog">
-			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">x</button>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<Icon name="close" class="h-4 stroke-current" />
+			</button>
 		</form>
 		<h3 class="font-bold text-lg">Emparelhamento</h3>
 		<form method="dialog" class="flex flex-col gap-1 mt-2 overflow-y-scroll">

@@ -1,5 +1,6 @@
 <script>
 	import { flip } from 'svelte/animate';
+	import Icon from '$lib/components/Icon.svelte';
 
 	export let data = [];
 	export let removesItems = false;
@@ -95,6 +96,7 @@
 	</div>
 	<div
 		class="cursor-grab flex flex-col gap-1"
+		role="list"
 		on:mousemove={function (ev) {
 			ev.stopPropagation();
 			drag(ev.clientY);
@@ -153,17 +155,7 @@
 				animate:flip={{ duration: 200 }}
 			>
 				<div class="flex items-center gap-4">
-					<svg
-						class="fill-base-content opacity-40 w-4"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 448 512"
-					>
-						<!-- Font Awesome Free 6.4.0 https://fontawesome.com/license/free (Free License). -->
-						<path
-							d="M32 288c-17.7 0-32 14.3-32 32s14.3 32 32 32l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 288zm0-128c-17.7 0-32 14.3-32 32s14.3 32 32 32l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 160z"
-						/></svg
-					>
-
+					<Icon name="handle" class="fill-base-content  w-4 opacity-40" />
 					<div class="content">
 						<slot />
 						<p class="text-base-content">
@@ -180,16 +172,7 @@
 							removeDatum(i);
 						}}
 					>
-						<svg
-							class="fill-base-content opacity-80"
-							xmlns="http://www.w3.org/2000/svg"
-							height="16"
-							viewBox="0 0 24 24"
-							width="16"
-							><path d="M0 0h24v24H0z" fill="none" /><path
-								d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-							/></svg
-						>
+						<Icon name="close" class="h-4 w-4" />
 					</button>
 				{/if}
 			</div>

@@ -2,6 +2,7 @@
 	import { apiServer } from '$lib/settings';
 	import { token } from '$lib/stores';
 	import { createEventDispatcher } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -137,15 +138,15 @@
 					{/if}
 				</div>
 				{#if !uploading && !entry.isUploaded}
-					<div
+					<button
 						class="btn btn-error btn-circle btn-xs"
 						on:click={() => {
 							uploadQueue = uploadQueue.filter((_, index) => index !== i);
 							updatePendingCount();
 						}}
 					>
-						✕
-					</div>
+						<Icon name="close" class="h-4 stroke-current" />
+					</button>
 				{/if}
 			</div>
 		{/each}

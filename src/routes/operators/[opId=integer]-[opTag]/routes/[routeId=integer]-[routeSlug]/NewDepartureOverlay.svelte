@@ -113,67 +113,52 @@
 </div>
 
 {#if data.calendars && subroute && canEditSchedules}
-<div class="modal" class:modal-open={sendingPictures}>
-	<div class="modal-box w-11/12 max-w-3xl">
-		<div class="card card-compact self-center">
-			<div class="card-body">
-				<h2 class="card-title">Nova partida em {subroute.flag}</h2>
-				<div class="flex flex-col gap-4 text-lg">
-					<div class="form-control">
-						<label class="input-group">
-							<span>Início</span>
-							<input
-								type="time"
-								class="input input-bordered"
-								bind:this={newTimeInput}
-								bind:value={newTime}
-							/>
-							<input
-								type="button"
-								class="btn btn-success"
-								value="+"
-								on:mouseup={addAdditionalTime}
-							/>
+	<div class="modal" class:modal-open={sendingPictures}>
+		<div class="modal-box w-11/12 max-w-3xl">
+			<div class="card card-compact self-center">
+				<div class="card-body">
+					<h2 class="card-title">Nova partida em {subroute.flag}</h2>
+					<div class="flex flex-col gap-4 text-lg">
+						<div class="form-control">
+							<label class="input-group">
+								<span>Início</span>
+								<input
+									type="time"
+									class="input input-bordered"
+									bind:this={newTimeInput}
+									bind:value={newTime}
+								/>
+								<button class="btn btn-success" on:mouseup={addAdditionalTime}>+</button>
+							</label>
+						</div>
+
+						<div class="flex flex-wrap gap-2">
+							{#each additionalNewTimes as time}
+								<div class="badge badge-info gap-2">
+									{time}
+									<button on:click={() => removeAdditionalTime(time)}>
+										<Icon name="close" class="inline-block  h-4 w-4 stroke-current" />
+									</button>
+								</div>
+							{/each}
+						</div>
+						Em
+						<select class="select select-bordered w-fit" bind:value={newCalendarId}>
+							{#each Object.values(data.calendars) as calendar}
+								<option value={calendar.id}>{calendar.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="card-actions justify-end">
+						<label>
+							Limpar ao adicionar
+							<input type="checkbox" bind:checked={cleanOnAdd} />
 						</label>
-					</div>
 
-					<div class="flex flex-wrap gap-2">
-						{#each additionalNewTimes as time}
-							<div class="badge badge-info gap-2">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									class="inline-block w-4 h-4 stroke-current"
-									on:mouseup={() => removeAdditionalTime(time)}
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M6 18L18 6M6 6l12 12"
-									/>
-								</svg>
-								{time}
-							</div>
-						{/each}
+						<button class="btn btn-primary" on:mouseup={createDeparture}>Adicionar</button>
 					</div>
-					Em
-					<select class="select select-bordered w-fit" bind:value={newCalendarId}>
-						{#each Object.values(data.calendars) as calendar}
-							<option value={calendar.id}>{calendar.name}</option>
-						{/each}
-					</select>
-				</div>
-				<div class="card-actions justify-end">
-					<label>
-						Limpar ao adicionar
-						<input type="checkbox" bind:checked={cleanOnAdd} />
-					</label>
-
-					<button class="btn btn-primary" on:mouseup={createDeparture}>Adicionar</button>
 				</div>
 			</div>
 		</div>
 	</div>
-</div>
 {/if}

@@ -4,6 +4,7 @@
 	import { writable } from 'svelte/store';
 	import { token, decodedToken } from '$lib/stores.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import MapLocationPicker from './subcomponents/MapLocationPicker.svelte';
 	import StopAttrs from './subcomponents/StopAttrs.svelte';
 
@@ -460,9 +461,9 @@
 						{#each tags as tag}
 							<div class="badge badge-outline badge-lg">
 								{tag}
-								<button class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}
-									>✕</button
-								>
+								<button class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>
+									<Icon name="close" class="h-4 stroke-current" />
+								</button>
 							</div>
 						{/each}
 						<input

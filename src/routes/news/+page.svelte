@@ -6,6 +6,7 @@
 	import { apiServer } from '$lib/settings.js';
 	import { decodedToken } from '$lib/stores.js';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
+	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import NewsItem from './NewsItem.svelte';
 	import ExternalNewsItem from './ExternalNewsItem.svelte';
@@ -301,7 +302,9 @@
 		<div class="modal-box relative z-30 sm:max-w-5xl">
 			<div>
 				<form method="dialog">
-					<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
+					<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
+						<Icon name="close" class="h-4 stroke-current" />
+					</button>
 				</form>
 				{#key editItemId}
 					<ExternalNewsItemEditor

@@ -8,6 +8,7 @@
 	import { toast } from '$lib/stores.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { fetchRegions, getRegions, loadMissing } from '$lib/db';
+	import Icon from '$lib/components/Icon.svelte';
 	import OsmStopData from './OsmStopData.svelte';
 
 	let map;
@@ -372,7 +373,9 @@
 <dialog bind:this={searchDialog} class="modal modal-bottom sm:modal-middle z-30">
 	<div class="modal-box z-30 max-w-5xl grid grid-cols-1" style="grid-template-rows: auto 1fr;">
 		<form method="dialog">
-			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<Icon name="close" class="h-4 stroke-current" />
+			</button>
 			<h3 class="font-bold text-lg">Pesquisar</h3>
 			<input
 				type="text"

@@ -715,7 +715,9 @@
 	>
 		<div>
 			<form method="dialog">
-				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">x</button>
+				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
+					<Icon name="close" class="h-4 stroke-current" />
+				</button>
 			</form>
 			<h3 class="text-lg font-bold">Pesquisar por paragem</h3>
 			<input

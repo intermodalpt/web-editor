@@ -2,6 +2,7 @@
 	import { token } from '$lib/stores';
 	import { version } from '$lib/settings';
 	import { wipeCachedData, loadMissing } from '$lib/db';
+	import Icon from '../lib/components/Icon.svelte';
 
 	let cacheRebuilding = false;
 

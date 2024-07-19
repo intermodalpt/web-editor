@@ -1,9 +1,10 @@
 <script>
 	import { derived } from 'svelte/store';
 	import { page } from '$app/stores';
+	import { liveQuery } from 'dexie';
 	import { logout, decodedToken } from '$lib/stores.js';
 	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.js';
-	import { liveQuery } from 'dexie';
+	import Icon from '$lib/components/Icon.svelte';
 
 	const regions = liveQuery(() => getRegions());
 
@@ -24,19 +25,7 @@
 	<div class="grow flex justify-between items-center max-w-[80em]">
 		<div class="flex-none lg:hidden">
 			<label for="mobile-drawer" class="btn btn-sm btn-square btn-ghost">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					class="inline-block w-6 h-6 stroke-current"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M4 6h16M4 12h16M4 18h16"
-					/>
-				</svg>
+				<Icon name="hamburger" class="inline-block w-6 h-6 stroke-current" />
 			</label>
 		</div>
 		<div class="flex gap-2 items-center">
@@ -81,31 +70,14 @@
 						>{$decodedToken?.uname}</a
 					>
 					<a class="btn btn-info btn-xs h-8 w-8 p-1 sm:hidden" href="/perfil">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-							<!-- Font Awesome Free 6.4.0 https://fontawesome.com/license/free (Free License). -->
-							<path
-								d="M304 128a80 80 0 1 0 -160 0 80 80 0 1 0 160 0zM96 128a128 128 0 1 1 256 0A128 128
-								0 1 1 96 128zM49.3 464H398.7c-8.9-63.3-63.3-112-129-112H178.3c-65.7 0-120.1 48.7-129
-								112zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3
-								29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3z"
-							/>
-						</svg>
+						<Icon name="user" class="fill-info-content" />
 					</a>
-					<button class="btn btn-error btn-xs fill-error-content h-8 w-8 p-1" on:click={logout}>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-							<!-- Font Awesome Free 6.4.0 https://fontawesome.com/license/free (Free License). -->
-							<path
-								d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-12.5-12.5-32.8-12.5-45.3 0s-12.5
-								32.8 0 45.3L402.7 224 192 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l210.7 0-73.4
-								73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l128-128zM160 96c17.7 0 32-14.3
-								32-32s-14.3-32-32-32L96 32C43 32 0 75 0 128L0 384c0 53 43 96 96 96l64 0c17.7 0 32-14.3
-								32-32s-14.3-32-32-32l-64 0c-17.7 0-32-14.3-32-32l0-256c0-17.7 14.3-32 32-32l64 0z"
-							/></svg
-						>
+					<button class="btn btn-error btn-xs h-8 w-8 p-1" on:click={logout}>
+						<Icon name="exit" class="fill-error-content" />
 					</button>
 				</div>
 			{:else}
-				<a href="/login" class="btn btn-primary btn-xs">Login</a>
+				<a href="/login" class="btn btn-primary btn-xs">Entrar</a>
 			{/if}
 		</div>
 	</div>

@@ -1,4 +1,6 @@
 <script>
+	import Icon from '$lib/components/Icon.svelte';
+
 	export let tags;
 	export let tmpIssues;
 	export let notes;
@@ -71,10 +73,10 @@
 		<span class="text-sm">Defeitos</span>
 		<div class="flex flex-col items-start flex-wrap gap-1">
 			{#each tmpIssues as issue}
-				<div class="border rounded-xl p-1">
+				<div class="border rounded-xl p-1 flex items-center gap-1">
 					{tmpIssueLabels[issue]}
 					<button class="btn btn-error btn-circle btn-xs" on:click={() => removeIssue(issue)}>
-						✕
+						<Icon name="close" class="h-4 stroke-current" />
 					</button>
 				</div>
 			{/each}
@@ -121,10 +123,10 @@
 			</div>
 			<div class="flex flex-row flex-wrap gap-1">
 				{#each tags as tag}
-					<span class="border rounded-xl p-1">
+					<span class="border rounded-xl p-1 flex gap-1 items-center">
 						{tag}
 						<button class="btn btn-error btn-circle btn-xs" on:click={() => removeTag(tag)}>
-							✕
+							<Icon name="close" class="h-4 stroke-current" />
 						</button>
 					</span>
 				{/each}

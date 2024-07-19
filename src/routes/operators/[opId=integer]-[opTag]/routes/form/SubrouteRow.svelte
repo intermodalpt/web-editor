@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import ViaInput from './ViaInput.svelte';
 	import ViaForm from './ViaForm.svelte';
 
@@ -38,17 +39,9 @@
 					class="w-8"
 					on:dragstart={(event) => dragStart(event, groupIndex, indexInGroup)}
 					draggable="true"
+					role="listitem"
 				>
-					<svg
-						class="fill-base-content opacity-40 w-4"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 448 512"
-					>
-						<!-- Font Awesome Free 6.4.0 https://fontawesome.com/license/free (Free License). -->
-						<path
-							d="M32 288c-17.7 0-32 14.3-32 32s14.3 32 32 32l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 288zm0-128c-17.7 0-32 14.3-32 32s14.3 32 32 32l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 160z"
-						/></svg
-					>
+					<Icon name="handle" class="fill-base-content opacity-40 w-4" />
 				</span>
 			{/if}
 			<span>{subroute.flag || ''}</span>

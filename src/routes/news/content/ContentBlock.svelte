@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import MdContent from './MdContent.svelte';
 	import ImgContent from './ImgContent.svelte';
 	import MapContent from './MapContent.svelte';
@@ -38,7 +39,9 @@
 		<button class="btn btn-xs btn-outline" class:hidden={!hasNext} on:click={() => dispatch('down')}
 			>↓</button
 		>
-		<button class="btn btn-xs btn-error" on:click={() => dispatch('drop')}>x</button>
+		<button class="btn btn-xs btn-error" on:click={() => dispatch('drop')}>
+			<Icon name="close" class="h-4 stroke-current" />
+		</button>
 	</div>
 
 	{#if 'md' in block}
@@ -46,7 +49,7 @@
 	{:else if 'img' in block}
 		<ImgContent
 			bind:data={block.img}
-			bind:images={images}
+			bind:images
 			{canEdit}
 			on:new-img={(e) => {
 				const img = e.detail.img;
