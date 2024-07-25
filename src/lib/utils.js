@@ -568,3 +568,7 @@ export function isValidUri(uri) {
 
 	return true;
 }
+
+export function isValidEmail(email) {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
