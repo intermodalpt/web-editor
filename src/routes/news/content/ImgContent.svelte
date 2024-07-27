@@ -33,11 +33,10 @@
 
 		try {
 			let res = await fetch(`${apiServer}/v1/news/images`, {
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
 				method: 'POST',
-				body: formData,
-				headers: {
-					authorization: `Bearer ${$token}`
-				}
+				body: formData
 			});
 
 			// HTTP 200 means successful upload

@@ -1,17 +1,10 @@
-<script>
-	import { decodedToken } from '$lib/stores.js';
-	import { getStops } from '$lib/db';
-	import { writable } from 'svelte/store';
+<script lang="ts">
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 
-	/** @type {import('./$types').PageData} */
 	export let data;
-
-	const stops = writable({});
-
-	getStops().then((res) => {
-		stops.set(res);
-	});
+	const decidedContributions = data.decidedContributions;
+	const undecidedContributions = data.undecidedContributions;
+	const permissions = data.permissions;
 </script>
 
 <svelte:head>

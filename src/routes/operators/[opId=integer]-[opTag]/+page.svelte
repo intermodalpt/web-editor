@@ -2,11 +2,12 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { Map as Maplibre, LngLatBounds } from 'maplibre-gl';
-	import polyline from '@mapbox/polyline';
+	import { Map as Maplibre, LngLatBounds } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import polyline from '@mapbox/polyline';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { decodedToken } from '$lib/stores.js';
+	import { permissions } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions.ts';
 	import {
 		getRegions,
 		getOperators,
@@ -33,7 +34,7 @@
 		'#4c4f69'
 	];
 
-	const canEdit = $decodedToken?.permissions?.is_admin || false;
+	const canEdit = isAdmin($permissions);
 
 	let issues = [];
 

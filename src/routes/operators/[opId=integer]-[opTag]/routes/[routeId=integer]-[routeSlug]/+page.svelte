@@ -1,11 +1,12 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
-	import { decodedToken, token, toast } from '$lib/stores.js';
+	import { toast, permissions } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions.js';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { regionMapParams } from '$lib/utils.js';
 	import { fetchCalendars, getCalendars, loadMissing, selectedRegion } from '$lib/db';
@@ -22,7 +23,7 @@
 	const operatorId = data.route.operator;
 	const routeTypes = data.routeTypes;
 
-	const isAdmin = $decodedToken?.permissions?.is_admin || false;
+	const hasAdminPerm = isAdmin($permissions);
 
 	// Stores and reactive variables
 	// PS: We might not need stores as these are now coming from load()
@@ -613,10 +614,8 @@
 
 		fetch(`${apiServer}/v1/subroutes/${$selectedSubrouteId}/stops`, {
 			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				from: originalStops,
 				to: newStops
@@ -781,7 +780,7 @@
 					stops={$stops}
 					routeStops={$routeStops}
 					{routeTypes}
-					canEdit={isAdmin}
+					canEdit={hasAdminPerm}
 				/>
 			</div>
 		{:else if tab == tabs.departures && $selectedSubroute}
@@ -792,12 +791,12 @@
 					{selectedSubroute}
 					{routeSchedules}
 					{operatorCalendars}
-					canEdit={isAdmin}
+					canEdit={hasAdminPerm}
 				/>
 			</div>
 		{:else if tab == tabs.validation}
 			<div class="flex flex-col rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto">
-				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={isAdmin} />
+				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={hasAdminPerm} />
 			</div>
 		{/if}
 	</div>
@@ -805,8 +804,10 @@
 		<div
 			class="absolute lg:left-4 lg:bottom-4 bottom-2 left-2 z-10 bg-base-100 rounded-xl p-1 flex flex-col gap-1"
 		>
-			<button class="btn btn-sm normal-case" class:hidden={!isAdmin} on:click={handleStopIdImport}
-				>Import</button
+			<button
+				class="btn btn-sm normal-case"
+				class:hidden={!hasAdminPerm}
+				on:click={handleStopIdImport}>Import</button
 			>
 			<button
 				class="btn btn-sm normal-case"
@@ -848,7 +849,7 @@
 						/>
 					{/key}
 				</div>
-				{#if isAdmin}
+				{#if hasAdminPerm}
 					<div class="divider px-6 m-2" />
 					<div class="flex">
 						<button

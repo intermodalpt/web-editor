@@ -51,19 +51,15 @@
 		([$page, $userFilter], set) => {
 			undecidedLoaded = false;
 			console.log('fetching undecided contributions', $page);
-			const fetchParams = {
-				headers: {
-					authorization: `Bearer ${$token}`
-				}
-			};
 
 			return (
 				$userFilter
-					? fetch(
-							`${apiServer}/v1/contrib/contributions/undecided?p=${$page}&uid=${$userFilter}`,
-							fetchParams
-					  )
-					: fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${$page}`, fetchParams)
+					? fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${$page}&uid=${$userFilter}`, {
+							credentials: 'include'
+						})
+					: fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${$page}`, {
+							credentials: 'include'
+						})
 			)
 				.then((res) => res.json())
 				.then((res) => {
@@ -78,13 +74,8 @@
 		[decidedPage, forceDerivedStoresToUpdate],
 		([$page], set) => {
 			decidedLoaded = false;
-			const fetchParams = {
-				headers: {
-					authorization: `Bearer ${$token}`
-				}
-			};
 
-			fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, fetchParams)
+			fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, { credentials: 'include' })
 				.then((res) => res.json())
 				.then((res) => {
 					decidedTotal = res.total;
@@ -96,12 +87,7 @@
 
 	const changelog = derived([changelogPage, forceDerivedStoresToUpdate], ([$page], set) => {
 		changelogLoaded = false;
-		const fetchParams = {
-			headers: {
-				authorization: `Bearer ${$token}`
-			}
-		};
-		fetch(`${apiServer}/v1/contrib/changelog?p=${$page}`, fetchParams)
+		fetch(`${apiServer}/v1/contrib/changelog?p=${$page}`, { credentials: 'include' })
 			.then((res) => res.json())
 			.then((res) => {
 				changelogTotal = res.total;
@@ -122,14 +108,11 @@
 	}
 
 	async function loadData() {
-		let fetchParams = {
-			headers: {
-				authorization: `Bearer ${$token}`
-			}
-		};
 		await Promise.all([
 			fetchStops(),
-			fetch(`${apiServer}/v1/contrib/contributions/undecided/contributors`, fetchParams)
+			fetch(`${apiServer}/v1/contrib/contributions/undecided/contributors`, {
+				credentials: 'include'
+			})
 				.then((res) => res.json())
 				.then((res) => {
 					contributors = res;

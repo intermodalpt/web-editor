@@ -2,7 +2,8 @@
 	import { onMount, createEventDispatcher, tick } from 'svelte';
 	import { apiServer, movementTreshold } from '$lib/settings.js';
 	import { writable } from 'svelte/store';
-	import { token, decodedToken } from '$lib/stores.js';
+	import { permissions } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import Icon from '$lib/components/Icon.svelte';
 	import MapLocationPicker from './subcomponents/MapLocationPicker.svelte';
@@ -18,9 +19,7 @@
 
 	onMount(async () => {
 		const res = await fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
-			headers: {
-				Authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		}).then((r) => r.json());
 
 		image = res;
@@ -48,8 +47,7 @@
 		locationPicker?.setMarkerPosition(lon, lat);
 	});
 
-	const editable =
-		image?.uploader === $decodedToken?.permissions?.uid || $decodedToken?.permissions?.is_admin;
+	const editable = image?.uploader === $uid || isAdmin($permissions);
 	let saveInProgress = false;
 
 	let qualityLabelElem;
@@ -221,11 +219,9 @@
 
 		fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
 			method: 'PATCH',
-			body: JSON.stringify(savedPic),
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			}
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(savedPic)
 		})
 			.catch((e) => {
 				alert('Failed to save the stop meta. Error: ' + e.message);
@@ -256,13 +252,7 @@
 
 	function deleteImage() {
 		if (confirm('Tem certeza que quer apagar esta imagem?')) {
-			fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${$token}`
-				}
-			})
+			fetch(`${apiServer}/v1/stop_pics/${imageId}`, { method: 'DELETE', credentials: 'include' })
 				.catch(() => alert('Failed to delete the image'))
 				.then(() => {
 					dispatch('delete', { id: imageId });

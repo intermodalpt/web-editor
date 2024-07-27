@@ -116,10 +116,8 @@
 			`${apiServer}/v1/subroutes/${subroute.id}/validation/correspondence_ack`,
 			{
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$token}`
-				},
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
 				body: JSON.stringify({
 					from_stop_ids: subroute.validation.correspondence_ack,
 					to_stop_ids: subroute.validation.correspondence
@@ -143,10 +141,8 @@
 
 		const res = await fetch(`${apiServer}/v1/subroutes/${subroute.id}/validation/current_ack`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				from_stop_ids: subroute.validation.current_ack,
 				to_stop_ids: subroute.validation.current
@@ -169,10 +165,8 @@
 
 		const res = await fetch(`${apiServer}/v1/subroutes/${subroute.id}/stops`, {
 			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				from: subroute.validation.current,
 				to: subroute.validation.correspondence
@@ -196,10 +190,8 @@
 
 		const res = await fetch(`${apiServer}/v1/routes/${$route.id}/assign_unmatched_validation`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				subroute_id: subroute.id,
 				pattern_id: pairRef,

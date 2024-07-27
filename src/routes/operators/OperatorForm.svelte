@@ -4,7 +4,8 @@
 	import { onMount } from 'svelte';
 	import { liveQuery } from 'dexie';
 	import { getRegions, wipeOperators } from '$lib/db';
-	import { token, decodedToken, toast } from '$lib/stores.js';
+	import { permissions, toast } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions';
 	import { apiServer } from '$lib/settings.js';
 	import { isDeepEqual, deepCopy } from '$lib/utils.js';
 	import RouteTypeForm from './RouteTypeForm.svelte';
@@ -20,7 +21,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	const canEdit = $decodedToken?.permissions.is_admin;
+	const canEdit = isAdmin($permissions);
 
 	export let id = null;
 
@@ -153,9 +154,7 @@
 			for (let region of newRegions) {
 				fetch(`${apiServer}/v1/regions/${region}/operators/${id}`, {
 					method: 'PUT',
-					headers: {
-						authorization: `Bearer ${$token}`
-					}
+					credentials: 'include'
 				}).then((res) => {
 					if (res.ok) {
 						toast(`Região ${region} adicionada ao operador ${originalTag}`, 'success');
@@ -174,9 +173,7 @@
 			for (let region of removedRegions) {
 				fetch(`${apiServer}/v1/regions/${region}/operators/${id}`, {
 					method: 'DELETE',
-					headers: {
-						authorization: `Bearer ${$token}`
-					}
+					credentials: 'include'
 				}).then((res) => {
 					if (res.ok) {
 						toast(`Região ${region} removida do operador ${originalTag}`, 'success');
@@ -203,9 +200,7 @@
 			formData.append('logo', logoFiles[0]);
 			let res = await fetch(`${apiServer}/v1/operators/${id}/logo`, {
 				method: 'POST',
-				headers: {
-					authorization: `Bearer ${$token}`
-				},
+				credentials: 'include',
 				body: formData
 			});
 
@@ -232,10 +227,7 @@
 			for (const rt of deletedRouteTypes) {
 				let res = await fetch(`${apiServer}/v1/operators/${id}/routes/types/${rt.id}`, {
 					method: 'DELETE',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${$token}`
-					}
+					credentials: 'include'
 				});
 
 				if (res.ok) {
@@ -270,10 +262,8 @@
 				if (rt.id < 0) {
 					let res = await fetch(`${apiServer}/v1/operators/${id}/routes/types`, {
 						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${$token}`
-						},
+						headers: { 'Content-Type': 'application/json' },
+						credentials: 'include',
 						body: JSON.stringify(body)
 					});
 
@@ -295,10 +285,8 @@
 				} else {
 					let res = await fetch(`${apiServer}/v1/operators/${id}/routes/types/${rt.id}`, {
 						method: 'PATCH',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${$token}`
-						},
+						headers: { 'Content-Type': 'application/json' },
+						credentials: 'include',
 						body: JSON.stringify(body)
 					});
 
@@ -327,10 +315,8 @@
 			const [dataRes] = await Promise.all([
 				fetch(`${apiServer}/v1/operators/${id}`, {
 					method: 'PATCH',
-					headers: {
-						'Content-Type': 'application/json',
-						authorization: `Bearer ${$token}`
-					},
+					headers: { 'Content-Type': 'application/json' },
+					credentials: 'include',
 					body: JSON.stringify(data)
 				}),
 				updateRegions(),
@@ -352,10 +338,8 @@
 		} else {
 			let res = await fetch(`${apiServer}/v1/operators`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${$token}`
-				},
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
 				body: JSON.stringify(data)
 			});
 
@@ -385,10 +369,8 @@
 		if (!id) return;
 
 		fetch(`${apiServer}/v1/operators/${id}`, {
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include'
 		})
 			.then((r) => r.json())
 			.then((item) => {

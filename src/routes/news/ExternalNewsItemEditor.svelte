@@ -69,10 +69,8 @@
 
 		const res = await fetch(`${apiServer}/v1/news/external/${id}`, {
 			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify(data)
 		});
 
@@ -91,10 +89,7 @@
 
 		const res = awaitfetch(`${apiServer}/v1/news/external/${id}`, {
 			method: 'DELETE',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		});
 
 		if (res.ok) {
@@ -106,12 +101,7 @@
 	}
 
 	onMount(() => {
-		fetch(`${apiServer}/v1/news/external/${id}/full`, {
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
-		})
+		fetch(`${apiServer}/v1/news/external/${id}/full`, { credentials: 'include' })
 			.then((r) => r.json())
 			.then((item) => {
 				original = item;

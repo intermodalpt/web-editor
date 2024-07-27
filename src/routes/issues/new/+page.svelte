@@ -77,11 +77,9 @@
 
 		let res = await fetch(`${apiServer}/v1/issues`, {
 			method: 'POST',
-			body: JSON.stringify(issue),
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			}
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify(issue)
 		});
 
 		if (res.ok) {

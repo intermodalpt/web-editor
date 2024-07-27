@@ -72,10 +72,8 @@
 			try {
 				let res = await fetch(url, {
 					method: 'POST',
-					body: formData,
-					headers: {
-						authorization: `Bearer ${$token}`
-					}
+					credentials: 'include',
+					body: formData
 				});
 
 				entry.isUploading = false;

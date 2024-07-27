@@ -1,11 +1,12 @@
 <script>
+	import { derived } from 'svelte/store';
 	import Select from 'svelte-select';
+	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings.js';
 	import { calendarStr, isDeepEqual } from '$lib/utils.js';
-	import { token, decodedToken } from '$lib/stores.js';
-	import { liveQuery } from 'dexie';
+	import { permissions } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions';
 	import { fetchOperators, getOperators, fetchCalendars, getCalendars, loadMissing } from '$lib/db';
-	import { derived } from 'svelte/store';
 
 	const calendars = liveQuery(() => getCalendars());
 	const operators = liveQuery(() => getOperators());
@@ -108,10 +109,8 @@
 		}
 		fetch(`${apiServer}/v1/operators/${selectedOperatorId}/calendars`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				name: formTitle,
 				calendar: formCalendar
@@ -137,10 +136,7 @@
 		}
 		fetch(`${apiServer}/v1/operators/${selectedOperatorId}/calendars/${calendar.id}`, {
 			method: 'DELETE',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		}).then(async (response) => {
 			if (response.ok) {
 				await fetchCalendars(false);
@@ -184,12 +180,12 @@
 								<td>{calendar.name}</td>
 								<td>{calendarStr(calendar.calendar)}</td>
 								<td>
-									{#if $decodedToken?.permissions.is_admin}
-										<span
+									{#if isAdmin($permissions)}
+										<button
 											class="btn btn-error btn-xs btn-outline"
-											on:mouseup={() => {
+											on:click={() => {
 												deleteCalendar(calendar);
-											}}>Apagar</span
+											}}>Apagar</button
 										>
 									{/if}
 								</td>
@@ -201,7 +197,7 @@
 		</div>
 	</div>
 
-	{#if selectedOperatorId && $decodedToken?.permissions.is_admin}
+	{#if selectedOperatorId && isAdmin($permissions)}
 		<div class="card max-w-5xl bg-base-100 shadow-md">
 			<div class="card-body">
 				<h2 class="card-title">Novo calendário</h2>

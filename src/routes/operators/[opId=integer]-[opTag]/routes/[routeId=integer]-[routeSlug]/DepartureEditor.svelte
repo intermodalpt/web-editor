@@ -47,10 +47,8 @@
 
 			await fetch(`${apiServer}/v1/schedules/${$selectedSubroute.id}`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${$token}`
-				},
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
 				body: JSON.stringify(departure)
 			}).then((x) => {
 				if (x.ok) {
@@ -72,7 +70,7 @@
 		if (confirm(`Confirma que quer apagar? (${timestampToTime(selectedDeparture.time)})`)) {
 			await fetch(`${apiServer}/v1/schedules/${$selectedSubroute.id}/${selectedDepartureId}`, {
 				method: 'DELETE',
-				headers: { authorization: `Bearer ${$token}` }
+				credentials: 'include'
 			});
 			invalidate('app:departures');
 		}

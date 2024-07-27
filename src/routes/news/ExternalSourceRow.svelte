@@ -21,10 +21,7 @@
 
 	onMount(async () => {
 		const res = await fetch(`${apiServer}/v1/news/external/${externalId}/full`, {
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		});
 
 		if (!res.ok) {

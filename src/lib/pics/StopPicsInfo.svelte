@@ -13,11 +13,7 @@
 			return;
 		}
 
-		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, {
-			headers: {
-				authorization: `Bearer ${$token}`
-			}
-		})
+		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, { credentials: 'include' })
 			.then((r) => r.json())
 			.then((r) => {
 				set(r);

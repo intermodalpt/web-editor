@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { apiServer } from '$lib/settings.js';
-	import { token } from '$lib/stores.js';
+	import { toast } from '$lib/stores';
 	import Registration from './Registration.svelte';
 
 	const tabs = {
@@ -36,10 +36,8 @@
 				}
 			})
 			.then((tokenVal) => {
-				$token = tokenVal;
-				// TODO Set this in a store, not directly in localStorage
-				localStorage.setItem('token', tokenVal);
-				return goto('/perfil');
+				toast('Autenticado com sucesso');
+				goto('/perfil', { invalidateAll: true });
 			});
 	}
 

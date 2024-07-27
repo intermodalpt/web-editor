@@ -38,11 +38,7 @@
 
 	const panoOnion = derived([selectedPano], async ([$selectedPano], set) => {
 		if (!$selectedPano) return null;
-		fetch(`${apiServer}/v1/stop_pics/pano/${$selectedPano.id}/onion`, {
-			headers: {
-				Authorization: `Bearer ${$token}`
-			}
-		})
+		fetch(`${apiServer}/v1/stop_pics/pano/${$selectedPano.id}/onion`, { credentials: 'include' })
 			.then((r) => r.json())
 			.then((r) => set(r));
 	});
@@ -107,11 +103,7 @@
 			fetchStops().then((r) => {
 				stopsLoaded = true;
 			}),
-			fetch(`${apiServer}/v1/stop_pics/pano/all`, {
-				headers: {
-					Authorization: `Bearer ${$token}`
-				}
-			})
+			fetch(`${apiServer}/v1/stop_pics/pano/all`, { credentials: 'include' })
 				.then((r) => r.json())
 				.then((r) => {
 					$panoramas = r;

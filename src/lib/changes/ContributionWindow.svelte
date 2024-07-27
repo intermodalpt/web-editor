@@ -2,7 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 	import { apiServer } from '$lib/settings.js';
-	import { token, decodedToken } from '$lib/stores.js';
+	import { permissions } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions.ts';
 
 	export let contribution;
 	export let stops;
@@ -11,7 +12,8 @@
 
 	let ignoredKeys = [];
 
-	const isEvaluation = $decodedToken?.permissions?.is_admin && contribution.accepted == null;
+	const hasAdminPerm = isAdmin($permissions);
+	const isEvaluation = hasAdminPerm && contribution.accepted == null;
 
 	const dispatch = createEventDispatcher();
 
@@ -22,10 +24,8 @@
 			}&ignored=${ignoredKeys.join(',')}`,
 			{
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$token}`
-				}
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include'
 			}
 		)
 			.catch((e) => {
@@ -46,10 +46,7 @@
 		if (!confirm('Are you sure')) return;
 		fetch(`${apiServer}/v1/contrib/${contribution.id}/decline`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		})
 			.catch((e) => {
 				alert("Couldn't decline contribution: " + e.message);
@@ -114,7 +111,7 @@
 				</div>
 			{/if}
 			<button class="btn" on:click={close}>Fechar</button>
-			{#if $decodedToken?.permissions?.is_admin && contribution.accepted != true}
+			{#if hasAdminPerm && contribution.accepted != true}
 				<button class="btn btn-success" on:click={acceptContribution}>Aceitar</button>
 			{/if}
 		</div>

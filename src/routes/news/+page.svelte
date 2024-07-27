@@ -4,7 +4,8 @@
 	import { writable, derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings.js';
-	import { decodedToken } from '$lib/stores.js';
+	import { permissions } from '$lib/stores.js';
+	import { canCreateNews, canModifyNews } from '$lib/permissions';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
@@ -12,7 +13,6 @@
 	import ExternalNewsItem from './ExternalNewsItem.svelte';
 	import ExternalNewsItemEditor from './ExternalNewsItemEditor.svelte';
 
-	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 	const operators = liveQuery(() => getOperators());
 	const regions = liveQuery(() => getRegions());
 
@@ -49,18 +49,14 @@
 		[pendingExternalPage, operatorFilter, forceDerivedStoresToUpdate],
 		async ([$page, $OperatorFilter], set) => {
 			pendingExternalLoaded = false;
-			const fetchParams = {
-				headers: {
-					authorization: `Bearer ${$token}`
-				}
-			};
 
 			const res = await ($OperatorFilter
-				? fetch(
-						`${apiServer}/v1/operators/${$operatorFilter}/external_news/pending?p=${$page}`,
-						fetchParams
-					)
-				: fetch(`${apiServer}/v1/news/external/pending?p=${$page}`, fetchParams));
+				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/external_news/pending?p=${$page}`, {
+						credentials: 'include'
+					})
+				: fetch(`${apiServer}/v1/news/external/pending?p=${$page}`, {
+						credentials: 'include'
+					}));
 			const data = await res.json();
 			pendingExternalTotal = data.total;
 			set(data.items);
@@ -72,18 +68,12 @@
 		[pendingExternalPage, operatorFilter, forceDerivedStoresToUpdate],
 		async ([$page, $OperatorFilter], set) => {
 			allExternalLoaded = false;
-			const fetchParams = {
-				headers: {
-					authorization: `Bearer ${$token}`
-				}
-			};
 
 			const res = await ($OperatorFilter
-				? fetch(
-						`${apiServer}/v1/operators/${$operatorFilter}/external_news?p=${$page}`,
-						fetchParams
-					)
-				: fetch(`${apiServer}/v1/news/external?p=${$page}`, fetchParams));
+				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/external_news?p=${$page}`, {
+						credentials: 'include'
+					})
+				: fetch(`${apiServer}/v1/news/external?p=${$page}`, { credentials: 'include' }));
 			const data = await res.json();
 			allExternalTotal = data.total;
 			set(data.items);
@@ -95,15 +85,11 @@
 		[allInternalPage, operatorFilter, forceDerivedStoresToUpdate],
 		async ([$page, $OperatorFilter], set) => {
 			allInternalLoaded = false;
-			const fetchParams = {
-				headers: {
-					authorization: `Bearer ${$token}`
-				}
-			};
-
 			const res = await ($OperatorFilter
-				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/news?p=${$page}`, fetchParams)
-				: fetch(`${apiServer}/v1/news?p=${$page}`, fetchParams));
+				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/news?p=${$page}`, {
+						credentials: 'include'
+					})
+				: fetch(`${apiServer}/v1/news?p=${$page}`, { credentials: 'include' }));
 			const data = await res.json();
 			allInternalTotal = data.total;
 			set(data.items);
@@ -311,7 +297,7 @@
 						id={editItemId}
 						{operators}
 						{regions}
-						canEdit={isAdmin}
+						canEdit={canCreateNews($permissions) || canModifyNews($permissions)}
 						on:save={() => {
 							editDialog.close();
 							refreshData();

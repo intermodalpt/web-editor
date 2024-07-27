@@ -90,10 +90,8 @@
 	async function createRoute() {
 		let res = await fetch(`${apiServer}/v1/routes`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				operator_id: route._original.operator_id,
 				main_subroute: route._original.main_subroute,
@@ -123,12 +121,12 @@
 	async function patchRoute() {
 		let res = await fetch(`${apiServer}/v1/routes/${route.id}`, {
 			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
-				operator_id: route._original.operator_id,
+				// TODO rename once the API is updated
+				// operator_id: route._original.operator_id,
+				operator_id: route._original.operator,
 				main_subroute: route._original.main_subroute,
 				code: route.code,
 				name: route.name,
@@ -155,19 +153,12 @@
 
 	function deleteRoute() {
 		if (confirm(`Quer mesmo apagar a linha ${route.code}?`)) {
-			fetch(`${apiServer}/v1/routes/${route.id}`, {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${$token}`
-				}
-			})
+			fetch(`${apiServer}/v1/routes/${route.id}`, { method: 'DELETE', credentials: 'include' })
 				.catch((e) => {
 					toast(`Erro a apagar a rota`, 'error');
 				})
 				.then((res) => {
 					if (res.ok) {
-						routeChanged = false;
 						toast(`Rota apagada com sucesso`);
 					} else {
 						res
@@ -200,10 +191,8 @@
 	async function createSubroute(subroute) {
 		return await fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				group: subroute.group,
 				flag: deriveFlag(subroute),
@@ -247,10 +236,8 @@
 	async function patchSubroute(subroute) {
 		return await fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
 			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify({
 				group: subroute.group,
 				headsign: subroute.headsign,
@@ -290,38 +277,33 @@
 	}
 
 	async function deleteSubroute(subroute) {
-		await fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
+		const success = await fetch(`${apiServer}/v1/routes/${route.id}/${subroute.id}`, {
 			method: 'DELETE',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		})
 			.catch((e) => {
 				toast('Error deleting', 'error');
-				console.log(e);
+				console.error(e);
 			})
 			.then((res) => {
 				if (res.ok) {
+					toast(`Variante apagada com sucesso`);
+					return true;
 				} else {
-					if (res.ok) {
-						routeChanged = false;
-						toast(`Variante apagada com sucesso`);
-						return true;
-					} else {
-						res
-							.text()
-							.then((error) => {
-								toast(`Erro a apagar variante:\n${error}`, 'error');
-							})
-							.catch(() => {
-								toast('Erro a apagar variante', 'error');
-							});
-						return false;
-					}
+					res
+						.text()
+						.then((error) => {
+							toast(`Erro a apagar variante:\n${error}`, 'error');
+						})
+						.catch(() => {
+							toast('Erro a apagar variante', 'error');
+						});
+					return false;
 				}
 			});
+
 		route.subroutes = route.subroutes;
+		return success;
 	}
 </script>
 

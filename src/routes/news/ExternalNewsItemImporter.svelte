@@ -76,10 +76,7 @@
 
 		const res = await fetch(`${apiServer}/v1/news/images/import_external/${extImageId}`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		});
 
 		uploadingImages.delete(extImageId);

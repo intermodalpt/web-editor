@@ -124,9 +124,8 @@
 	function handleSave() {
 		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/todo`, {
 			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
 			body: JSON.stringify(todo)
 		})
 			.then((res) => {

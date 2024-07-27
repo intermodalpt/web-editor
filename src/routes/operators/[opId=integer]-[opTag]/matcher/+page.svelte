@@ -3,10 +3,20 @@
 	import { derived, writable } from 'svelte/store';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
-	import { softInvalidateStops, selectedRegion } from '$lib/db';
+	import { softInvalidateStops, selectedRegion, loadMissing } from '$lib/db';
+	import {
+		createStop,
+		setStopUnverified,
+		attachStopToRegion,
+		attachStopToOperator,
+		detachStopFromOperator,
+		setStopPosition
+	} from '$lib/api.js';
 	import { regionMapParams } from '$lib/utils.js';
-	import { decodedToken, token, toast } from '$lib/stores.js';
+	import { permissions, toast } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions.ts';
 	import { apiServer, credibleSources } from '$lib/settings.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import MatchViewer from './MatchViewer.svelte';
 	import MatcherMap from './MatcherMap.svelte';
 
@@ -686,7 +696,7 @@
 			class:w-[300px]={!areStopsSelected}
 		>
 			<MatchViewer
-				canEdit={$decodedToken?.permissions?.is_admin}
+				canEdit={isAdmin($permissions)}
 				{operator}
 				gtfsStops={$gtfsStops}
 				{selectedGtfsStop}

@@ -3,7 +3,8 @@
 	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings.js';
 	import { Gallery } from '$lib/pics/utils.js';
-	import { token } from '$lib/stores.js';
+	import { token, isAuthenticated, permissions } from '$lib/stores.js';
+	import { canUploadPics, canContribUploadPics } from '$lib/permissions.ts';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import SinglePicMetaEditor from '$lib/pics/wrappers/SinglePicMetaEditor.svelte';
 	import PicUploader from '$lib/pics/PicUploader.svelte';
@@ -84,11 +85,9 @@
 		let pages = pagesToFetch(taggedGallery.nextPage);
 
 		Promise.all(
-			pages.map((page) => {
+			pages.map(async (page) => {
 				return fetch(`${apiServer}/v1/stop_pics/latest?tagged_only=true&p=${page}`, {
-					headers: {
-						authorization: `Bearer ${$token}`
-					}
+					credentials: 'include'
 				}).then((r) => r.json());
 			})
 		)
@@ -110,11 +109,9 @@
 		let pages = pagesToFetch(untaggedGallery.nextPage);
 
 		Promise.all(
-			pages.map((page) => {
+			pages.map(async (page) => {
 				return fetch(`${apiServer}/v1/stop_pics/latest?untagged_only=true&p=${page}`, {
-					headers: {
-						authorization: `Bearer ${$token}`
-					}
+					credentials: 'include'
 				}).then((r) => r.json());
 			})
 		)
@@ -136,11 +133,9 @@
 		let pages = pagesToFetch(unpositionedGallery.nextPage);
 
 		Promise.all(
-			pages.map((page) => {
+			pages.map(async (page) => {
 				return fetch(`${apiServer}/v1/stop_pics/unpositioned?p=${page}`, {
-					headers: {
-						authorization: `Bearer ${$token}`
-					}
+					credentials: 'include'
 				}).then((r) => r.json());
 			})
 		)
@@ -179,11 +174,7 @@
 	function handlePicSave(e) {
 		let picture = e.detail.picture;
 
-		fetch(`${apiServer}/v1/stop_pics/${picture.id}`, {
-			headers: {
-				Authorization: `Bearer ${$token}`
-			}
-		})
+		fetch(`${apiServer}/v1/stop_pics/${picture.id}`, { credentials: 'include' })
 			.then((r) => r.json())
 			.then((pic) => {
 				let isTagged = pic.tagged;
@@ -253,7 +244,7 @@
 			class:tab-active={$tab === tabs.untagged}
 			on:click={() => ($tab = tabs.untagged)}>Por catalogar</button
 		>
-		{#if $token}
+		{#if $isAuthenticated}
 			<button
 				class="tab tab-bordered lg:tab-lifted"
 				class:tab-active={$tab === tabs.unpositioned}
@@ -394,7 +385,7 @@
 		{:else if $tab === tabs.upload}
 			<div class="card-body">
 				<h2 class="card-title">Enviar imagens</h2>
-				{#if $token}
+				{#if canUploadPics($permissions) || canContribUploadPics($permissions)}
 					<PicUploader />
 				{:else}
 					<p class="text-lg">Precisa de estar autenticado para enviar imagens</p>

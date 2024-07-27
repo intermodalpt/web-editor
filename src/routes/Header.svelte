@@ -2,9 +2,11 @@
 	import { derived } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { liveQuery } from 'dexie';
-	import { logout, decodedToken } from '$lib/stores.js';
+	import { logout } from '$lib/stores.js';
 	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.js';
 	import Icon from '$lib/components/Icon.svelte';
+
+	export let username;
 
 	const regions = liveQuery(() => getRegions());
 
@@ -64,11 +66,9 @@
 			</div>
 		</nav>
 		<div>
-			{#if $decodedToken}
+			{#if username}
 				<div class="bg-base-200 rounded-lg p-1 flex gap-2">
-					<a class="btn btn-info btn-xs h-8 p-1 hidden sm:flex" href="/perfil"
-						>{$decodedToken?.uname}</a
-					>
+					<a class="btn btn-info btn-xs h-8 p-1 hidden sm:flex" href="/perfil">{username}</a>
 					<a class="btn btn-info btn-xs h-8 w-8 p-1 sm:hidden" href="/perfil">
 						<Icon name="user" class="fill-info-content" />
 					</a>

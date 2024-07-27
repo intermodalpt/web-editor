@@ -1,7 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
-	import { token } from '$lib/stores';
 	import { apiServer } from '$lib/settings';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
@@ -16,9 +15,7 @@
 		}
 
 		fetch(`${apiServer}/v1/stop_pics/${$picId}`, {
-			headers: {
-				authorization: `Bearer ${$token}`
-			}
+			credentials: 'include'
 		})
 			.then((r) => r.json())
 			.then((r) => {
@@ -52,7 +49,6 @@
 				</span>
 				<button
 					class="btn btn-xs btn-primary"
-					disabled={!$token}
 					on:click={() => {
 						dispatch('edit-pic', { id: $data.id });
 					}}>Editar</button

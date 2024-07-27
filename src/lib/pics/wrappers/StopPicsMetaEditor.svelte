@@ -2,9 +2,10 @@
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings.js';
-	import { token, decodedToken } from '$lib/stores.js';
+	import { isAuthenticated, permissions, uid } from '$lib/stores.js';
 	import PicMetaEditor from '$lib/pics/PicMetaEditor.svelte';
 	import PicUploader from '$lib/pics/PicUploader.svelte';
+	import { isAdmin } from '$lib/permissions';
 
 	const POSITION_REQUIRED = false;
 
@@ -27,10 +28,8 @@
 				return [];
 			}
 
-			let req = $decodedToken
-				? fetch(`${apiServer}/v1/stops/${$stop.id}/pictures/all`, {
-						headers: { authorization: `Bearer ${$token}` }
-					})
+			let req = $isAuthenticated
+				? fetch(`${apiServer}/v1/stops/${$stop.id}/pictures/all`, { credentials: 'include' })
 				: fetch(`${apiServer}/v1/stops/${$stop.id}/pictures`);
 
 			req
@@ -42,10 +41,7 @@
 						const quality = pic.tagged;
 						const stops = pic.stops != null && pic.stops.length > 0;
 						const total = !(POSITION_REQUIRED && !position) && visibility && quality && stops;
-						const fixable =
-							!total &&
-							(pic.uploader === $decodedToken?.permissions?.uid ||
-								$decodedToken?.permissions?.is_admin);
+						const fixable = !total && (pic.uploader === $uid || isAdmin($permissions));
 
 						pic.metaCompleteness = {
 							position: position,

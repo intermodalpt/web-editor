@@ -9,7 +9,8 @@
 		getRoutes,
 		loadMissing
 	} from '$lib/db';
-	import { decodedToken } from '$lib/stores';
+	import { permissions } from '$lib/stores';
+	import { isAdmin } from '$lib/permissions';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -44,11 +45,7 @@
 				<li><a class="link" href="/operators/{operator.id}-{operator.tag}/issues">Problemas</a></li>
 			</ul>
 		</div>
-		<a
-			class="btn btn-primary btn-sm"
-			class:hidden={!$decodedToken?.permissions?.is_admin}
-			href="/issues/new"
-		>
+		<a class="btn btn-primary btn-sm" class:hidden={!isAdmin($permissions)} href="/issues/new">
 			Adicionar problema
 		</a>
 	</div>

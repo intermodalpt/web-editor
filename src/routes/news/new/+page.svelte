@@ -1,10 +1,10 @@
 <script>
 	import { liveQuery } from 'dexie';
-	import { decodedToken } from '$lib/stores.js';
+	import { permissions } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import NewsItemEditor from '../NewsItemEditor.svelte';
 
-	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 	const operators = liveQuery(() => getOperators());
 	const regions = liveQuery(() => getRegions());
 
@@ -26,7 +26,7 @@
 <div class="self-center max-w-[80em] w-full my-4">
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-sm self-start">
 		<div class="card-body">
-			<NewsItemEditor {operators} {regions} canEdit={isAdmin} />
+			<NewsItemEditor {operators} {regions} canEdit={isAdmin($permissions)} />
 		</div>
 	</div>
 </div>

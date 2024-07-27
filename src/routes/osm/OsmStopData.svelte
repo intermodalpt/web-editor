@@ -2,9 +2,12 @@
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { apiServer, movementTreshold } from '$lib/settings.js';
-	import { decodedToken, token, toast } from '$lib/stores.js';
+	import { toast, permissions } from '$lib/stores.js';
+	import { canCreateStops, canMoveStops } from '$lib/permissions.ts';
+	import { createStop, attachStopToRegion, setStopPosition } from '$lib/api.js';
 	import { distance } from '$lib/utils.js';
 	import { regionId } from '$lib/db.js';
+	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 
@@ -13,13 +16,14 @@
 	export let osmStop;
 	export let regions;
 
+	let hasCreateStopsPerm = canCreateStops($permissions);
+	let hasModifyPosPerm = canMoveStops($permissions);
+
 	let isCreating = false;
 	let creationDialog;
 
 	let newStopName;
 	let newStopRegions = $regionId ? [$regionId] : [];
-
-	const isAdmin = $decodedToken?.permissions?.is_admin || false;
 
 	const stopHistory = derived(osmStop, ($osmStop, set) => {
 		if (!$osmStop) return [];
@@ -325,7 +329,7 @@
 						<button
 							class="btn grow btn-primary"
 							on:click={handleSyncPosition}
-							disabled={!isAdmin ||
+							disabled={!hasModifyPosPerm ||
 								!$derivedStopDistance ||
 								Math.abs($derivedStopDistance) < movementTreshold}
 						>
@@ -336,7 +340,7 @@
 				</div>
 			{:else}
 				<span>Sem equivalente</span>
-				{#if isAdmin}
+				{#if hasCreateStopsPerm}
 					<button class="btn btn-primary" on:click={handlePrecreate} disabled={isCreating}
 						>Criar</button
 					>

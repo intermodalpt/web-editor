@@ -3,11 +3,12 @@
 	import { derived, writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
+	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
 	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { decodedToken, token, toast } from '$lib/stores.js';
+	import { permissions, toast, isAuthenticated } from '$lib/stores.js';
+	import { isAdmin } from '$lib/permissions.ts';
 	import { isDeepEqual } from '$lib/utils.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { fetchStops, getStops, patchStop, loadMissing } from '$lib/db';
@@ -22,6 +23,8 @@
 	import PicDialog from '$lib/pics/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
 	import StopAttributesForm from './forms/StopAttributesForm.svelte';
+
+	const hasAdminPerm = isAdmin($permissions);
 
 	let picsPerStop = {};
 	let map;
@@ -64,7 +67,7 @@
 	const userPatches = writable([]);
 
 	const patchedStops = derived([stops, userPatches], ([$stops, $userPatches], set) => {
-		if ($stops && $token) {
+		if ($userPatches) {
 			const patched = Object.assign({}, $stops);
 
 			for (const stop of $userPatches) {
@@ -91,12 +94,10 @@
 					return r;
 				}),
 			// Either get the current user's patches or an empty array if no user is logged in
-			$token
-				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, {
-						headers: {
-							authorization: `Bearer ${$token}`
-						}
-					}).then((res) => res.json())
+			$isAuthenticated
+				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, { credentials: 'include' }).then(
+						(res) => res.json()
+					)
 				: new Promise((resolve) => {
 						resolve([]);
 					})
@@ -215,9 +216,9 @@
 		[selectedStop, stopPicturesNonce],
 		([$selectedStop, stopPicturesNonce], set) => {
 			if ($selectedStop) {
-				if ($decodedToken) {
+				if ($isAuthenticated) {
 					fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, {
-						headers: { authorization: `Bearer ${$token}` }
+						credentials: 'include'
 					})
 						.then((r) => r.json())
 						.then((pictureList) => set(pictureList));
@@ -470,11 +471,7 @@
 		let newStop = e.detail.stop;
 		const hasStopChanged = !isDeepEqual(newStop, currStop);
 
-		const headers = {
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${$token}`
-		};
-		const isAdmin = $decodedToken?.permissions.is_admin;
+		const headers = { 'Content-Type': 'application/json' };
 
 		if (!hasStopChanged) {
 			console.log('Não foram feitas alterações na paragem');
@@ -485,7 +482,7 @@
 
 		console.log('Foram feitas alterações');
 		let request;
-		if (isAdmin) {
+		if (hasAdminPerm) {
 			request = fetch(`${apiServer}/v1/stops/${currStop.id}`, {
 				method: 'PATCH',
 				headers: headers,
@@ -513,7 +510,7 @@
 		request
 			.then(async (r) => {
 				if (r.ok) {
-					if (isAdmin) {
+					if (hasAdminPerm) {
 						let upstreamStop = await r.json();
 
 						// Object.assign(currStop, newStop);
@@ -798,14 +795,10 @@
 				{selectedStop}
 				{stopPictures}
 				{latestPictureDate}
-				readOnly={!$decodedToken}
-				isAdmin={$decodedToken?.permissions.is_admin}
-				on:pictureClick={(e) => {
-					previewedPic = e.detail.picture;
-				}}
-				on:pictureEditorRequest={(e) => {
-					editingStopPics = true;
-				}}
+				readOnly={$permissions.length == 0}
+				isAdmin={hasAdminPerm}
+				on:pictureClick={(e) => (previewedPic = e.detail.picture)}
+				on:pictureEditorRequest={(e) => (editingStopPics = true)}
 				on:save={handleStopFormSave}
 			/>
 		</div>
