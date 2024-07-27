@@ -1,5 +1,3 @@
-import { browser } from '$app/environment';
-import { loadToken } from '$lib/stores.js';
 import { apiServer } from '$lib/settings.js';
 import { fetchStops, fetchParishes } from '$lib/db';
 
@@ -9,12 +7,6 @@ export const prerender = false;
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch, depends }) {
-	if (!browser) {
-		return {};
-	}
-
-	const token = await loadToken(fetch);
-
 	// await Promise.all([
 	// 	fetchStops(),
 	// 	fetchParishes()

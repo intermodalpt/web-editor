@@ -4,7 +4,7 @@
 	import Select from 'svelte-select';
 	import { marked } from 'marked';
 	import { apiServer } from '$lib/settings.js';
-	import { token, toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores.js';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
 
 	const dispatch = createEventDispatcher();

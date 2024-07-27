@@ -1,5 +1,3 @@
-import { browser } from '$app/environment';
-import { loadToken } from '$lib/stores.js';
 import { apiServer } from '$lib/settings';
 
 export const csr = true;
@@ -10,10 +8,6 @@ export const prerender = false;
 export async function load({ params, fetch, depends }) {
 	const operatorTag = params.tag;
 	const issueId = params.id;
-
-	if (browser) {
-		await loadToken(fetch);
-	}
 
 	return {
 		operatorTag: operatorTag,

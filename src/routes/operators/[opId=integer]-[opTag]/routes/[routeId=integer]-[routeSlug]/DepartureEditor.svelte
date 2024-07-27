@@ -1,6 +1,6 @@
 <script>
 	import { derived } from 'svelte/store';
-	import { token, toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores.js';
 	import { timeToTimestamp, timestampToTime } from '$lib/utils.js';
 	import Icon from '$lib/components/Icon.svelte';
 	import { getDeparturesAndCalendars } from '../aux.js';

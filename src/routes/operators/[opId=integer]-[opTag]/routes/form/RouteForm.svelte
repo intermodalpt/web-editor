@@ -1,6 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import { token, toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores.js';
 	import SubrouteForm from './SubrouteForm.svelte';
 	import { apiServer } from '$lib/settings.js';
 	import { softInvalidateRoutes } from '$lib/db.js';

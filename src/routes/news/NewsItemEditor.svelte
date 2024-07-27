@@ -3,7 +3,7 @@
 	import { derived, writable } from 'svelte/store';
 	import Select from 'svelte-select';
 	import { apiServer } from '$lib/settings.js';
-	import { token, toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores.js';
 	import Icon from '$lib/components/Icon.svelte';
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';

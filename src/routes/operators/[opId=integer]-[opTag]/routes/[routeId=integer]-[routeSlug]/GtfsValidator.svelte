@@ -1,7 +1,7 @@
 <script>
 	import { derived } from 'svelte/store';
 	import { isDeepEqual, isEmpty, needlemanWunsch } from '$lib/utils.js';
-	import { token, toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores.js';
 	import { apiServer } from '$lib/settings.js';
 	import Matched from './gtfscmp/Matched.svelte';
 	import UnmatchedIml from './gtfscmp/UnmatchedIml.svelte';
