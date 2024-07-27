@@ -9,7 +9,7 @@
 		getRoutes,
 		loadMissing
 	} from '$lib/db';
-	import { Map as Maplibre } from 'maplibre-gl';
+	import { Map as Maplibre } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';

@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { tileStyle } from '$lib/settings.js';
-	import { Map, Marker } from 'maplibre-gl';
+	import { Map, Marker } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { writable } from 'svelte/store';
 

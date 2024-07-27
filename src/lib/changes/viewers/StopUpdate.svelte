@@ -1,5 +1,5 @@
 <script>
-	import { Map, Marker } from 'maplibre-gl';
+	import { Map, Marker } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { listDifferences, getNearestStops } from '$lib/utils.js';
 	import { tileStyle } from '$lib/settings.js';

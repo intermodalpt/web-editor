@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { Map, Marker } from 'maplibre-gl';
+	import { Map, Marker } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
 	import { token } from '$lib/stores.js';

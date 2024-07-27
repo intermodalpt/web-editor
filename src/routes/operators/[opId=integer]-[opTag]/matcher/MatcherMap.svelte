@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-	import { Map as Maplibre, NavigationControl, GeolocateControl, LngLatBounds } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl, GeolocateControl, LngLatBounds } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { tileStyle } from '$lib/settings.js';

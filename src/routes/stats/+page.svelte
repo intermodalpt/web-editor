@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { apiServer, tileStyle } from '$lib/settings.js';
 	import { fetchStops, fetchParishes, getStops, getParishes, loadMissing } from '$lib/db';

@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { Map } from 'maplibre-gl';
+	import { Map } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { tileStyle } from '$lib/settings.js';
 	import { isValidGeoJson } from './utils.js';

@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl';
+	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
 	import { apiServer, tileStyle } from '$lib/settings.js';

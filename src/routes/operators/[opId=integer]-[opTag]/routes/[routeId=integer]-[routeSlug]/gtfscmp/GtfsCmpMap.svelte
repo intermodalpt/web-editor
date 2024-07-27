@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
+	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl?client';
 	import { tileStyle } from '$lib/settings.js';
 
 	export let stops;

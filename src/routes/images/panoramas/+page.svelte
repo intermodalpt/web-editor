@@ -8,7 +8,7 @@
 		LngLatBounds,
 		NavigationControl,
 		GeolocateControl
-	} from 'maplibre-gl';
+	} from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import View360, { EquirectProjection, LoadingSpinner, ControlBar } from '@egjs/svelte-view360';
 	import '@egjs/svelte-view360/css/view360.min.css';
