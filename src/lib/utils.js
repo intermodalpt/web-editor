@@ -130,31 +130,31 @@ export function calendarStr(calendar) {
 	if (calendar.only_if.length > 0) {
 		conditions.push(
 			'that are ' +
-			calendar.only_if
-				.map((condition) => {
-					return conditionName(condition);
-				})
-				.join(', ')
+				calendar.only_if
+					.map((condition) => {
+						return conditionName(condition);
+					})
+					.join(', ')
 		);
 	}
 	if (calendar.also_if.length > 0) {
 		conditions.push(
 			'plus ' +
-			calendar.also_if
-				.map((condition) => {
-					return conditionName(condition);
-				})
-				.join(', ')
+				calendar.also_if
+					.map((condition) => {
+						return conditionName(condition);
+					})
+					.join(', ')
 		);
 	}
 	if (calendar.except_if.length > 0) {
 		conditions.push(
 			'except ' +
-			calendar.except_if
-				.map((condition) => {
-					return conditionName(condition);
-				})
-				.join(', ')
+				calendar.except_if
+					.map((condition) => {
+						return conditionName(condition);
+					})
+					.join(', ')
 		);
 	}
 
@@ -247,7 +247,7 @@ export function getNearestStops(stopList, lat, lon, n = 30) {
 	return stopList.slice(0, n);
 }
 
-export function needlemanWunsch(seq1, seq2) {
+export function needlemanWunsch(seq1, seq2, nullElement) {
 	const n = seq1.length;
 	const m = seq2.length;
 	const gapPenalty = -1;
@@ -290,7 +290,7 @@ export function needlemanWunsch(seq1, seq2) {
 			j > 0 &&
 			//
 			matrix[i][j] ===
-			matrix[i - 1][j - 1] + (seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
+				matrix[i - 1][j - 1] + (seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
 		) {
 			// Diagonal, no space added
 			alignedSeq1.push(seq1[i - 1]);
@@ -300,11 +300,11 @@ export function needlemanWunsch(seq1, seq2) {
 		} else if (i > 0 && matrix[i][j] === matrix[i - 1][j] + gapPenalty) {
 			// Up, space added to seq2
 			alignedSeq1.push(seq1[i - 1]);
-			alignedSeq2.push('-');
+			alignedSeq2.push(nullElement);
 			i--;
 		} else {
 			// Left, space added to seq1
-			alignedSeq1.push('-');
+			alignedSeq1.push(nullElement);
 			alignedSeq2.push(seq2[j - 1]);
 			j--;
 		}
@@ -321,6 +321,7 @@ export function progressiveSequenceAlignment(sequences) {
 	const gapPenalty = -1;
 	const matchScore = 1;
 	const mismatchScore = -1;
+	const nullElement = null;
 
 	let n = sequences.length;
 	if (n === 1) {
@@ -335,7 +336,7 @@ export function progressiveSequenceAlignment(sequences) {
 	// Find how well sequences match amongst themselves
 	for (let i = 0; i < n; i++) {
 		for (let j = i + 1; j < n; j++) {
-			const [alignedSeq1, alignedSeq2] = needlemanWunsch(sequences[i], sequences[j]);
+			const [alignedSeq1, alignedSeq2] = needlemanWunsch(sequences[i], sequences[j], nullElement);
 			const score = calculateScore(alignedSeq1, alignedSeq2, gapPenalty, matchScore, mismatchScore);
 			// Supperior triangle
 			crossAlignmentScores[i][j] = score;
@@ -361,7 +362,8 @@ export function progressiveSequenceAlignment(sequences) {
 
 	const [alignedSeq1, alignedSeq2] = needlemanWunsch(
 		sequences[bestMatchRow],
-		sequences[bestMatchCol]
+		sequences[bestMatchCol],
+		nullElement
 	);
 
 	// Attach original indices so we can sort the output back later
@@ -381,7 +383,7 @@ export function progressiveSequenceAlignment(sequences) {
 
 	//############################ PROGRESSIVE ALIGNMENT ############################
 	while (n > 0) {
-		const currentConsensus = sequencesConsensus(alignedSequences);
+		const currentConsensus = sequencesConsensus(alignedSequences, nullElement);
 
 		let bestAlignmentSeq;
 		let bestAlignmentSeqOriIdx;
@@ -391,9 +393,17 @@ export function progressiveSequenceAlignment(sequences) {
 		for (let i = 0; i < n; i++) {
 			const [alignedSeq1, alignedSeq2, alignmentMatrix] = needlemanWunsch(
 				currentConsensus,
-				sequences[i][0]
+				sequences[i][0],
+				nullElement
 			);
-			const score = calculateScore(alignedSeq1, alignedSeq2, gapPenalty, matchScore, mismatchScore);
+			const score = calculateScore(
+				alignedSeq1,
+				alignedSeq2,
+				gapPenalty,
+				matchScore,
+				mismatchScore,
+				nullElement
+			);
 
 			if (score > bestScore) {
 				bestScore = score;
@@ -421,8 +431,8 @@ export function progressiveSequenceAlignment(sequences) {
 				i > 0 &&
 				j > 0 &&
 				bestAlignmentMatrix[i][j] ===
-				bestAlignmentMatrix[i - 1][j - 1] +
-				(seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
+					bestAlignmentMatrix[i - 1][j - 1] +
+						(seq1[i - 1] === seq2[j - 1] ? matchScore : mismatchScore)
 			) {
 				// Diagonal, no space added
 				i--;
@@ -444,7 +454,7 @@ export function progressiveSequenceAlignment(sequences) {
 		alignedSequences.forEach((seq) => {
 			for (const idx of paddedIndexes) {
 				// Insert a gap in the idx position
-				seq.splice(idx, 0, '-');
+				seq.splice(idx, 0, nullElement);
 			}
 		});
 
@@ -463,11 +473,11 @@ export function progressiveSequenceAlignment(sequences) {
 	return reorderedSequences;
 }
 
-function calculateScore(seq1, seq2, gapPenalty, matchScore, mismatchScore) {
+function calculateScore(seq1, seq2, gapPenalty, matchScore, mismatchScore, nullElement) {
 	let score = 0;
 
 	for (let i = 0; i < seq1.length; i++) {
-		if (seq1[i] === '-' || seq2[i] === '-') {
+		if (seq1[i] === nullElement || seq2[i] === nullElement) {
 			score += gapPenalty;
 		} else if (seq1[i] === seq2[i]) {
 			score += matchScore;
@@ -478,7 +488,7 @@ function calculateScore(seq1, seq2, gapPenalty, matchScore, mismatchScore) {
 	return score;
 }
 
-function sequencesConsensus(sequences) {
+function sequencesConsensus(sequences, nullElement) {
 	const n = sequences[0].length;
 
 	let consensus = [];
@@ -488,7 +498,7 @@ function sequencesConsensus(sequences) {
 		if (sequences.every((seq) => seq[i] === firstElem)) {
 			consensus.push(firstElem);
 		} else {
-			consensus.push('-');
+			consensus.push(nullElement);
 		}
 	}
 	return consensus;
@@ -531,7 +541,6 @@ export function longestCommonSubsequence(arr1, arr2) {
 export function regionMapParams(region) {
 	let centerLon = region?.center_lon;
 	let centerLat = region?.center_lat;
-
 
 	let zoom = region?.zoom ?? 9;
 	if (!centerLon || !centerLat) {
