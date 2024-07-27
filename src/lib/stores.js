@@ -1,47 +1,9 @@
-import { writable, derived, get } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { goto } from '$app/navigation';
-import { browser } from '$app/environment';
-import { apiServer } from '$lib/settings.js';
-import { parseJwt } from '$lib/utils.js';
 
-// FIXME this is not safe but it is good enough for now
-export const token = writable(null);
-
-export const decodedToken = derived(token, ($token) => {
-	if ($token) {
-		return parseJwt($token);
-	}
-});
-
-export async function loadToken(fetch) {
-	if (!browser) {
-		return;
-	}
-
-	let currentToken = get(token);
-	if (currentToken === null) {
-		let storedToken = localStorage.getItem('token');
-		if (storedToken === null) {
-			return null;
-		}
-		currentToken = storedToken;
-		let validityCheck = await fetch(`${apiServer}/v1/auth/check`, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${storedToken}`
-			}
-		});
-		if (validityCheck.status === 200) {
-			token.set(storedToken);
-			return storedToken;
-		} else {
-			return null;
-		}
-	}
-
-	return currentToken;
-}
+export const permissions = writable([]);
+export const isAuthenticated = writable(false);
+export const uid = writable(null);
 
 export async function logout() {
 	token.set(null);
