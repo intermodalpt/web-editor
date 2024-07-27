@@ -374,10 +374,7 @@
 							</button>
 						{/each}
 					</div>
-					<button
-						class="btn btn-secondary w-full"
-						on:click={() => loadMoreUnpositionedStops()}
-					>
+					<button class="btn btn-secondary w-full" on:click={() => loadMoreUnpositionedStops()}>
 						Listar mais
 					</button>
 				</div>
