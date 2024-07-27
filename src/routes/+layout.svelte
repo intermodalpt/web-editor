@@ -1,8 +1,12 @@
-<script>
+<script type="ts">
 	import '../app.css';
-	import Header from './Header.svelte';
 	import { page, navigating } from '$app/stores';
+	import { showDebugInfo } from '$lib/settings';
 	import { toasts } from '$lib/stores';
+	import Header from './Header.svelte';
+	import DbLoadingInfo from '$lib/components/DbLoadingInfo.svelte';
+
+	export let data;
 </script>
 
 {#if $navigating}
@@ -16,8 +20,8 @@
 <div class="drawer min-h-[100%]">
 	<input id="mobile-drawer" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content flex flex-col min-h-[100%]">
-		<div id="layout" class="min-h-[100%]">
-			<Header />
+		<div id="layout" class="min-h-[100%] grid h-full" style="grid-template-rows: auto 1fr;">
+			<Header username={data.uname} />
 			<main class="flex flex-col overflow-y-auto">
 				<slot />
 			</main>
@@ -60,10 +64,6 @@
 	{/each}
 </div>
 
-<style>
-	#layout {
-		display: grid;
-		grid-template-rows: auto 1fr;
-		height: 100%;
-	}
-</style>
+{#if showDebugInfo}
+	<DbLoadingInfo />
+{/if}z

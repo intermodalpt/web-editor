@@ -16,3 +16,4 @@ export const movementTreshold = 0.000001;
 export const credibleSources = ['tml', 'manual', 'flags', 'h1'];
 
 export const registrationsEnabled = true;
+export const showDebugInfo = true;
