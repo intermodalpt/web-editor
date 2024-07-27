@@ -1,4 +1,5 @@
 <script>
+	import { writable } from 'svelte/store';
 	import StopUpdate from '$lib/changes/viewers/StopUpdate.svelte';
 	import StopPicUpload from '$lib/changes/viewers/StopPicUpload.svelte';
 	import StopPicMetaUpdate from '$lib/changes/viewers/StopPicMetaUpdate.svelte';
@@ -8,7 +9,7 @@
 	import SubrouteDeletion from '$lib/changes/viewers/SubrouteDeletion.svelte';
 
 	export let change;
-	export let stops;
+	export let stops = writable({});
 	export let ignoredKeys;
 
 	export let isEvaluation = false;
