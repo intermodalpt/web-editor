@@ -10,6 +10,14 @@ export function canMoveStops(permissions: [{ perm: string }]) {
 	return permissions.some((p) => p.perm === 'stops' || p.modify_pos);
 }
 
+export function canModifyStopAttrs(permissions: [{ perm: string }]) {
+	return permissions.some((p) => p.perm === 'stops' || p.modify_attrs);
+}
+
+export function canContribModifyStopAttrs(permissions: [{ perm: string }]) {
+	return permissions.some((p) => p.perm === 'stops' || p.contrib_modify_attrs);
+}
+
 export function canCreateRoutes(permissions: [{ perm: string }]) {
 	return permissions.some((p) => p.perm === 'routes' || p.create);
 }

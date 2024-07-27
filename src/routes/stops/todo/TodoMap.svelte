@@ -12,6 +12,7 @@
 	export let mapParams;
 
 	let map;
+	let mapElem;
 	let searchDialog;
 
 	export function increaseSidePadding(show) {
@@ -29,7 +30,6 @@
 		reportIssueStops,
 		otherStops
 	) {
-		console.log(unpositionedStops.length);
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
 			features: stops
@@ -214,7 +214,7 @@
 
 	onMount(() => {
 		map = new Maplibre({
-			container: 'map',
+			container: mapElem,
 			style: tileStyle,
 			center: mapParams.center,
 			zoom: mapParams.zoom,
@@ -247,7 +247,7 @@
 	});
 </script>
 
-<div id="map" class="h-full relative">
+<div bind:this={mapElem} class="h-full relative">
 	<dialog bind:this={searchDialog} class="modal modal-bottom sm:modal-middle">
 		<slot name="search-dialog" />
 	</dialog>
