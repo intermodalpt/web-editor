@@ -1,11 +1,12 @@
 <script>
+	import { goto } from '$app/navigation';
 	import { isValidEmail } from '$lib/utils';
 	import { apiServer } from '$lib/settings';
 	import { toast } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
 	import IntrestRating from './IntrestRating.svelte';
 
-	let step = 2;
+	let step = 0;
 
 	let username = null;
 	let email = null;
@@ -76,10 +77,10 @@
 			localKnowledge
 		},
 		consent,
-        captcha: {
-            uuid: captcha?.uuid,
-            answer: captchaConfirmation
-        }
+		captcha: {
+			uuid: captcha?.uuid,
+			answer: captchaConfirmation
+		}
 	};
 
 	let captcha;
@@ -88,6 +89,8 @@
 	$: {
 		if (captchaConfirmation) captchaConfirmationTouched = true;
 	}
+
+	let isProcessing = false;
 
 	function reloadCaptcha() {
 		fetch(`${apiServer}/v1/auth/get_captcha`).then((r) => {
@@ -169,31 +172,24 @@
 	}
 
 	function register() {
+		isProcessing = true;
 		fetch(`${apiServer}/v1/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				username: username,
-				password: password,
-				email: email
-			})
+			body: JSON.stringify(registration)
 		}).then((r) => {
+			isProcessing = false;
 			if (r.ok) {
-				alert('Registo com sucesso.');
-				loginUser = username;
-				loginPassword = password;
-				username = null;
-				email = null;
-				password = null;
-				passwordConfirmation = null;
-				login();
+				toast('Registo com sucesso', 'success');
+				goto('/perfil');
 			} else {
+				reloadCaptcha();
 				r.text()
 					.then((error) => {
-						alert(`Registo falhou:\n${error}`);
+						toast(`Registo falhou:\n${error}`, 'error');
 					})
 					.catch(() => {
-						alert('Registo falhou.');
+						toast('Registo falhou.', 'error');
 					});
 			}
 		});
@@ -215,9 +211,7 @@
 		let res = await fetch(`${apiServer}/v1/auth/register/username_check`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				username: testedUsername
-			})
+			body: JSON.stringify({ username: testedUsername })
 		});
 
 		if (!res.ok) {
@@ -242,7 +236,7 @@
 	</p>
 	<p>Nenhum dos seus dados pessoais será partilhado ou utilizado para comunicação em massa.</p>
 {:else if step === 1}
-	<h2 class="text-lg">Escolha as suas credênciais</h2>
+	<h2 class="text-lg">Escolha as suas credenciais</h2>
 	<label
 		id="registrationUsername"
 		class="input input-bordered flex items-center gap-2 grow"
@@ -413,5 +407,10 @@
 <div class="card-actions justify-between">
 	<span class:hidden={step != 0}></span>
 	<button class="btn btn-outline" class:hidden={step == 0} on:click={previousStep}>Voltar</button>
-	<button class="btn btn-primary" on:click={nextStep}>Seguinte</button>
+	<div class="flex gap-1 items-center">
+		{#if isProcessing}
+			<Icon name="spinner" class="animate-spin -ml-1 mr-3 h-6 w-6" />
+		{/if}
+		<button class="btn btn-primary" on:click={nextStep} disabled={isProcessing}>Seguinte</button>
+	</div>
 </div>
