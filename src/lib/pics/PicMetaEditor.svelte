@@ -128,16 +128,16 @@
 				label.textContent = '2 - De dentro de um veiculo (visível na imagem)';
 				break;
 			case 30:
-				label.textContent = '3 - De dentro de um veiculo (reflexos ou filto no vidro)';
+				label.textContent = '3 - Mal direccionada';
 				break;
 			case 40:
-				label.textContent = '4 - Mal direccionada';
+				label.textContent = '4 - De dentro de um veiculo (reflexos ou filto no vidro)';
 				break;
 			case 50:
-				label.textContent = '5 - Noturna';
+				label.textContent = '5 - Noturna / Excesso ou falta de brilho';
 				break;
 			case 60:
-				label.textContent = '6 - Excesso ou falta de brilho';
+				label.textContent = '6 - Ângulos estranhos ou cortes';
 				break;
 			case 70:
 				label.textContent = '7 - Paragem não é sujeito principal';
@@ -146,7 +146,7 @@
 				label.textContent = '8 - Pessoas, veículos ou lixo';
 				break;
 			case 90:
-				label.textContent = '9 - Imperfeições menores (seria possivel fazer melhor?)';
+				label.textContent = '9 - Imperfeições menores (é possivel fazer melhor)';
 				break;
 			case 100:
 				label.textContent = '10 - Absolutamente nada de assinalável';
