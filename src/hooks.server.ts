@@ -1,5 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import { apiServer } from '$lib/settings.js';
+import { renewAccessToken } from '$lib/api';
 
 export async function handle({ event, resolve }) {
 	const rawRefreshToken = event.cookies.get('refresh_token');
@@ -14,7 +14,7 @@ export async function handle({ event, resolve }) {
 				event.locals.refreshData = parsedRefresh;
 				event.locals.refreshExp = new Date(parsedRefresh.exp * 1000);
 			} else {
-				console.log('User had an expirted refresh token');
+				console.log('User had an expired refresh token');
 			}
 		}
 		if (rawAccessToken) {
@@ -29,14 +29,14 @@ export async function handle({ event, resolve }) {
 					event.locals.accessData = parsedAccess;
 					event.locals.accessExp = new Date(parsedAccess.exp * 1000);
 				} else {
-					console.log('User had an expirted access token');
+					console.log('User had an expired access token');
 				}
 			}
 		}
 
 		if (event.locals.refreshToken && !event.locals.accessToken) {
 			console.log('Renewing access token');
-			await renewAccessToken(event);
+			await fetchNewAccessToken(event);
 		}
 	} else if (rawAccessToken) {
 		// Unset the cookie
@@ -49,35 +49,38 @@ export async function handle({ event, resolve }) {
 	return resolve(event);
 }
 
-async function renewAccessToken(event: Parameters<import('@sveltejs/kit').Handle>[0]['event']) {
-	const res = await event.fetch(`${apiServer}/v1/auth/renew`);
-	if (res.ok) {
-		const cookieHeader = res.headers.get('set-cookie');
-		if (cookieHeader) {
-			const cookie = cookieHeader.split(';')[0];
-			const [name, value] = cookie.split('=');
-			if (name === 'access_token') {
-				event.cookies.set('access_token', value, {
-					path: '/',
-					maxAge: 12345678990,
-					sameSite: 'lax',
-					secure: true,
-					httpOnly: true,
-					domain: event.url.host
-				});
+async function fetchNewAccessToken(event: Parameters<import('@sveltejs/kit').Handle>[0]['event']) {
+	await renewAccessToken({
+		onSuccess: (res) => {
+			const cookieHeader = res.headers.get('set-cookie');
+			if (cookieHeader) {
+				const cookie = cookieHeader.split(';')[0];
+				const [name, value] = cookie.split('=');
+				if (name === 'access_token') {
+					event.cookies.set('access_token', value, {
+						path: '/',
+						maxAge: 12345678990,
+						sameSite: 'lax',
+						secure: true,
+						httpOnly: true,
+						domain: event.url.host
+					});
 
-				const parsedAccess = jwtDecode<AccessPayload>(value);
-				if (parsedAccess) {
-					event.locals.accessToken = value;
-					event.locals.accessData = parsedAccess;
-					event.locals.permissions = parsedAccess.permissions;
-					event.locals.accessExp = new Date(parsedAccess.exp * 1000);
+					const parsedAccess = jwtDecode<AccessPayload>(value);
+					if (parsedAccess) {
+						event.locals.accessToken = value;
+						event.locals.accessData = parsedAccess;
+						event.locals.permissions = parsedAccess.permissions;
+						event.locals.accessExp = new Date(parsedAccess.exp * 1000);
+					}
+				} else {
+					console.error('Unexpected cookie name', name);
 				}
-			} else {
-				console.error('Unexpected cookie name', name);
 			}
-		}
-	} else {
-		console.error('Could not renew token', res);
-	}
+		},
+		onError: (res) => {
+			console.error('Could not renew token');
+		},
+		fetch: event.fetch
+	});
 }
