@@ -443,7 +443,7 @@ export async function deleteRoute(routeId: number, opts: ReqOpts) {
 }
 
 export async function createSubroute(data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/routes/${route.id}/create_subroute`, {
+	const res = await fetch(`${apiServer}/v1/routes/${route.id}/subroutes`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
@@ -454,8 +454,7 @@ export async function createSubroute(data, opts: ReqOpts) {
 }
 
 export async function updateSubroute(subrouteId: number, data, opts: ReqOpts) {
-	// TODO update URL
-	const res = await fetch(`${apiServer}/v1/routes/-1/${subrouteId}`, {
+	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}`, {
 		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
 		credentials: 'include',
@@ -466,8 +465,7 @@ export async function updateSubroute(subrouteId: number, data, opts: ReqOpts) {
 }
 
 export async function deleteSubroute(subrouteId: number, opts: ReqOpts) {
-	// TODO update URL
-	const res = await fetch(`${apiServer}/v1/routes/-1/${subrouteId}`, {
+	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}`, {
 		method: 'DELETE',
 		credentials: 'include'
 	});
