@@ -5,7 +5,7 @@
 	import { liveQuery } from 'dexie';
 	import { logout } from '$lib/api';
 	import { toast } from '$lib/stores';
-	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.ts';
+	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';
 
 	export let username;
@@ -27,7 +27,7 @@
 	async function handleLogout() {
 		await logout({
 			onSuccess: (res) => {
-				toast('Autenticado com sucesso');
+				toast('Boa viagem!');
 				goto('/perfil', { invalidateAll: true });
 			},
 			onError: (res) => {
