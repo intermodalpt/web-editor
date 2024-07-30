@@ -92,19 +92,19 @@
 
 	let isProcessing = false;
 
-	function reloadCaptcha() {
-		fetch(`${apiServer}/v1/auth/get_captcha`).then((r) => {
-			if (r.ok) {
-				r.json().then((json) => {
-					captcha = json;
-				});
-			} else {
+	async function reloadCaptcha() {
+		await getCaptcha({
+			onSuccess: async (res) => {
+				const json = res.json();
+				captcha = json;
+			},
+			onError: () => {
 				toast('Erro ao obter captcha', 'error');
 			}
 		});
 	}
 
-	function nextStep() {
+	async function nextStep() {
 		if (step == 1) {
 			if (!usernameTouched) {
 				usernameTouched = true;
@@ -157,12 +157,12 @@
 				return;
 			}
 
-			register();
+			await register();
 			return;
 		}
 
 		if (step === 2 && !captcha) {
-			reloadCaptcha();
+			await reloadCaptcha();
 		}
 		step++;
 	}
@@ -171,26 +171,19 @@
 		step--;
 	}
 
-	function register() {
+	async function register() {
 		isProcessing = true;
-		fetch(`${apiServer}/v1/auth/register`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(registration)
-		}).then((r) => {
-			isProcessing = false;
-			if (r.ok) {
+		await registerCall(registration, {
+			onSuccess: () => {
 				toast('Registo com sucesso', 'success');
 				goto('/perfil');
-			} else {
-				reloadCaptcha();
-				r.text()
-					.then((error) => {
-						toast(`Registo falhou:\n${error}`, 'error');
-					})
-					.catch(() => {
-						toast('Registo falhou.', 'error');
-					});
+			},
+			onError: async (e) => {
+				await reloadCaptcha();
+				toast(`Registo falhou`, 'error');
+			},
+			onAfter: () => {
+				isProcessing = false;
 			}
 		});
 	}
@@ -208,23 +201,20 @@
 
 		checkingUsername = true;
 
-		let res = await fetch(`${apiServer}/v1/auth/register/username_check`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ username: testedUsername })
+		await checkUsername(testedUsername, {
+			onSuccess: async (res) => {
+				let resJson = await res.json();
+
+				if (username != testedUsername) {
+					return;
+				}
+				checkingUsername = false;
+				usernameAvailable = resJson === 'available';
+			},
+			onError: () => {
+				toast('Erro a verificar disponibilidade do utilizador', 'error');
+			}
 		});
-
-		if (!res.ok) {
-			return false;
-		}
-
-		let resJson = await res.json();
-
-		if (username != testedUsername) {
-			return;
-		}
-		checkingUsername = false;
-		usernameAvailable = resJson === 'available';
 	}
 </script>
 
