@@ -35,7 +35,7 @@ interface Permissions {
 		modify_subroutes?: boolean;
 		modify_stops?: boolean;
 		modify_departures?: boolean;
-		validate_gtfs?: boolean;
+		authenticate?: boolean;
 		delete?: boolean;
 	};
 	stops?: {
@@ -43,6 +43,7 @@ interface Permissions {
 		modify_pos?: boolean;
 		modify_attrs?: boolean;
 		modify_map_features?: boolean;
+		authenticate?: boolean;
 		delete?: boolean;
 		contrib_modify_attrs?: boolean;
 	};
@@ -98,4 +99,26 @@ declare namespace App {
 	}
 	// interface PageData {}
 	// interface Platform {}
+}
+
+type Region = {
+	id: number;
+	name: string;
+	geometry: any;
+	center_lat?: number;
+	center_lon?: number;
+	zoom?: number;
+};
+
+type Condition = {
+	condition: string;
+	range?: { start: [number, number]; end: [number, number] };
+	nth?: number;
+};
+
+interface Calendar {
+	weekdays: number[];
+	only_if: Condition[];
+	also_if: Condition[];
+	except_if: Condition[];
 }
