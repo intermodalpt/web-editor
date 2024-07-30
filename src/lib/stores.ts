@@ -1,15 +1,8 @@
-import { writable, derived } from 'svelte/store';
-import { goto } from '$app/navigation';
+import { writable } from 'svelte/store';
 
 export const permissions = writable([]);
 export const isAuthenticated = writable(false);
 export const uid = writable(null);
-
-export async function logout() {
-	token.set(null);
-	localStorage.removeItem('token');
-	await goto('/login');
-}
 
 export const toasts = writable([]);
 

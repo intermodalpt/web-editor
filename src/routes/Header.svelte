@@ -1,12 +1,15 @@
 <script>
 	import { derived } from 'svelte/store';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { liveQuery } from 'dexie';
-	import { logout } from '$lib/stores.js';
+	import { logout } from '$lib/api';
 	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.js';
 	import Icon from '$lib/components/Icon.svelte';
 
 	export let username;
+
+	let regionModal;
 
 	const regions = liveQuery(() => getRegions());
 
@@ -20,7 +23,17 @@
 		}
 	});
 
-	let regionModal;
+	async function handleLogout() {
+		await logout({
+			onSuccess: (res) => {
+				toast('Autenticado com sucesso');
+				goto('/perfil', { invalidateAll: true });
+			},
+			onError: (res) => {
+				toast(`Erro a sair`, 'error');
+			}
+		});
+	}
 </script>
 
 <header class="flex justify-center bg-base-100 p-1">
@@ -72,7 +85,7 @@
 					<a class="btn btn-info btn-xs h-8 w-8 p-1 sm:hidden" href="/perfil">
 						<Icon name="user" class="fill-info-content" />
 					</a>
-					<button class="btn btn-error btn-xs h-8 w-8 p-1" on:click={logout}>
+					<button class="btn btn-error btn-xs h-8 w-8 p-1" on:click={handleLogout}>
 						<Icon name="exit" class="fill-error-content" />
 					</button>
 				</div>

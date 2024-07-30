@@ -79,6 +79,12 @@ export async function login(username: string, password: string, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function logout(opts: ReqOpts) {
+	const res = await fetch(`${apiServer}/v1/auth/logout`, { method: 'POST' });
+
+	return await handleResponse(res, opts);
+}
+
 export async function renewAccessToken(opts: ReqOpts) {
 	const url = `${apiServer}/v1/auth/renew`;
 	const res = await betterFetch(url, { opts });
