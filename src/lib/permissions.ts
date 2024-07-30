@@ -1,43 +1,43 @@
-export function isAdmin(permissions: [{ perm: string }]) {
+export function isAdmin(permissions: Permissions) {
 	return permissions.some((p) => p.perm === 'admin');
 }
 
-export function canCreateStops(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'stops' && p.create);
+export function canCreateStops(permissions: Permissions) {
+	return permissions.stops?.create;
 }
 
-export function canMoveStops(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'stops' && p.modify_pos);
+export function canMoveStops(permissions: Permissions) {
+	return permissions.stops?.modify_pos;
 }
 
-export function canModifyStopAttrs(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'stops' && p.modify_attrs);
+export function canModifyStopAttrs(permissions: Permissions) {
+	return permissions.stops?.modify_attrs;
 }
 
-export function canContribModifyStopAttrs(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'stops' && p.contrib_modify_attrs);
+export function canContribModifyStopAttrs(permissions: Permissions) {
+	return permissions.stops?.contrib_modify_attrs;
 }
 
-export function canCreateRoutes(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'routes' && p.create);
+export function canCreateRoutes(permissions: Permissions) {
+	return permissions.routes?.create;
 }
 
-export function canCreateNews(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'news' && p.create);
+export function canCreateNews(permissions: Permissions) {
+	return permissions.news?.create;
 }
 
-export function canModifyNews(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'news' && p.modify);
+export function canModifyNews(permissions: Permissions) {
+	return permissions.news?.modify;
 }
 
-export function canDeleteNews(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'routes' && p.delete);
+export function canDeleteNews(permissions: Permissions) {
+	return permissions.news?.delete;
 }
 
-export function canUploadPics(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'stopPics' && p.upload);
+export function canUploadPics(permissions: Permissions) {
+	return permissions.stop_pics?.upload;
 }
 
-export function canContribUploadPics(permissions: [{ perm: string }]) {
-	return permissions.some((p) => p.perm === 'admin' || p.perm === 'stopPics' && p.contrib_upload);
+export function canContribUploadPics(permissions: Permissions) {
+	return permissions.stop_pics?.contrib_upload;
 }
