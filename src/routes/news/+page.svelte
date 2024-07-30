@@ -1,10 +1,9 @@
 <script>
 	import { tick } from 'svelte';
-	import { token } from '$lib/stores.js';
 	import { writable, derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { apiServer } from '$lib/settings.js';
-	import { permissions } from '$lib/stores.js';
+	import { apiServer } from '$lib/settings';
+	import { permissions } from '$lib/stores';
 	import { canCreateNews, canModifyNews } from '$lib/permissions';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';

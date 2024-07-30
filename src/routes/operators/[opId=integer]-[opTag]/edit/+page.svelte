@@ -1,5 +1,5 @@
 <script>
-	import { permissions } from '$lib/stores.js';
+	import { permissions } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions.ts';
 	import OperatorForm from '../../OperatorForm.svelte';
 

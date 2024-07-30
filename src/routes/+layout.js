@@ -1,6 +1,6 @@
-import { permissions, isAuthenticated, uid } from '$lib/stores.js';
+import { permissions, isAuthenticated, uid } from '$lib/stores';
 import { browser } from '$app/environment';
-import { apiServer } from '$lib/settings.js';
+import { apiServer } from '$lib/settings';
 
 export const csr = true;
 export const ssr = true;

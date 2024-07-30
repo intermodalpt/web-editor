@@ -3,7 +3,6 @@
 	import { Map, Marker } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
-	import { token } from '$lib/stores.js';
 	import {
 		fetchOperators,
 		getOperators,
@@ -13,7 +12,7 @@
 		getRoutes,
 		loadMissing
 	} from '$lib/db';
-	import { apiServer, tileStyle } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings';
 	import Icon from '$lib/components/Icon.svelte';
 
 	const operators = liveQuery(() => getOperators());

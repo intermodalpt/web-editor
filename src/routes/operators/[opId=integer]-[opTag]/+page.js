@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
-import { fetchOperators, getOperator } from '$lib/db.js';
+import { fetchOperators, getOperator } from '$lib/db.ts';
 
 export const csr = true;
 export const ssr = false;

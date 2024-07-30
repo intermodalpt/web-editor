@@ -1,7 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings';
 	import { permissions } from '$lib/stores';
 	import { acceptContribution, declineContribution } from '$lib/api';
 

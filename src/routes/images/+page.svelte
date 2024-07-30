@@ -1,9 +1,9 @@
 <script>
 	import { derived, writable } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings';
 	import { Gallery } from '$lib/pics/utils.js';
-	import { isAuthenticated, permissions } from '$lib/stores.js';
+	import { isAuthenticated, permissions } from '$lib/stores';
 	import { canUploadPics, canContribUploadPics } from '$lib/permissions.ts';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import SinglePicMetaEditor from '$lib/pics/wrappers/SinglePicMetaEditor.svelte';

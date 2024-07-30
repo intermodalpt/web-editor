@@ -4,7 +4,8 @@
 	import { page } from '$app/stores';
 	import { liveQuery } from 'dexie';
 	import { logout } from '$lib/api';
-	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.js';
+	import { toast } from '$lib/stores';
+	import { regionId, getRegions, setRegion, selectedRegion } from '$lib/db.ts';
 	import Icon from '$lib/components/Icon.svelte';
 
 	export let username;

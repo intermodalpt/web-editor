@@ -1,4 +1,4 @@
-import { apiServer } from '$lib/settings.js';
+import { apiServer } from '$lib/settings';
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {

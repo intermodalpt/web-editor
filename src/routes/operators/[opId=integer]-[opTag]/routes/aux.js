@@ -1,4 +1,4 @@
-import { isDeepEqual } from '$lib/utils.js';
+import { isDeepEqual } from '$lib/utils';
 
 export function getDeparturesAndCalendars(departures, dense = true) {
 	let scheduleMats = dense

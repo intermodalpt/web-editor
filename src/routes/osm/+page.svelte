@@ -4,8 +4,8 @@
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
-	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { toast } from '$lib/stores.js';
+	import { apiServer, tileStyle } from '$lib/settings';
+	import { toast } from '$lib/stores';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { fetchRegions, getRegions, loadMissing } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';

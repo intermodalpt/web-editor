@@ -1,4 +1,5 @@
 <script>
+	import { uploadNewsImg } from '$lib/api';
 	import { apiServer } from '$lib/settings';
 	import { toast } from '$lib/stores';
 	import { createEventDispatcher } from 'svelte';

@@ -1,13 +1,14 @@
 <script>
 	import { onMount, createEventDispatcher, tick } from 'svelte';
-	import { apiServer, movementTreshold } from '$lib/settings.js';
+	import { movementTreshold } from '$lib/settings';
 	import { writable } from 'svelte/store';
-	import { permissions } from '$lib/stores.js';
+	import { permissions, toast, uid } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions';
-	import { isDeepEqual, deepCopy } from '$lib/utils.js';
+	import { isDeepEqual, deepCopy } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import MapLocationPicker from './subcomponents/MapLocationPicker.svelte';
 	import StopAttrs from './subcomponents/StopAttrs.svelte';
+	import { deleteStopPic, getStopPic, updateStopPic } from '$lib/api';
 
 	const dispatch = createEventDispatcher();
 	const managedAttrs = ['flag', 'schedule', 'defect', 'vehicle', 'infra', 'nocturnal'];

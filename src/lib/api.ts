@@ -1,4 +1,4 @@
-import { apiServer } from '$lib/settings.js';
+import { apiServer } from '$lib/settings';
 
 // Boilerplate reduction
 

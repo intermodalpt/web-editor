@@ -3,9 +3,9 @@
 	import { derived } from 'svelte/store';
 	import Select from 'svelte-select';
 	import { marked } from 'marked';
-	import { apiServer } from '$lib/settings.js';
-	import { toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
+	import { deleteExternalNewsItem, getExternalNewsItem, updateExternalNewsItem } from '$lib/api';
 
 	const dispatch = createEventDispatcher();
 

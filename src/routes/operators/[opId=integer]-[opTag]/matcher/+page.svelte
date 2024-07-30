@@ -6,19 +6,20 @@
 	import { softInvalidateStops, selectedRegion, loadMissing } from '$lib/db';
 	import {
 		createStop,
-		setStopUnverified,
+		updateStopTodos,
 		attachStopToRegion,
 		attachStopToOperator,
 		detachStopFromOperator,
 		setStopPosition
-	} from '$lib/api.js';
-	import { regionMapParams } from '$lib/utils.js';
-	import { permissions, toast } from '$lib/stores.js';
+	} from '$lib/api';
+	import { regionMapParams } from '$lib/utils';
+	import { permissions, toast } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions.ts';
-	import { apiServer, credibleSources } from '$lib/settings.js';
+	import { credibleSources } from '$lib/settings';
 	import Icon from '$lib/components/Icon.svelte';
 	import MatchViewer from './MatchViewer.svelte';
 	import MatcherMap from './MatcherMap.svelte';
+	import { getOsmStops } from '$lib/api';
 
 	/** @type {import('./$types').PageData} */
 	export let data;

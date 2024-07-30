@@ -2,8 +2,8 @@
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import Select from 'svelte-select';
-	import { apiServer } from '$lib/settings.js';
-	import { toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores';
+	import { getExternalNewsItem } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';

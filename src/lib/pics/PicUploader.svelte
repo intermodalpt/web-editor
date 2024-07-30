@@ -1,7 +1,6 @@
 <script>
-	import { apiServer } from '$lib/settings';
-	import { token } from '$lib/stores';
 	import { createEventDispatcher } from 'svelte';
+	import { uploadDanglingStopPic, uploadLinkedStopPic } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 
 	const dispatch = createEventDispatcher();

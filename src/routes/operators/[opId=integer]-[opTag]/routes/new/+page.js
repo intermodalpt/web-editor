@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
-import { apiServer } from '$lib/settings.js';
-import { fetchOperators, getOperators } from '$lib/db.js';
+import { apiServer } from '$lib/settings';
+import { fetchOperators, getOperators } from '$lib/db.ts';
 
 export const csr = true;
 export const ssr = false;

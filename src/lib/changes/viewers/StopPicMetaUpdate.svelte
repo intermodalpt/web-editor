@@ -1,5 +1,5 @@
 <script>
-	import { listDifferences, isDeepEqual } from '$lib/utils.js';
+	import { listDifferences, isDeepEqual } from '$lib/utils';
 
 	export let change;
 	let expand = false;

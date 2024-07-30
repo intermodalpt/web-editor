@@ -1,5 +1,5 @@
 <script>
-	import { listDifferences } from '$lib/utils.js';
+	import { listDifferences } from '$lib/utils';
 
 	export let change;
 	let expand = false;

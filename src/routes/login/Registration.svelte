@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { isValidEmail } from '$lib/utils';
-	import { apiServer } from '$lib/settings';
+	import { checkUsername, getCaptcha, register as registerCall } from '$lib/api';
 	import { toast } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
 	import IntrestRating from './IntrestRating.svelte';

@@ -1,12 +1,13 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
-	import { apiServer } from '$lib/settings.js';
-	import { isDeepEqual } from '$lib/utils.js';
-	import { toast } from '$lib/stores.js';
+	import { apiServer } from '$lib/settings';
+	import { isDeepEqual } from '$lib/utils';
+	import { toast } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
+	import { updateStopTodos } from '$lib/api';
 
 	const dispatch = createEventDispatcher();
 

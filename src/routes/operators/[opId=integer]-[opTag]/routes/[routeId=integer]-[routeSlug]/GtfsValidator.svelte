@@ -1,11 +1,11 @@
 <script>
 	import { derived } from 'svelte/store';
-	import { isDeepEqual, isEmpty, needlemanWunsch } from '$lib/utils.js';
-	import { toast } from '$lib/stores.js';
-	import { apiServer } from '$lib/settings.js';
+	import { isDeepEqual, isEmpty, needlemanWunsch } from '$lib/utils';
+	import { toast } from '$lib/stores';
 	import Matched from './gtfscmp/Matched.svelte';
 	import UnmatchedIml from './gtfscmp/UnmatchedIml.svelte';
 	import UnmatchedGtfs from './gtfscmp/UnmatchedGtfs.svelte';
+	import { changeSubrouteStops } from '$lib/api';
 
 	export let route;
 	export let stops;

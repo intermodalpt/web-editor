@@ -1,8 +1,8 @@
 <script>
 	import { Map, Marker } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { listDifferences, getNearestStops } from '$lib/utils.js';
-	import { tileStyle } from '$lib/settings.js';
+	import { listDifferences, getNearestStops } from '$lib/utils';
+	import { tileStyle } from '$lib/settings';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { derived } from 'svelte/store';
 	import Icon from '$lib/components/Icon.svelte';

@@ -12,8 +12,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import View360, { EquirectProjection, LoadingSpinner, ControlBar } from '@egjs/svelte-view360';
 	import '@egjs/svelte-view360/css/view360.min.css';
-	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { token } from '$lib/stores.js';
+	import { apiServer, tileStyle } from '$lib/settings';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 
 	const panoramas = writable([]);

@@ -3,13 +3,13 @@
 	import { derived } from 'svelte/store';
 	import { onMount } from 'svelte';
 	import { liveQuery } from 'dexie';
-	import { getRegions, wipeOperators } from '$lib/db';
-	import { permissions, toast } from '$lib/stores.js';
+	import { getOperator, getRegions, wipeOperators } from '$lib/db';
+	import { permissions, toast } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions';
-	import { apiServer } from '$lib/settings.js';
-	import { isDeepEqual, deepCopy } from '$lib/utils.js';
+	import { isValidUri } from '$lib/utils';
+	import { patchOperator, uploadLogo } from '$lib/api';
+	import { isDeepEqual, deepCopy } from '$lib/utils';
 	import RouteTypeForm from './RouteTypeForm.svelte';
-	import { isValidUri } from '$lib/utils.js';
 
 	const regions = liveQuery(() => getRegions());
 	const sortedRegions = derived(regions, ($regions) => {

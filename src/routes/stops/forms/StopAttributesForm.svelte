@@ -1,8 +1,8 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { deepCopy } from '$lib/utils.js';
-	import { toast } from '$lib/stores.js';
+	import { deepCopy } from '$lib/utils';
+	import { toast } from '$lib/stores';
 
 	import InfoForm from './InfoForm.svelte';
 	import ServiceForm from './ServiceForm.svelte';

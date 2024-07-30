@@ -5,8 +5,8 @@
 	import { Map as Maplibre, LngLatBounds } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import polyline from '@mapbox/polyline';
-	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { permissions } from '$lib/stores.js';
+	import { apiServer, tileStyle } from '$lib/settings';
+	import { permissions } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions.ts';
 	import {
 		getRegions,

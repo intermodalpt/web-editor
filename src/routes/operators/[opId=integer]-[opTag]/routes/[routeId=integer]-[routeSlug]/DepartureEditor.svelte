@@ -1,9 +1,9 @@
 <script>
 	import { derived } from 'svelte/store';
-	import { toast } from '$lib/stores.js';
-	import { timeToTimestamp, timestampToTime } from '$lib/utils.js';
-	import Icon from '$lib/components/Icon.svelte';
+	import { toast } from '$lib/stores';
+	import { timeToTimestamp, timestampToTime } from '$lib/utils';
 	import { getDeparturesAndCalendars } from '../aux.js';
+	import Icon from '$lib/components/Icon.svelte';
 
 	export let canEdit = false;
 	export let selectedSubroute;

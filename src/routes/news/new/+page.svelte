@@ -1,6 +1,6 @@
 <script>
 	import { liveQuery } from 'dexie';
-	import { permissions } from '$lib/stores.js';
+	import { permissions } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import NewsItemEditor from '../NewsItemEditor.svelte';

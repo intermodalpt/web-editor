@@ -1,5 +1,5 @@
-import { apiServer } from '$lib/settings.js';
-import { fetchOperators, getOperator } from '$lib/db.js';
+import { apiServer } from '$lib/settings';
+import { fetchOperators, getOperator } from '$lib/db.ts';
 
 export const csr = true;
 export const ssr = false;

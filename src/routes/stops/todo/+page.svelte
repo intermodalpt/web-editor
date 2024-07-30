@@ -3,8 +3,8 @@
 	import { derived, writable } from 'svelte/store';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { selectedRegion } from '$lib/db';
-	import { regionMapParams } from '$lib/utils.js';
-	import { toast, permissions } from '$lib/stores.js';
+	import { regionMapParams } from '$lib/utils';
+	import { toast, permissions } from '$lib/stores';
 	import { canModifyStopAttrs, canContribModifyStopAttrs } from '$lib/permissions';
 	import Icon from '$lib/components/Icon.svelte';
 	import StopTodoViewer from './StopTodoViewer.svelte';

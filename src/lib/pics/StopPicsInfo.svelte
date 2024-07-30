@@ -1,7 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
-	import { token } from '$lib/stores';
 	import { apiServer } from '$lib/settings';
 
 	const dispatch = createEventDispatcher();

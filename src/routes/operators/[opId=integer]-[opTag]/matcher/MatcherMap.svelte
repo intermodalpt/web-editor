@@ -3,7 +3,7 @@
 	import { Map as Maplibre, NavigationControl, GeolocateControl, LngLatBounds } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { tileStyle } from '$lib/settings.js';
+	import { tileStyle } from '$lib/settings';
 
 	const dispatch = createEventDispatcher();
 	const DEFAULT_PADDING = 300;

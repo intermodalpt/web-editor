@@ -1,9 +1,16 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import { toast } from '$lib/stores.js';
+	import { toast } from '$lib/stores';
 	import SubrouteForm from './SubrouteForm.svelte';
-	import { apiServer } from '$lib/settings.js';
-	import { softInvalidateRoutes } from '$lib/db.js';
+	import { softInvalidateRoutes } from '$lib/db.ts';
+	import {
+		createRoute,
+		createSubroute,
+		deleteRoute,
+		deleteSubroute,
+		updateRoute,
+		updateSubroute
+	} from '$lib/api';
 
 	const dispatch = createEventDispatcher();
 

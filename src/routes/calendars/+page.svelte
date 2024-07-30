@@ -2,11 +2,11 @@
 	import { derived } from 'svelte/store';
 	import Select from 'svelte-select';
 	import { liveQuery } from 'dexie';
-	import { apiServer } from '$lib/settings.js';
-	import { calendarStr, isDeepEqual } from '$lib/utils.js';
-	import { permissions } from '$lib/stores.js';
+	import { calendarStr, isDeepEqual } from '$lib/utils';
+	import { permissions, toast } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions';
 	import { fetchOperators, getOperators, fetchCalendars, getCalendars, loadMissing } from '$lib/db';
+	import { deleteCalendar } from '$lib/api';
 
 	const calendars = liveQuery(() => getCalendars());
 	const operators = liveQuery(() => getOperators());

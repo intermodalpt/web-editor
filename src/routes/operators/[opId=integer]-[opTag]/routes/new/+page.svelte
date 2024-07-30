@@ -1,6 +1,6 @@
 <script>
 	import RouteForm from '../form/RouteForm.svelte';
-	import { permissions } from '$lib/stores.js';
+	import { permissions } from '$lib/stores';
 	import { canCreateRoutes } from '$lib/permissions';
 
 	/** @type {import('./$types').PageData} */

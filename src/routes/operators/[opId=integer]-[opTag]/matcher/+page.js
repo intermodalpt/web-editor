@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { fetchOperators, getOperator, regionId } from '$lib/db.js';
-import { apiServer } from '$lib/settings.js';
+import { fetchOperators, getOperator, regionId } from '$lib/db.ts';
+import { apiServer } from '$lib/settings';
 import { get } from 'svelte/store';
 
 export const csr = true;

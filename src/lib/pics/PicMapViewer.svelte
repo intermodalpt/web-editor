@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-	import { tileStyle } from '$lib/settings.js';
+	import { tileStyle } from '$lib/settings';
 	import { Map as Maplibre, NavigationControl, GeolocateControl } from 'maplibre-gl?client';
 
 	const dispatch = createEventDispatcher();

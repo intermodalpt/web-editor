@@ -3,7 +3,7 @@
 	import { derived, writable } from 'svelte/store';
 	import { Map as Maplibre, NavigationControl } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { apiServer, tileStyle } from '$lib/settings.js';
+	import { apiServer, tileStyle } from '$lib/settings';
 	import { fetchStops, fetchParishes, getStops, getParishes, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
 

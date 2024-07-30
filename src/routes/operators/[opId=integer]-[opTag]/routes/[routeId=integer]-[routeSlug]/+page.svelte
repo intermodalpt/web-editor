@@ -5,16 +5,17 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
-	import { toast, permissions } from '$lib/stores.js';
+	import { toast, permissions } from '$lib/stores';
 	import { isAdmin } from '$lib/permissions.js';
-	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { regionMapParams } from '$lib/utils.js';
+	import { apiServer, tileStyle } from '$lib/settings';
+	import { regionMapParams } from '$lib/utils';
 	import { fetchCalendars, getCalendars, loadMissing, selectedRegion } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
 	import { annotateSubroute, subrouteTitle } from '../aux.js';
 	import RouteForm from '../form/RouteForm.svelte';
 	import DepartureEditor from './DepartureEditor.svelte';
 	import GtfsValidator from './GtfsValidator.svelte';
+	import { changeSubrouteStops } from '$lib/api';
 
 	/** @type {import('./$types').PageData} */
 	export let data;

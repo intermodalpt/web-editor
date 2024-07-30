@@ -1,7 +1,6 @@
 <script>
-	import { token } from '$lib/stores.js';
 	import { writable, derived } from 'svelte/store';
-	import { apiServer } from '$lib/settings.js';
+	import { apiServer } from '$lib/settings';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import ContributionRow from '$lib/changes/rows/ContributionRow.svelte';

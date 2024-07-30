@@ -1,8 +1,8 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
-	import { apiServer } from '$lib/settings.js';
-	import { isAuthenticated, permissions, uid } from '$lib/stores.js';
+	import { apiServer } from '$lib/settings';
+	import { isAuthenticated, permissions, uid } from '$lib/stores';
 	import PicMetaEditor from '$lib/pics/PicMetaEditor.svelte';
 	import PicUploader from '$lib/pics/PicUploader.svelte';
 	import { isAdmin } from '$lib/permissions';

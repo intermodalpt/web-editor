@@ -5,8 +5,8 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Select from 'svelte-select';
 	import polyline from '@mapbox/polyline';
-	import { progressiveSequenceAlignment, longestCommonSubsequence } from '$lib/utils.js';
-	import { apiServer, osrmServer, tileStyle } from '$lib/settings.js';
+	import { progressiveSequenceAlignment, longestCommonSubsequence } from '$lib/utils';
+	import { apiServer, osrmServer, tileStyle } from '$lib/settings';
 
 	/** @type {import('./$types').PageData} */
 	export let data;

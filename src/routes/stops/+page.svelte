@@ -6,12 +6,20 @@
 	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
-	import { apiServer, tileStyle } from '$lib/settings.js';
-	import { permissions, toast, isAuthenticated } from '$lib/stores.js';
-	import { isAdmin } from '$lib/permissions.ts';
+	import { tileStyle } from '$lib/settings';
+	import { permissions, toast, isAuthenticated } from '$lib/stores';
+	import { isAdmin } from '$lib/permissions';
 	import { isDeepEqual } from '$lib/utils.js';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { fetchStops, getStops, patchStop, loadMissing } from '$lib/db';
+	import { fetchStops, getStops, patchStop, loadMissing } from '$lib/db.js';
+	import {
+		updateStopMeta,
+		contribUpdateStopMeta,
+		getStopPicsRels,
+		getOwnStopPatch,
+		getStopPics,
+		getAllStopPics
+	} from '$lib/api';
 	import {
 		logStopScore,
 		logWeightedStopScore,

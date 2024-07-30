@@ -1,12 +1,12 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
-	import { apiServer, movementTreshold } from '$lib/settings.js';
-	import { toast, permissions } from '$lib/stores.js';
+	import { apiServer, movementTreshold } from '$lib/settings';
+	import { toast, permissions } from '$lib/stores';
 	import { canCreateStops, canMoveStops } from '$lib/permissions.ts';
-	import { createStop, attachStopToRegion, setStopPosition } from '$lib/api.js';
-	import { distance } from '$lib/utils.js';
-	import { regionId } from '$lib/db.js';
+	import { createStop, attachStopToRegion, setStopPosition } from '$lib/api';
+	import { distance } from '$lib/utils';
+	import { regionId } from '$lib/db.ts';
 	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';

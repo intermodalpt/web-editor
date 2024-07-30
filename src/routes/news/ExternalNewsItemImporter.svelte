@@ -1,9 +1,10 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { marked } from 'marked';
-	import { apiServer } from '$lib/settings.js';
-	import { toast } from '$lib/stores.js';
+	import { apiServer } from '$lib/settings';
+	import { toast } from '$lib/stores';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
+	import { importExternalNewsImage } from '$lib/api';
 
 	const dispatch = createEventDispatcher();
 

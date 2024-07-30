@@ -1,5 +1,5 @@
 <script>
-	import { stops } from '$lib/stores.js';
+	import { stops } from '$lib/stores';
 	import { derived, writable } from 'svelte/store';
 	import Icon from '$lib/components/Icon.svelte';
 

@@ -1,8 +1,8 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { derived } from 'svelte/store';
-	import { apiServer } from '$lib/settings.js';
-	import { distance } from '$lib/utils.js';
+	import { apiServer } from '$lib/settings';
+	import { distance } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';

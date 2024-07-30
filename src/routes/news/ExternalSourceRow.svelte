@@ -1,7 +1,7 @@
 <script>
 	import { onMount, createEventDispatcher } from 'svelte';
-	import { toast } from '$lib/stores.js';
-	import { apiServer } from '$lib/settings.js';
+	import { toast } from '$lib/stores';
+	import { apiServer } from '$lib/settings';
 	import Icon from '$lib/components/Icon.svelte';
 	import ExternalNewsItemImporter from './ExternalNewsItemImporter.svelte';
 
