@@ -1,4 +1,15 @@
-export function calc_route_multipoly(stops, route_stops) {
+type Stop = {
+	id: number;
+	name: string;
+	lat: number;
+	lon: number;
+};
+
+interface StopDict {
+	[key: number]: Stop;
+}
+
+export function calc_route_multipoly(stops: StopDict, route_stops: number[]) {
 	let segments = [];
 
 	let current_segment = [];
@@ -25,7 +36,7 @@ export function calc_route_multipoly(stops, route_stops) {
 	return segments;
 }
 
-function randomInteger(max) {
+function randomInteger(max: number) {
 	return Math.floor(Math.random() * (max + 1));
 }
 
@@ -46,7 +57,7 @@ export function randomHexColor() {
 	return '#' + hr + hg + hb;
 }
 
-export function weekdayName(weekday) {
+export function weekdayName(weekday: number) {
 	switch (weekday) {
 		case 0:
 			return 'Mon';
@@ -67,7 +78,7 @@ export function weekdayName(weekday) {
 	}
 }
 
-function conditionName(condition) {
+function conditionName(condition: Condition) {
 	switch (condition.condition) {
 		case 'Holiday':
 			return 'holidays';
@@ -101,7 +112,7 @@ const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 const WEEKDAYS = [0, 1, 2, 3, 4];
 const WEEKEND = [5, 6];
 
-export function calendarStr(calendar) {
+export function calendarStr(calendar: Calendar) {
 	if (isDeepEqual(calendar, { weekdays: WEEKDAYS, except_if: [{ condition: 'Holiday' }] })) {
 		return 'Workdays';
 	}
@@ -161,13 +172,13 @@ export function calendarStr(calendar) {
 	return `${namedWeekdays} ${conditions.join(', ')}`;
 }
 
-export const timestampToTime = (timestamp) => {
+export const timestampToTime = (timestamp: number) => {
 	return `${String(Math.floor(timestamp / 60) % 24).padStart(2, '0')}:${String(
 		Math.floor(timestamp % 60)
 	).padStart(2, '0')}`;
 };
 
-export function timeToTimestamp(time) {
+export function timeToTimestamp(time: string) {
 	let hour = parseInt(time.split(':')[0]);
 	if (hour < 4) {
 		hour += 24;
@@ -177,11 +188,11 @@ export function timeToTimestamp(time) {
 	return hour * 60 + minute;
 }
 
-const isObject = (object) => {
+const isObject = (object: any) => {
 	return object != null && typeof object === 'object';
 };
 
-export const isDeepEqual = (object1, object2) => {
+export const isDeepEqual = (object1: any, object2: any) => {
 	const objKeys1 = Object.keys(object1);
 	const objKeys2 = Object.keys(object2);
 
@@ -201,11 +212,11 @@ export const isDeepEqual = (object1, object2) => {
 };
 
 // Duplicates an object, including subfield
-export function deepCopy(object) {
+export function deepCopy(object: any) {
 	return JSON.parse(JSON.stringify(object));
 }
 
-export function isEmpty(obj) {
+export function isEmpty(obj: any) {
 	for (const prop in obj) {
 		if (Object.hasOwn(obj, prop)) {
 			return false;
@@ -215,7 +226,7 @@ export function isEmpty(obj) {
 	return true;
 }
 
-export function listDifferences(original, patch) {
+export function listDifferences(original: any, patch: any) {
 	const changes = [];
 	for (const [key, value] of Object.entries(patch)) {
 		if (value === null) {
@@ -228,7 +239,7 @@ export function listDifferences(original, patch) {
 	return changes;
 }
 
-export function distance(lat1, lon1, lat2, lon2) {
+export function distance(lat1: number, lon1: number, lat2: number, lon2: number) {
 	var p = 0.017453292519943295; // Math.PI / 180
 	var c = Math.cos;
 	var a =
@@ -237,7 +248,7 @@ export function distance(lat1, lon1, lat2, lon2) {
 	return 12742 * Math.asin(Math.sqrt(a)) * 1000; // 2 * R; R = 6371 km
 }
 
-export function getNearestStops(stopList, lat, lon, n = 30) {
+export function getNearestStops(stopList, lat: number, lon: number, n = 30) {
 	stopList.sort((a, b) => {
 		let distA = distance(lat, lon, a.lat, a.lon);
 		let distB = distance(lat, lon, b.lat, b.lon);
@@ -247,7 +258,7 @@ export function getNearestStops(stopList, lat, lon, n = 30) {
 	return stopList.slice(0, n);
 }
 
-export function needlemanWunsch(seq1, seq2, nullElement) {
+export function needlemanWunsch(seq1: any[], seq2: any[], nullElement: any) {
 	const n = seq1.length;
 	const m = seq2.length;
 	const gapPenalty = -1;
@@ -313,7 +324,7 @@ export function needlemanWunsch(seq1, seq2, nullElement) {
 	return [alignedSeq1.reverse(), alignedSeq2.reverse(), matrix];
 }
 
-export function progressiveSequenceAlignment(sequences) {
+export function progressiveSequenceAlignment(sequences: any[][]) {
 	// I'm pretty darn sure that this function can be improved
 	// And I'm pretty darn sure that nobody will ever notice a real
 	// difference between this and the improved version, at least for what we're doing
@@ -337,7 +348,14 @@ export function progressiveSequenceAlignment(sequences) {
 	for (let i = 0; i < n; i++) {
 		for (let j = i + 1; j < n; j++) {
 			const [alignedSeq1, alignedSeq2] = needlemanWunsch(sequences[i], sequences[j], nullElement);
-			const score = calculateScore(alignedSeq1, alignedSeq2, gapPenalty, matchScore, mismatchScore);
+			const score = calculateScore(
+				alignedSeq1,
+				alignedSeq2,
+				gapPenalty,
+				matchScore,
+				mismatchScore,
+				null
+			);
 			// Supperior triangle
 			crossAlignmentScores[i][j] = score;
 			// Inferior triangle
@@ -385,8 +403,8 @@ export function progressiveSequenceAlignment(sequences) {
 	while (n > 0) {
 		const currentConsensus = sequencesConsensus(alignedSequences, nullElement);
 
-		let bestAlignmentSeq;
-		let bestAlignmentSeqOriIdx;
+		let bestAlignmentSeq: any[];
+		let bestAlignmentSeqOriIdx: number;
 		let bestAlignmentMatrix;
 		let bestScore = -Infinity;
 		// Find how well sequences match amongst themselves
@@ -473,7 +491,14 @@ export function progressiveSequenceAlignment(sequences) {
 	return reorderedSequences;
 }
 
-function calculateScore(seq1, seq2, gapPenalty, matchScore, mismatchScore, nullElement) {
+function calculateScore(
+	seq1: any[],
+	seq2: any[],
+	gapPenalty: number,
+	matchScore: number,
+	mismatchScore: number,
+	nullElement: any | undefined
+) {
 	let score = 0;
 
 	for (let i = 0; i < seq1.length; i++) {
@@ -488,7 +513,7 @@ function calculateScore(seq1, seq2, gapPenalty, matchScore, mismatchScore, nullE
 	return score;
 }
 
-function sequencesConsensus(sequences, nullElement) {
+function sequencesConsensus(sequences: any[][], nullElement: any) {
 	const n = sequences[0].length;
 
 	let consensus = [];
@@ -504,7 +529,7 @@ function sequencesConsensus(sequences, nullElement) {
 	return consensus;
 }
 
-export function longestCommonSubsequence(arr1, arr2) {
+export function longestCommonSubsequence(arr1: any[], arr2: any[]) {
 	const m = arr1.length;
 	const n = arr2.length;
 	const lcs = new Array(m + 1).fill(null).map(() => new Array(n + 1).fill(0));
@@ -538,7 +563,7 @@ export function longestCommonSubsequence(arr1, arr2) {
 	return result;
 }
 
-export function regionMapParams(region) {
+export function regionMapParams(region: Region) {
 	let centerLon = region?.center_lon;
 	let centerLat = region?.center_lat;
 
@@ -552,7 +577,7 @@ export function regionMapParams(region) {
 	return { center: [centerLon, centerLat], zoom };
 }
 
-export function isValidUri(uri) {
+export function isValidUri(uri: string) {
 	try {
 		new URL(uri);
 	} catch (_) {
@@ -562,6 +587,6 @@ export function isValidUri(uri) {
 	return true;
 }
 
-export function isValidEmail(email) {
+export function isValidEmail(email: string) {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
