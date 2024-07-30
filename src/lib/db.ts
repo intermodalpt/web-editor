@@ -18,12 +18,12 @@ db.version(1).stores({
 	settings: 'key'
 });
 
-let _regionsLoaded;
-let _operatorsLoaded;
-let _stopsLoaded;
-let _routesLoaded;
-let _calendarsLoaded;
-let _parishesLoaded;
+let _regionsLoaded: boolean;
+let _operatorsLoaded: boolean;
+let _stopsLoaded: boolean;
+let _routesLoaded: boolean;
+let _calendarsLoaded: boolean;
+let _parishesLoaded: boolean;
 
 export let regionsLoaded = writable(false);
 export let operatorsLoaded = writable(false);
@@ -42,12 +42,12 @@ parishesLoaded.subscribe((v) => (_parishesLoaded = v));
 export const regionId = writable(
 	browser ? parseInt(localStorage.getItem(REGION_KEY)) || null : null
 );
-let _regionId = null;
+let _regionId: number | null = null;
 regionId.subscribe((id) => {
 	_regionId = id;
 });
 
-export async function setRegion(id) {
+export async function setRegion(id: number) {
 	if (!id) {
 		console.error('Attempted to nullify the region id');
 		return;
