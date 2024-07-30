@@ -18,32 +18,29 @@
 			<h2 class="card-title">
 				{data.uname}<span class="text-xs">(#{data.uid})</span>
 			</h2>
-			<table class="table table-compact">
-				<thead><tr><td>Permissões</td><td /></tr></thead>
-				<tbody>
-					{#each permissions as permission}
-						<tr>
-							<td>{permission.perm}</td>
-							<td>
-								<ul>
-									{#each Object.entries(permission) as [key, val]}
-										{#if key !== 'perm'}
-											<li class="flex gap-1">
-												<b>{key}</b>
-												{#if val}
-													<span class="text-success font-bold">Sim</span>
-												{:else}
-													<span class="text-error font-bold">Não</span>
-												{/if}
-											</li>
+			<h2 class="card-title">Permissões</h2>
+
+			<div class="flex flex-col gap-4">
+				{#each Object.entries(permissions) as [scope, perms]}
+					{#if Object.keys(perms).length > 0}
+						<div>
+							<h3 class="text-lg">{scope}</h3>
+							<div class="flex gap-4 ml-4 flex-wrap max-w-full">
+								{#each Object.entries(perms) as [key, val]}
+									<div class="flex items-start">
+										<span>{key}</span>
+										{#if val}
+											<i class="bg-success p-1 rounded-full"></i>
+										{:else}
+											<i class="bg-error p-1 rounded-full"></i>
 										{/if}
-									{/each}
-								</ul>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				{/each}
+			</div>
 		</div>
 	</div>
 
@@ -63,7 +60,7 @@
 						<ChangeViewer change={contribution.change} />
 						{#if contribution.comment}
 							<h4 class="font-bold">Comentário:</h4>
-							<textarea disable class="w-full">{contribution.comment}</textarea>
+							<textarea disabled class="w-full">{contribution.comment}</textarea>
 						{/if}
 					</li>
 				{/each}
@@ -86,7 +83,7 @@
 						<ChangeViewer change={contribution.change} />
 						{#if contribution.comment}
 							<h4 class="font-bold">Comentário:</h4>
-							<textarea disable class="w-full">{contribution.comment}</textarea>
+							<textarea disabled class="w-full">{contribution.comment}</textarea>
 						{/if}
 					</li>
 				{/each}

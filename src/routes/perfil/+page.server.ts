@@ -1,11 +1,11 @@
-import { goto } from '$app/navigation';
+import { redirect } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import { apiServer } from '$lib/settings';
 import { fetchStops } from '$lib/db';
 
 export async function load({ locals, fetch }) {
 	if (!locals.accessToken) {
-		return goto('/login');
+		redirect(307, '/login');
 	}
 
 	const [decidedContributionsRes, undecidedContributionsRes] = await Promise.all([
