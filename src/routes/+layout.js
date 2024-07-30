@@ -10,7 +10,7 @@ export const prerender = false;
 export async function load({ fetch, data }) {
 	permissions.set(data.accessData?.permissions ?? []);
 	isAuthenticated.set(data.accessData ?? false);
-	uid.set(data.accessData.uid);
+	uid.set(data.uid);
 
 	return data;
 }
