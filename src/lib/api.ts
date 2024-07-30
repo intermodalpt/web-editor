@@ -70,6 +70,7 @@ export async function login(username: string, password: string, opts: ReqOpts) {
 	const res = await fetch(`${apiServer}/v1/auth/login`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
+		credentials: 'include',
 		body: JSON.stringify({
 			username: username,
 			password: password
@@ -80,7 +81,7 @@ export async function login(username: string, password: string, opts: ReqOpts) {
 }
 
 export async function logout(opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/auth/logout`, { method: 'POST' });
+	const res = await fetch(`${apiServer}/v1/auth/logout`, { method: 'POST', credentials: 'include' });
 
 	return await handleResponse(res, opts);
 }
