@@ -2,8 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
 	import { apiServer } from '$lib/settings.js';
-	import { permissions } from '$lib/stores.js';
-	import { isAdmin } from '$lib/permissions.ts';
+	import { permissions } from '$lib/stores';
+	import { acceptContribution, declineContribution } from '$lib/api';
 
 	export let contribution;
 	export let stops;
@@ -12,53 +12,32 @@
 
 	let ignoredKeys = [];
 
-	const hasAdminPerm = isAdmin($permissions);
-	const isEvaluation = hasAdminPerm && contribution.accepted == null;
+	const isEvaluation = $permissions.misc.contrib_evaluator && contribution.accepted == null;
 
 	const dispatch = createEventDispatcher();
 
-	function acceptContribution() {
-		fetch(
-			`${apiServer}/v1/contrib/${contribution.id}/accept?verify=${
-				keepVerification ? 'true' : 'false'
-			}&ignored=${ignoredKeys.join(',')}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include'
+	async function handleAcceptContribution() {
+		await acceptContribution(contribution.id, ignoredKeys, keepVerification, {
+			onSuccess: () => {
+				dispatch('accept', { id: contribution.id });
+			},
+			onError: (e) => {
+				toast("Couldn't accept contribution", 'error');
 			}
-		)
-			.catch((e) => {
-				alert("Couldn't decline contribution: " + e.message);
-				console.error(e);
-			})
-			.then(async (r) => {
-				if (r.ok) {
-					// await wipeCachedData();
-					dispatch('accept', { id: contribution.id });
-				} else {
-					alert("Couldn't accept contribution: " + r.status + ' ' + r.statusText);
-				}
-			});
+		});
 	}
 
-	function declineContribution() {
+	async function handleDeclineContribution() {
 		if (!confirm('Are you sure')) return;
-		fetch(`${apiServer}/v1/contrib/${contribution.id}/decline`, {
-			method: 'POST',
-			credentials: 'include'
-		})
-			.catch((e) => {
-				alert("Couldn't decline contribution: " + e.message);
-				console.error(e);
-			})
-			.then((r) => {
-				if (r.ok) {
-					dispatch('reject', { id: contribution.id });
-				} else {
-					alert("Couldn't decline contribution: " + r.status + ' ' + r.statusText);
-				}
-			});
+
+		await declineContribution(contribution.id, {
+			onSuccess: () => {
+				dispatch('accept', { id: contribution.id });
+			},
+			onError: (e) => {
+				toast("Couldn't decline contribution", 'error');
+			}
+		});
 	}
 
 	function close() {
@@ -94,7 +73,7 @@
 		</div>
 		<div class="modal-action">
 			{#if isEvaluation}
-				<button class="btn btn-error" on:click={declineContribution}>Recusar</button>
+				<button class="btn btn-error" on:click={handleDeclineContribution}>Recusar</button>
 			{/if}
 			<span class="grow" />
 			{#if isEvaluation}
@@ -111,8 +90,8 @@
 				</div>
 			{/if}
 			<button class="btn" on:click={close}>Fechar</button>
-			{#if hasAdminPerm && contribution.accepted != true}
-				<button class="btn btn-success" on:click={acceptContribution}>Aceitar</button>
+			{#if isEvaluation && contribution.accepted != true}
+				<button class="btn btn-success" on:click={handleAcceptContribution}>Aceitar</button>
 			{/if}
 		</div>
 	</div>
