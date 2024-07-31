@@ -45,16 +45,12 @@
 				calendar_id: newCalendarId
 			};
 
-			await fetch(`${apiServer}/v1/schedules/${$selectedSubroute.id}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				body: JSON.stringify(departure)
-			}).then((x) => {
-				if (x.ok) {
+			await createDeparture($selectedSubroute.id, departure, {
+				onSuccess: () => {
 					invalidate('app:departures');
-				} else {
-					throw alert('Erro a criar partida');
+				},
+				onError: () => {
+					toast('Erro a criar partida', 'error');
 				}
 			});
 		}
@@ -62,18 +58,24 @@
 		additionalNewTimes = [];
 	}
 
-	async function patchDeparture() {
+	async function handlePatchDeparture() {
 		alert('Not implemented yet');
 	}
 
-	async function deleteDeparture() {
-		if (confirm(`Confirma que quer apagar? (${timestampToTime(selectedDeparture.time)})`)) {
-			await fetch(`${apiServer}/v1/schedules/${$selectedSubroute.id}/${selectedDepartureId}`, {
-				method: 'DELETE',
-				credentials: 'include'
-			});
-			invalidate('app:departures');
+	async function handleDeleteDeparture() {
+		if (!confirm(`Confirma que quer apagar? (${timestampToTime(selectedDeparture.time)})`)) {
+			return;
 		}
+
+		await deleteDeparture($selectedSubroute.id, selectedDepartureId, {
+			onSuccess: () => {
+				toast('Partida apagada', 'success');
+				invalidate('app:departures');
+			},
+			onError: () => {
+				toast('Erro a apagar partida', 'error');
+			}
+		});
 	}
 
 	function addAdditionalTime() {
@@ -148,8 +150,8 @@
 				</select>
 			</div>
 			<div class="modal-action">
-				<button class="btn btn-secondary" on:click={patchDeparture}>Alterar</button>
-				<button class="btn btn-error" on:click={deleteDeparture}>Apagar</button>
+				<button class="btn btn-secondary" on:click={handlePatchDeparture}>Alterar</button>
+				<button class="btn btn-error" on:click={handleDeleteDeparture}>Apagar</button>
 				<form method="dialog">
 					<button class="btn">Fechar</button>
 				</form>

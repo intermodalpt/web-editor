@@ -112,26 +112,21 @@
 
 		const subroute = e.detail.pairing.subroute;
 
-		const res = await fetch(
-			`${apiServer}/v1/subroutes/${subroute.id}/validation/correspondence_ack`,
+		await setSubrouteGtfsAck(
+			subroute.id,
 			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				body: JSON.stringify({
-					from_stop_ids: subroute.validation.correspondence_ack,
-					to_stop_ids: subroute.validation.correspondence
-				})
+				from: subroute.validation.current_ack,
+				to: subroute.validation.current
+			},
+			{
+				onSuccess: () => {
+					toast(`Ids GTFS confirmados para ${subroute.id}`, 'info');
+				},
+				onError: () => {
+					toast(`Erro a confirmar ids`, 'error');
+				}
 			}
 		);
-
-		if (res.ok) {
-			toast(`Ids GTFS confirmados para ${subroute.id}`, 'info');
-			subroute.validation.correspondence_ack = subroute.validation.correspondence;
-		} else {
-			toast(`Erro a confirmar ids`, 'error');
-			console.error(res);
-		}
 	}
 
 	async function handleImlAck(e) {
@@ -139,23 +134,21 @@
 
 		const subroute = e.detail.pairing.subroute;
 
-		const res = await fetch(`${apiServer}/v1/subroutes/${subroute.id}/validation/current_ack`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify({
-				from_stop_ids: subroute.validation.current_ack,
-				to_stop_ids: subroute.validation.current
-			})
-		});
-
-		if (res.ok) {
-			toast(`Ids IML confirmados para ${subroute.id}`, 'info');
-			subroute.validation.current_ack = subroute.validation.current;
-		} else {
-			toast(`Erro a confirmar ids`, 'error');
-			console.error(res);
-		}
+		await setSubrouteImlAck(
+			subroute.id,
+			{
+				from: subroute.validation.current_ack,
+				to: subroute.validation.current
+			},
+			{
+				onSuccess: () => {
+					toast(`Ids IML confirmados para ${subroute.id}`, 'info');
+				},
+				onError: () => {
+					toast(`Erro a confirmar ids`, 'error');
+				}
+			}
+		);
 	}
 
 	async function handleGtfsReplace(e) {
@@ -163,15 +156,21 @@
 
 		const subroute = e.detail.pairing.subroute;
 
-		const res = await fetch(`${apiServer}/v1/subroutes/${subroute.id}/stops`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify({
+		changeSubrouteStops(
+			subroute.id,
+			{
 				from: subroute.validation.current,
 				to: subroute.validation.correspondence
-			})
-		});
+			},
+			{
+				onSuccess: () => {
+					toast(`Ids IML substituídos por GTFS para ${subroute.id}`, 'info');
+				},
+				onError: () => {
+					toast(`Erro a substituir ids`, 'error');
+				}
+			}
+		);
 
 		if (res.ok) {
 			toast(`Paragens de ${subroute.id} sincronizadas com GTFS`, 'info');
@@ -188,23 +187,22 @@
 
 		if (!confirm(`Emparelhar IML ${subroute.id} com GTFS ${pairRef}?`)) return;
 
-		const res = await fetch(`${apiServer}/v1/routes/${$route.id}/assign_unmatched_validation`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify({
+		await pairRouteWithUnmatchedPattern(
+			$route.id,
+			{
 				subroute_id: subroute.id,
 				pattern_id: pairRef,
 				sync: true
-			})
-		});
-
-		if (res.ok) {
-			toast(`Subrota ${subroute.id} emparelhada com GTFS ${pairRef}`, 'info');
-		} else {
-			toast(`Erro a emparelhar`, 'error');
-			console.error(res);
-		}
+			},
+			{
+				onSuccess: () => {
+					toast(`Subrota ${subroute.id} emparelhada com GTFS ${pairRef}`, 'success');
+				},
+				onError: () => {
+					toast(`Erro a emparelhar`, 'error');
+				}
+			}
+		);
 	}
 </script>
 

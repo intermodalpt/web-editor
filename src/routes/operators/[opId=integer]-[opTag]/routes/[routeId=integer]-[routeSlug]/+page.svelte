@@ -6,7 +6,6 @@
 	import * as turf from '@turf/turf';
 	import { liveQuery } from 'dexie';
 	import { toast, permissions } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions.js';
 	import { apiServer, tileStyle } from '$lib/settings';
 	import { regionMapParams } from '$lib/utils';
 	import { fetchCalendars, getCalendars, loadMissing, selectedRegion } from '$lib/db';
@@ -23,8 +22,6 @@
 	const routeId = data.route.id;
 	const operatorId = data.route.operator;
 	const routeTypes = data.routeTypes;
-
-	const hasAdminPerm = isAdmin($permissions);
 
 	// Stores and reactive variables
 	// PS: We might not need stores as these are now coming from load()
@@ -613,28 +610,23 @@
 		let originalStops = routeStops[$selectedSubrouteId] || [];
 		let newStops = $subrouteStopIds;
 
-		fetch(`${apiServer}/v1/subroutes/${$selectedSubrouteId}/stops`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify({
+		changeSubrouteStops(
+			$selectedSubrouteId,
+			{
 				from: originalStops,
 				to: newStops
-			})
-		})
-			.then((resp) => {
-				if (resp.ok) {
+			},
+			{
+				onSuccess: () => {
 					routeStops[$selectedSubrouteId] = [...newStops];
 					subrouteStopsChanged = false;
-					toast('Stops saved');
-				} else {
-					toast("The server didn't like this data");
+					toast('Paragens guardadas');
+				},
+				onError: () => {
+					toast('Erro a guardar paragens', 'error');
 				}
-			})
-			.catch((e) => {
-				console.log(e);
-				toast('Error saving stops');
-			});
+			}
+		);
 	}
 
 	onMount(() => {
@@ -652,7 +644,7 @@
 			centerMap();
 		}
 
-		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
 
 		map.on('load', () => {
 			addSourcesAndLayers();
@@ -671,7 +663,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 
@@ -781,7 +773,6 @@
 					stops={$stops}
 					routeStops={$routeStops}
 					{routeTypes}
-					canEdit={hasAdminPerm}
 				/>
 			</div>
 		{:else if tab == tabs.departures && $selectedSubroute}
@@ -792,12 +783,11 @@
 					{selectedSubroute}
 					{routeSchedules}
 					{operatorCalendars}
-					canEdit={hasAdminPerm}
 				/>
 			</div>
 		{:else if tab == tabs.validation}
 			<div class="flex flex-col rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto">
-				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={hasAdminPerm} />
+				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={$permissions.} />
 			</div>
 		{/if}
 	</div>
@@ -807,7 +797,7 @@
 		>
 			<button
 				class="btn btn-sm normal-case"
-				class:hidden={!hasAdminPerm}
+				class:hidden={!$permissions?.routes?.modify_stops}
 				on:click={handleStopIdImport}>Import</button
 			>
 			<button
@@ -850,7 +840,7 @@
 						/>
 					{/key}
 				</div>
-				{#if hasAdminPerm}
+				{#if $permissions?.routes?.modify_stops}
 					<div class="divider px-6 m-2" />
 					<div class="flex">
 						<button

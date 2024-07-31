@@ -42,7 +42,7 @@
 	{#if showMap}
 		<GtfsCmpMap {stops} imlStops={unpaired.imlStops} />
 	{/if}
-	<div class="flex gap-2">
+	<div class="flex gap-2 justify-end">
 		<button
 			on:click={() => (showMap = !showMap)}
 			class="btn btn-sm btn-neutral"

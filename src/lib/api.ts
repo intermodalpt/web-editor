@@ -274,6 +274,11 @@ export async function deleteCalendar(operatorId: number, calendarId: number, opt
 	return await handleResponse(res, opts);
 }
 
+export async function getOperatorStops(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/stops`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getOperatorRoutes(operatorId: number, opts: ReqOpts) {
 	const res = await f(`/v1/operators/${operatorId}/routes`, { opts });
 	return await handleResponse(res, opts);

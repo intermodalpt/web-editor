@@ -231,7 +231,7 @@
 			center: [-9.0, 38.65]
 		});
 
-		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -243,7 +243,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 

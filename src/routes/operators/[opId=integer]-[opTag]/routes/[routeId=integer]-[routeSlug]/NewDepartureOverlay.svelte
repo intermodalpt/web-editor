@@ -2,8 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings';
-	import { isAuthenticated, uid } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions';
+	import { isAuthenticated, uid, permissions } from '$lib/stores';
 	import PicMetaEditor from '$lib/pics/PicMetaEditor.svelte';
 	import PicUploader from '$lib/pics/PicUploader.svelte';
 
@@ -41,7 +40,11 @@
 						const quality = pic.tagged;
 						const stops = pic.stops != null && pic.stops.length > 0;
 						const total = !(POSITION_REQUIRED && !position) && visibility && quality && stops;
-						const fixable = !total && (pic.uploader === $uid || isAdmin($permissions));
+						const fixable =
+							!total &&
+							((pic.uploader === $uid &&
+								($permissions?.stop_pics?.contrib_upload || $permissions?.stop_pics?.modify_own)) ||
+								$permissions?.stop_pics?.modify_others);
 
 						pic.metaCompleteness = {
 							position: position,

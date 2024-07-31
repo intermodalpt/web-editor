@@ -1,25 +1,10 @@
 import { error } from '@sveltejs/kit';
-import {
-	getRegions,
-	getOperator,
-	getOperatorFullRoutes,
-	getOperatorIssues,
-	getOperatorStops,
-	getOperatorCalendars
-} from '$lib/api';
+import { getOperator, getOperatorStops, getOperatorFullRoutes } from '$lib/api';
 
-/** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
 	const operatorId = parseInt(params.opId);
 
-	const [regions, operator, stops, routes] = await Promise.all([
-		getRegions({
-			onError: (res: Response) => {
-				error(res.status, 'Erro a carregar as regiões');
-			},
-			toJson: true,
-			fetch
-		}),
+	const [operator, stops, routes] = await Promise.all([
 		getOperator(operatorId, {
 			onError: (res: Response) => {
 				error(res.status, 'Erro a carregar o operador');
@@ -29,7 +14,7 @@ export async function load({ params, fetch }) {
 		}),
 		getOperatorStops(operatorId, {
 			onError: (res: Response) => {
-				error(res.status, 'Erro a carregar o operador');
+				error(res.status, 'Erro a carregar as paragens');
 			},
 			toJson: true,
 			fetch
@@ -44,7 +29,6 @@ export async function load({ params, fetch }) {
 	]);
 
 	return {
-		regions,
 		operator,
 		routes,
 		stops

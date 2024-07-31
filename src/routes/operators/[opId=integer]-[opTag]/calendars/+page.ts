@@ -4,7 +4,6 @@ import {
 	getOperator,
 	getOperatorFullRoutes,
 	getOperatorIssues,
-	getOperatorStops,
 	getOperatorCalendars
 } from '$lib/api';
 
@@ -12,7 +11,8 @@ import {
 export async function load({ params, fetch }) {
 	const operatorId = parseInt(params.opId);
 
-	const [regions, operator, stops, routes] = await Promise.all([
+	const [regions, operator, routes, issues, calendars] = await Promise.all([
+        // TODO create an operator regions endpoint
 		getRegions({
 			onError: (res: Response) => {
 				error(res.status, 'Erro a carregar as regiões');
@@ -27,16 +27,23 @@ export async function load({ params, fetch }) {
 			toJson: true,
 			fetch
 		}),
-		getOperatorStops(operatorId, {
+		getOperatorFullRoutes(operatorId, {
 			onError: (res: Response) => {
-				error(res.status, 'Erro a carregar o operador');
+				error(res.status, 'Erro a carregar as linhas');
 			},
 			toJson: true,
 			fetch
 		}),
-		getOperatorFullRoutes(operatorId, {
+		getOperatorIssues(operatorId, {
 			onError: (res: Response) => {
-				error(res.status, 'Erro a carregar as linhas');
+				error(res.status, 'Erro a carregar os problemas');
+			},
+			toJson: true,
+			fetch
+		}),
+		getOperatorCalendars(operatorId, {
+			onError: (res: Response) => {
+				error(res.status, 'Erro a carregar os calendários');
 			},
 			toJson: true,
 			fetch
@@ -47,6 +54,7 @@ export async function load({ params, fetch }) {
 		regions,
 		operator,
 		routes,
-		stops
+		issues,
+		calendars
 	};
 }
