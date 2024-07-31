@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export const permissions = writable([]);
+export const permissions = writable({});
 export const isAuthenticated = writable(false);
 export const uid = writable(null);
 
