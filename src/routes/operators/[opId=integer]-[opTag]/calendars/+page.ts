@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+
 import {
 	getRegions,
 	getOperator,
@@ -8,7 +9,7 @@ import {
 } from '$lib/api';
 
 /** @type {import('./$types').PageLoad} */
-export async function load({ params, fetch }) {
+export async function load({ params, fetch, depends }) {
 	const operatorId = parseInt(params.opId);
 
 	const [regions, operator, routes, issues, calendars] = await Promise.all([
@@ -49,6 +50,8 @@ export async function load({ params, fetch }) {
 			fetch
 		})
 	]);
+
+	depends('operator:calendars');
 
 	return {
 		regions,

@@ -256,11 +256,21 @@ export async function deleteOperatorRouteType(operatorId: number, typeId: number
 	return await handleResponse(res, opts);
 }
 
-export async function createCalendar(operatorId: number, name: number, calendar, opts: ReqOpts) {
+export async function createCalendar(operatorId: number, name: string, calendar, opts: ReqOpts) {
 	const res = await f(`/v1/operators/${operatorId}/calendars`, {
 		method: 'POST',
 		isJson: true,
 		body: { name, calendar },
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
+export async function updateCalendar(operatorId: number, calendar, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/calendars/${calendar.id}`, {
+		method: 'PATCH',
+		isJson: true,
+		body: calendar,
 		opts
 	});
 	return await handleResponse(res, opts);
@@ -299,7 +309,17 @@ export async function getOperatorIssues(operatorId: number, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getOperatorStopRels(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/stop_rels`, { opts });
+	return await handleResponse(res, opts);
+}
+
 // ----- Stops -----
+
+export async function getStops(opts: ReqOpts) {
+	const res = await f(`/v1/stops`, { opts });
+	return await handleResponse(res, opts);
+}
 
 export async function createStop(stopData, opts: ReqOpts) {
 	const res = await f(`/v1/stops`, {
@@ -673,6 +693,18 @@ export async function contribUpdateStopMeta(
 export async function getOwnStopPatch(opts: ReqOpts) {
 	const url = '/v1/contrib/pending_stop_patch/own';
 	return await handleResponse(await f(url, { opts }), opts);
+}
+
+// ----- GTFS -----
+
+export async function getOperatorGtfsStops(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/gtfs/stops`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorGtfsRoutes(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/gtfs/routes`, { opts });
+	return await handleResponse(res, opts);
 }
 
 // ----- Misc -----
