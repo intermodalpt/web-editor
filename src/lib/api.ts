@@ -46,17 +46,18 @@ async function ensureAwaited(maybePromise: Promise<any> | any): Promise<any> {
 }
 
 interface SimpleFetchOpts {
-	method: string | null;
-	body: any;
-	isJson: boolean | null;
+	method?: string;
+	body?: any;
+	isJson?: boolean;
 	opts: ReqOpts;
 }
 
-async function betterFetch(
+// A better fetch that gracefully deals with SSR
+async function f(
 	url: string,
 	{ method = 'GET', body, isJson = false, opts }: SimpleFetchOpts
 ): Promise<Response> {
-	return await (opts?.fetch ? opts.fetch : fetch)(url, {
+	return await (opts?.fetch ? opts.fetch : fetch)(apiServer + url, {
 		method: method,
 		headers: isJson ? { 'Content-Type': 'application/json' } : {},
 		credentials: 'include',
@@ -67,116 +68,102 @@ async function betterFetch(
 // ----- Auth -----
 
 export async function login(username: string, password: string, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/auth/login`, {
+	const res = await f(`/v1/auth/login`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({
-			username: username,
-			password: password
-		})
+		isJson: true,
+		body: {
+			username,
+			password
+		},
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function logout(opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/auth/logout`, { method: 'POST', credentials: 'include' });
-
+	const res = await f(`/v1/auth/logout`, { method: 'POST', opts });
 	return await handleResponse(res, opts);
 }
 
 export async function renewAccessToken(opts: ReqOpts) {
-	const url = `${apiServer}/v1/auth/renew`;
-	const res = await betterFetch(url, { opts });
-	// const res = await fetch(`${apiServer}/v1/auth/renew`, {
-	// 	credentials: 'include'
-	// });
-
+	const res = await f(`/v1/auth/renew`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function register(registration, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/auth/register`, {
+	const res = await f(`/v1/auth/register`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(registration)
+		isJson: true,
+		body: registration,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function getCaptcha(opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/auth/get_captcha`);
-
+	const res = await f(`/v1/auth/get_captcha`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function checkUsername(username: string, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/auth/register/username_check`, {
+	const res = await f(`/v1/auth/register/username_check`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ username })
+		isJson: true,
+		body: { username },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 // ----- Regions -----
 
 export async function getRegionTodo(regionId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/regions/${regionId}/stops/todo`);
-
+	const res = await f(`/v1/regions/${regionId}/stops/todo`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function updateStopTodos(stopId: number, todos: [any], opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stops/${stopId}/todo`, {
+	const res = await f(`/v1/stops/${stopId}/todo`, {
 		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(todos)
+		isJson: true,
+		body: todos,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 // ----- Operators -----
 
 export async function createOperator(data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators`, {
+	const res = await f(`/v1/operators`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function getOperator(operatorId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}`);
-
+	const res = await f(`/v1/operators/${operatorId}`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function patchOperator(operatorId: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}`, {
+	const res = await f(`/v1/operators/${operatorId}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function attachOperatorToRegion(operatorId: number, regionId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/regions/${regionId}/operators/${operatorId}`, {
+	const res = await f(`/v1/regions/${regionId}/operators/${operatorId}`, {
 		method: 'PUT',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -185,32 +172,29 @@ export async function dettachOperatorFromRegion(
 	regionId: number,
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/regions/${regionId}/operators/${operatorId}`, {
+	const res = await f(`/v1/regions/${regionId}/operators/${operatorId}`, {
 		method: 'DELETE',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function uploadLogo(operatorId: number, logoData, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/logo`, {
+	const res = await f(`/v1/operators/${operatorId}/logo`, {
 		method: 'POST',
-		credentials: 'include',
-		body: logoData
+		body: logoData,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function createOperatorRouteType(operatorId: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/routes/types`, {
+	const res = await f(`/v1/operators/${operatorId}/routes/types`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -220,101 +204,88 @@ export async function patchOperatorRouteType(
 	data,
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/routes/types/${typeId}`, {
+	const res = await f(`/v1/operators/${operatorId}/routes/types/${typeId}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteOperatorRouteType(operatorId: number, typeId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/routes/types/${typeId}`, {
+	const res = await f(`/v1/operators/${operatorId}/routes/types/${typeId}`, {
 		method: 'DELETE',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function createCalendar(operatorId: number, name: number, calendar, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/calendars`, {
+	const res = await f(`/v1/operators/${operatorId}/calendars`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ name, calendar })
+		isJson: true,
+		body: { name, calendar },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteCalendar(operatorId: number, calendarId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/calendars/${calendarId}`, {
+	const res = await f(`/v1/operators/${operatorId}/calendars/${calendarId}`, {
 		method: 'DELETE',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function createIssue(issue, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/issues`, {
+	const res = await f(`/v1/issues`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(issue)
+		isJson: true,
+		body: issue,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 // ----- Stops -----
 
 export async function createStop(stopData, opts: ReqOpts) {
-	const url = `${apiServer}/v1/stops`;
-	const res = await betterFetch(url, { opts, method: 'POST', body: stopData, isJson: true });
-
-	// const res = await fetch(`${apiServer}/v1/stops`, {
-	// 	method: 'POST',
-	// 	headers: { 'Content-Type': 'application/json' },
-	// 	credentials: 'include',
-	// 	body: JSON.stringify(stopData)
-	// });
-
+	const res = await f(`/v1/stops`, {
+		method: 'POST',
+		isJson: true,
+		body: stopData,
+		opts
+	});
 	return await handleResponse(res, opts);
 }
 
 export async function updateStopMeta(stopId: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stops/${stopId}`, {
+	const res = await f(`/v1/stops/${stopId}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function setStopPosition(stopId: number, lon: number, lat: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stops/${stopId}/position`, {
+	const res = await f(`/v1/stops/${stopId}/position`, {
 		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ lon, lat })
+		isJson: true,
+		body: { lon, lat },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function attachStopToRegion(stopId: number, regionId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/regions/${regionId}/stops/${stopId}`, {
+	const res = await f(`/v1/regions/${regionId}/stops/${stopId}`, {
 		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -324,159 +295,132 @@ export async function attachStopToOperator(
 	pairing,
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stopId}`, {
+	const res = await f(`/v1/operators/${operatorId}/stops/${stopId}`, {
 		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(pairing)
+		isJson: true,
+		body: pairing,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function detachStopFromOperator(stopId: number, operatorId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stopId}`, {
-		method: 'DELETE'
+	const res = await f(`/v1/operators/${operatorId}/stops/${stopId}`, {
+		method: 'DELETE',
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function getOsmStops(opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/osm/stops`);
-
+	const res = await f(`/v1/osm/stops`, { opts });
 	return await handleResponse(res, opts);
 }
 
 // ----- Stop pics -----
 
 export async function getStopPic(picId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stop_pics/${picId}`, {
-		credentials: 'include'
-	});
-
+	const res = await f(`/v1/stop_pics/${picId}`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function getStopPics(stopId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stops/${stopId}/pictures`);
-
+	const res = await f(`/v1/stops/${stopId}/pictures`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function getAllStopPics(stopId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stops/${stopId}/pictures/all`);
-
+	const res = await f(`/v1/stops/${stopId}/pictures/all`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function updateStopPic(picId: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stop_pics/${picId}`, {
+	const res = await f(`/v1/stop_pics/${picId}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function uploadLinkedStopPic(stopId: number, picData, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stop_pics/linked/${stopId}`, {
+	const res = await f(`/v1/stop_pics/linked/${stopId}`, {
 		method: 'POST',
-		credentials: 'include',
-		body: picData
+		body: picData,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function uploadDanglingStopPic(picData, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stop_pics/dangling`, {
+	const res = await f(`/v1/stop_pics/dangling`, {
 		method: 'POST',
-		credentials: 'include',
-		body: picData
+		body: picData,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteStopPic(picId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stop_pics/${picId}`, {
-		method: 'DELETE',
-		credentials: 'include'
-	});
-
+	const res = await f(`/v1/stop_pics/${picId}`, { method: 'DELETE', opts });
 	return await handleResponse(res, opts);
 }
 
 export async function getStopPicsRels(opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/stop_pics/by_stop`);
-
+	const res = await f(`/v1/stop_pics/by_stop`, { opts });
 	return await handleResponse(res, opts);
 }
 
 // ----- Routes -----
 
 export async function createRoute(data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/routes`, {
+	const res = await f(`/v1/routes`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function updateRoute(routeId: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/routes/${routeId}`, {
+	const res = await f(`/v1/routes/${routeId}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteRoute(routeId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/routes/${routeId}`, {
-		method: 'DELETE',
-		credentials: 'include'
-	});
-
+	const res = await f(`/v1/routes/${routeId}`, { method: 'DELETE', opts });
 	return await handleResponse(res, opts);
 }
 
 export async function createSubroute(data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/routes/${route.id}/subroutes`, {
+	const res = await f(`/v1/routes/${routeId}/subroutes`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function updateSubroute(subrouteId: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}`, {
+	const res = await f(`/v1/subroutes/${subrouteId}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteSubroute(subrouteId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}`, {
-		method: 'DELETE',
-		credentials: 'include'
-	});
-
+	const res = await f(`/v1/subroutes/${subrouteId}`, { method: 'DELETE', opts });
 	return await handleResponse(res, opts);
 }
 
@@ -485,33 +429,32 @@ export async function changeSubrouteStops(
 	{ from, to }: { from: [number]; to: [number] },
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}/stops`, {
+	return await handleResponse(res, opts);
+	// With betterFetch
+	const res = await f(`/v1/subroutes/${subrouteId}/stops`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ from, to })
+		isJson: true,
+		body: { from, to },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function createDeparture(subrouteId: number, departure, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/schedules/${subrouteId}`, {
+	const res = await f(`/v1/schedules/${subrouteId}`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(departure)
+		isJson: true,
+		body: departure,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteDeparture(subrouteId: number, departureId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/schedules/${subrouteId}/${departureId}`, {
+	const res = await f(`/v1/schedules/${subrouteId}/${departureId}`, {
 		method: 'DELETE',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -520,17 +463,12 @@ export async function setSubrouteGtfsAck(
 	{ from, to }: { from: [number]; to: [number] },
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}/validation/correspondence_ack`, {
+	const res = await f(`/v1/subroutes/${subrouteId}/validation/correspondence_ack`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		// TODO change this in the server to from and to (see changeSubrouteStops)
-		body: JSON.stringify({
-			from_stop_ids: from,
-			to_stop_ids: to
-		})
+		isJson: true,
+		body: { from_stop_ids: from, to_stop_ids: to },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -539,17 +477,12 @@ export async function setSubrouteImlAck(
 	{ from, to }: { from: [number]; to: [number] },
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/subroutes/${subrouteId}/validation/current_ack`, {
+	const res = await f(`/v1/subroutes/${subrouteId}/validation/current_ack`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		// TODO change this in the server to from and to (see changeSubrouteStops)
-		body: JSON.stringify({
-			from_stop_ids: from,
-			to_stop_ids: to
-		})
+		isJson: true,
+		body: { from_stop_ids: from, to_stop_ids: to },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -558,101 +491,89 @@ export async function pairRouteWithUnmatchedPattern(
 	data: { subroute_id: number; pattern_id: string; sync: boolean },
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/routes/${routeId}/assign_unmatched_validation`, {
+	const res = await f(`/v1/routes/${routeId}/assign_unmatched_validation`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 // ----- News -----
 
 export async function createNewsItem(data: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news`, {
+	const res = await f(`/v1/news`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function getNewsItem(id: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/${id}`, {
-		credentials: 'include'
+	const res = await f(`/v1/news/${id}`, {
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function changeNewsItem(id: number, data: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/${id}`, {
+	const res = await f(`/v1/news/${id}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteNewsItem(id: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/${id}`, {
+	const res = await f(`/v1/news/${id}`, {
 		method: 'DELETE',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function uploadNewsImg(data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/images`, {
+	const res = await f(`/v1/news/images`, {
 		method: 'POST',
-		credentials: 'include',
-		body: data
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function getExternalNewsItem(id: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/external/${id}/full`, {
-		credentials: 'include'
-	});
-
+	const res = await f(`/v1/news/external/${id}/full`, { opts });
 	return await handleResponse(res, opts);
 }
 
 export async function updateExternalNewsItem(id: number, data, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/external/${id}`, {
+	const res = await f(`/v1/news/external/${id}`, {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify(data)
+		isJson: true,
+		body: data,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function deleteExternalNewsItem(id: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/external/${id}`, {
+	const res = await f(`/v1/news/external/${id}`, {
 		method: 'DELETE',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function importExternalNewsImage(extImageId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/news/images/import_external/${extImageId}`, {
+	const res = await f(`/v1/news/images/import_external/${extImageId}`, {
 		method: 'POST',
-		credentials: 'include'
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -664,27 +585,23 @@ export async function acceptContribution(
 	keepVerification: number,
 	opts: ReqOpts
 ) {
-	const res = await fetch(
-		`${apiServer}/v1/contrib/${contributionId}/accept?verify=${
-			keepVerification ? 'true' : 'false'
-		}&ignored=${ignoredKeys.join(',')}`,
+	const res = await f(
+		`/v1/contrib/${contributionId}/accept?verify=${keepVerification ? 'true' : 'false'}&ignored=${ignoredKeys.join(',')}`,
 		{
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include'
+			isJson: true,
+			opts
 		}
 	);
-
 	return await handleResponse(res, opts);
 }
 
 export async function declineContribution(contributionId: number, opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/contrib/${contributionId}/decline`, {
+	const res = await f(`/v1/contrib/${contributionId}/decline`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include'
+		isJson: true,
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
@@ -694,20 +611,16 @@ export async function contribUpdateStopMeta(
 	comment: string,
 	opts: ReqOpts
 ) {
-	const res = await fetch(`${apiServer}/v1/contrib/stops/update/${stopId}`, {
+	const res = await f(`/v1/contrib/stops/update/${stopId}`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		credentials: 'include',
-		body: JSON.stringify({ contribution: stopData, comment })
+		isJson: true,
+		body: { contribution: stopData, comment },
+		opts
 	});
-
 	return await handleResponse(res, opts);
 }
 
 export async function getOwnStopPatch(opts: ReqOpts) {
-	const res = await fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, {
-		credentials: 'include'
-	});
-
-	return await handleResponse(res, opts);
+	const url = '/v1/contrib/pending_stop_patch/own';
+	return await handleResponse(await f(url, { opts }), opts);
 }
