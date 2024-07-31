@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-	import { Map as Maplibre, NavigationControl, GeolocateControl } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { tileStyle } from '$lib/settings';
@@ -213,7 +213,7 @@
 	}
 
 	onMount(() => {
-		map = new Maplibre({
+		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
 			center: mapParams.center,
@@ -223,10 +223,10 @@
 		});
 		map.easeTo({ padding: { left: DEFAULT_PADDING } });
 
-		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
 		map.addControl(new SearchControl(() => searchDialog.showModal()), 'top-right');
 		map.addControl(
-			new GeolocateControl({
+			new maplibre.GeolocateControl({
 				positionOptions: {
 					enableHighAccuracy: true
 				},
@@ -243,7 +243,7 @@
 	});
 
 	onDestroy(() => {
-		map.remove();
+		map?.remove();
 	});
 </script>
 

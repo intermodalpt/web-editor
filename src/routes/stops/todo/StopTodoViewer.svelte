@@ -122,26 +122,20 @@
 		todo = todo;
 	}
 
-	function handleSave() {
-		fetch(`${apiServer}/v1/stops/${$selectedStop.id}/todo`, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify(todo)
-		})
-			.then((res) => {
-				if (res.ok) {
-					toast('Guardado com sucesso', 'success');
-					$selectedStop.todo = structuredClone(todo);
-					dispatch('todo-update', { id: $selectedStop.id });
-				} else {
-					toast('Erro ao guardar', 'error');
-				}
+	async function handleSave() {
+		await updateStopTodos($selectedStop.id, todo, {
+			onSuccess: () => {
+				toast('Guardado com sucesso', 'success');
+				$selectedStop.todo = structuredClone(todo);
+				dispatch('todo-update', { id: $selectedStop.id });
+			},
+			onError: () => {
+				toast('Erro ao guardar', 'error');
+			},
+			onAfter: () => {
 				dispatch('refresh');
-			})
-			.catch((error) => {
-				console.error(error);
-			});
+			}
+		});
 	}
 </script>
 

@@ -4,10 +4,6 @@ import { apiServer } from '$lib/settings';
 import { get } from 'svelte/store';
 import { getRegionTodo } from '$lib/api';
 
-export const csr = true;
-export const ssr = false;
-export const prerender = false;
-
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
 	const selectedRegionId = get(regionId);
@@ -17,19 +13,20 @@ export async function load({ params, fetch }) {
 		error(400, 'Without a selected region');
 	}
 
-	const regionStopTodosRes = await fetch(`${apiServer}/v1/regions/${selectedRegionId}/stops/todo`);
+	let regionStopTodos = await getRegionTodo(selectedRegionId, {
+		onError: () => {
+			if (regionStopTodosRes.status === 0) {
+				error(500, 'Failed to connect to server');
+			} else {
+				error(500, 'Failed to fetch the region stops');
+			}
+		},
+		toJson: true
+	});
 
-	if (!regionStopTodosRes.ok) {
-		if (regionStopTodosRes.status === 0) {
-			error(500, 'Failed to connect to server');
-		} else {
-			error(500, 'Failed to fetch the region stops');
-		}
-	}
-
-	const regionStopTodos = await regionStopTodosRes.json();
+	console.log('regionStopTodos', regionStopTodos);
 
 	return {
-		regionStopTodos: Object.fromEntries(regionStopTodos.map((stop) => [stop.id, stop])),
+		regionStopTodos: Object.fromEntries(regionStopTodos.map((stop) => [stop.id, stop]))
 	};
 }

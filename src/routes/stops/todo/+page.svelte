@@ -1,7 +1,6 @@
 <script>
 	import { onDestroy, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { selectedRegion } from '$lib/db';
 	import { regionMapParams } from '$lib/utils';
 	import { toast, permissions } from '$lib/stores';
