@@ -1,13 +1,12 @@
-<script>
+<script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { writable, derived } from 'svelte/store';
 	import { liveQuery } from 'dexie';
-	import { Map as Maplibre, LngLatBounds } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import polyline from '@mapbox/polyline';
 	import { apiServer, tileStyle } from '$lib/settings';
 	import { permissions } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions.ts';
 	import {
 		getRegions,
 		getOperators,
@@ -17,10 +16,6 @@
 		getStops,
 		loadMissing
 	} from '$lib/db';
-
-	/** @type {import('./$types').PageData} */
-	export let data;
-	const operator = data.operator;
 
 	const ROUTES_PER_PAGE = 15;
 	const SUBROUTE_COLORS = [
@@ -34,40 +29,22 @@
 		'#4c4f69'
 	];
 
-	const canEdit = isAdmin($permissions);
-
-	let issues = [];
-
-	async function loadData() {
-		await Promise.all([
-			fetch(`${apiServer}/v1/operators/${operator.id}/routes/full`)
-				.then((r) => r.json())
-				.then((r) => {
-					$routes = r;
-				}),
-			fetchCalendars(),
-			fetchStops(),
-			fetch(`${apiServer}/v1/operators/${operator.id}/issues`)
-				.then((r) => r.json())
-				.then((r) => {
-					issues = r;
-				})
-		]);
-	}
-
-	loadData().then(async () => {
-		await loadMissing();
-	});
-
-	const regions = liveQuery(() => getRegions());
-	const operators = liveQuery(() => getOperators());
-	const calendars = liveQuery(() => getCalendars());
-	const routes = writable(null);
-	const stops = liveQuery(() => getStops());
+	export let data;
 
 	let mapElem;
 	let map;
 	let mapLoaded = false;
+
+	const operator = data.operator;
+	const routes = data.routes;
+	const calendars = data.calendars;
+	const issues = data.issues;
+	const regions = data.regions;
+	const subrouteCount = routes.reduce((acc, route) => acc + route.subroutes.length, 0);
+
+	const routeIndex = Object.fromEntries(routes.map((r) => [r.id, r]));
+
+	const stops = liveQuery(() => getStops());
 
 	const selectedRoute = writable(null);
 
@@ -100,34 +77,23 @@
 		$routePage = 0;
 	});
 
-	const sortedFilteredRoutes = derived([routes, filter], ([$routes, $filter]) => {
-		if (!$routes) return [];
-
+	const sortedFilteredRoutes = derived(filter, ($filter) => {
 		const filterFunc = $filter
 			? (r) =>
 					r.name.toLowerCase().includes($filter.toLowerCase()) ||
 					r.code?.toLowerCase().includes($filter.toLowerCase())
 			: () => true;
 
-		let res = Object.values($routes)
-			.filter((r) => r.operator === operator.id)
-			.filter(filterFunc)
-			.sort((ra, rb) => {
-				if (!ra.code) {
-					return -1;
-				} else if (!rb.code) {
-					return 1;
-				} else {
-					return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
-				}
-			});
-
+		let res = routes.filter(filterFunc).sort((ra, rb) => {
+			if (!ra.code) {
+				return -1;
+			} else if (!rb.code) {
+				return 1;
+			} else {
+				return (parseInt(ra.code) || 10000) - (parseInt(rb.code) || 10000);
+			}
+		});
 		return res;
-	});
-
-	const subrouteCount = derived([sortedFilteredRoutes], ([$sortedFilteredRoutes]) => {
-		if (!$sortedFilteredRoutes) return 0;
-		return $sortedFilteredRoutes.reduce((acc, route) => acc + route.subroutes.length, 0);
 	});
 
 	const routePageCount = derived([sortedFilteredRoutes], ([$sortedFilteredRoutes]) => {
@@ -174,13 +140,6 @@
 			return range($routePage + 1, end);
 		}
 	);
-
-	const operatorCalendars = derived([calendars], ([$calendars]) => {
-		if (!$calendars) {
-			return [];
-		}
-		return Object.values($calendars).filter((calendar) => calendar.operator_id === operator.id);
-	});
 
 	function drawStops() {
 		if (!mapLoaded || !$stops) return;
@@ -230,7 +189,7 @@
 
 		let drawnSubroutes = 0;
 		const features = [];
-		const bounds = new LngLatBounds();
+		const bounds = new maplibre.LngLatBounds();
 
 		for (const subroute of $selectedRoute.subroutes) {
 			if (!subroute.polyline) {
@@ -342,7 +301,7 @@
 	}
 
 	onMount(() => {
-		map = new Maplibre({
+		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
 			minZoom: 8,
@@ -367,7 +326,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 
@@ -391,28 +350,26 @@
 				{operator.name}
 				<a class="btn btn-xs" href="/operators/{operator.id}-{operator.tag}/edit">Editar</a>
 			</h2>
-			{#if $regions}
-				<div class="flex flex-wrap gap-2 mt-1 -mb-8">
-					<div>Presença em</div>
-					{#each operator.regions as regionId}
-						<div class="border-b-2 border-sky-300">{$regions[regionId]?.name ?? '?'}</div>
-					{/each}
-				</div>
-			{/if}
+			<div class="flex flex-wrap gap-2 mt-1 -mb-8">
+				<div>Presença em</div>
+				{#each operator.regions as regionId}
+					<div class="border-b-2 border-sky-300">{regions[regionId]?.name ?? '?'}</div>
+				{/each}
+			</div>
 		</div>
 
 		<div class="stats stats-vertical lg:stats-horizontal">
 			<div class="stat">
 				<div class="stat-title">Linhas</div>
-				<div class="stat-value">{$sortedFilteredRoutes?.length ?? '?'}</div>
+				<div class="stat-value">{routes.length ?? '?'}</div>
 			</div>
 			<div class="stat">
 				<div class="stat-title">Variantes</div>
-				<div class="stat-value">{$subrouteCount}</div>
+				<div class="stat-value">{subrouteCount}</div>
 			</div>
 			<div class="stat">
 				<div class="stat-title">Calendários</div>
-				<div class="stat-value">{$operatorCalendars?.length}</div>
+				<div class="stat-value">{calendars.length}</div>
 			</div>
 		</div>
 	</div>
@@ -436,7 +393,7 @@
 					<h2 class="card-title p-2">Escolha uma linha</h2>
 					<a
 						class="btn btn-xs btn-success"
-						class:hidden={!canEdit}
+						class:hidden={!$permissions?.routes?.create}
 						href="/operators/{operator.id}-{operator.tag}/routes/new">+</a
 					>
 				</div>
@@ -464,7 +421,7 @@
 			</div>
 			<div class="flex flex-col gap-1">
 				{#each $routesInPage as route}
-					<div
+					<button
 						class="flex gap-1 hover:bg-base-200 border-[1px] px-2 py-1 rounded-lg cursor-pointer"
 						on:click={async () => {
 							$selectedRoute = route;
@@ -483,7 +440,7 @@
 							{/if}
 						</span>
 						<span class="font">{route.name}</span>
-					</div>
+					</button>
 				{/each}
 			</div>
 			<div>
@@ -548,8 +505,11 @@
 	<div class="card card-compact self-center bg-base-100 shadow-sm w-full">
 		<div class="card-body">
 			<h2 class="card-title">Calendários</h2>
+			{#if calendars.length == 0}
+				<p>Sem calendários introduzidos neste operador.</p>
+			{/if}
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				{#each $operatorCalendars as calendar}
+				{#each calendars as calendar}
 					<div class="flex gap-2 p-2 rounded-lg border-[1px] shadow-sm">
 						<span class="text-3xl font-light w-10">{calendar.id}</span>
 						<div class="flex flex-col gap-1">
@@ -611,10 +571,13 @@
 			<h2 class="card-title">
 				<a href="/operators/{operator.id}-{operator.tag}/issues">Problemas</a>
 			</h2>
-			<div class="grid p-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-				{#if issues.length == 0}
-					<span>Sem problemas anexos a este operador.</span>
-				{/if}
+			{#if issues.length == 0}
+				<p>Sem problemas anexos a este operador.</p>
+			{/if}
+			<div
+				class="grid p-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+				class:hidden={issues.length == 0}
+			>
 				{#each issues as issue}
 					<div class="card card-compact self-center bg-base-100 shadow-md">
 						<div class="card-body">
@@ -622,7 +585,8 @@
 								<span>Afecto a</span>
 								<div class="flex">
 									{#each issue.operator_ids as id}
-										<span class="badge badge-secondary">{$operators[id].name}</span>
+										<span class="badge badge-secondary">{id}</span>
+										<!-- <span class="badge badge-secondary">{$operators[id].name}</span> -->
 									{/each}
 								</div>
 							</div>
@@ -630,24 +594,20 @@
 								<a href="/operators/{operator.id}-{operator.tag}/issues/{issue.id}">{issue.title}</a
 								>
 							</h2>
-							<div class="flex gap-2">
+							<!-- <div class="flex gap-2">
 								<span>Linhas</span>
-								{#if $routes}
-									{#each issue.route_ids as id}
-										<div class="flex">
-											<span
-												class="rounded-l-full px-1 font-bold"
-												style="color: {$routes[id].badge_text}; background-color: {$routes[id]
-													.badge_bg}"
-											>
-												{$routes[id].code}
-											</span>
-											<span class="badge rounded-r-full badge-outline">{$routes[id].name}</span>
-										</div>
-									{/each}
-								{:else}
-									<span>Linhas a carregar...</span>
-								{/if}
+								{#each issue.route_ids as id}
+									<div class="flex">
+										<span
+											class="rounded-l-full px-1 font-bold"
+											style="color: {routeIndex[id]?.badge_text}; background-color: {routeIndex[id]
+												.badge_bg}"
+										>
+											{routes[id].code}
+										</span>
+										<span class="badge rounded-r-full badge-outline">{routes[id].name}</span>
+									</div>
+								{/each}
 							</div>
 							<div class="flex gap-2">
 								<span>Stops</span>
@@ -658,7 +618,7 @@
 								{:else}
 									<span>Stops a carregar...</span>
 								{/if}
-							</div>
+							</div> -->
 						</div>
 					</div>
 				{/each}

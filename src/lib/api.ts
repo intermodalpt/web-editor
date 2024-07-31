@@ -132,6 +132,11 @@ export async function checkUsername(username: string, opts: ReqOpts) {
 
 // ----- Regions -----
 
+export async function getRegions(opts: ReqOpts) {
+	const res = await f(`/v1/regions`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getRegionStops(regionId: number, opts: ReqOpts) {
 	const res = await f(`/v1/regions/${regionId}/stops/full`, { opts });
 	return await handleResponse(res, opts);
@@ -269,13 +274,23 @@ export async function deleteCalendar(operatorId: number, calendarId: number, opt
 	return await handleResponse(res, opts);
 }
 
-export async function createIssue(issue, opts: ReqOpts) {
-	const res = await f(`/v1/issues`, {
-		method: 'POST',
-		isJson: true,
-		body: issue,
-		opts
-	});
+export async function getOperatorRoutes(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/routes`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorFullRoutes(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/routes/full`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorCalendars(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/calendars`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorIssues(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/issues`, { opts });
 	return await handleResponse(res, opts);
 }
 
@@ -653,4 +668,16 @@ export async function contribUpdateStopMeta(
 export async function getOwnStopPatch(opts: ReqOpts) {
 	const url = '/v1/contrib/pending_stop_patch/own';
 	return await handleResponse(await f(url, { opts }), opts);
+}
+
+// ----- Misc -----
+
+export async function createIssue(issue, opts: ReqOpts) {
+	const res = await f(`/v1/issues`, {
+		method: 'POST',
+		isJson: true,
+		body: issue,
+		opts
+	});
+	return await handleResponse(res, opts);
 }
