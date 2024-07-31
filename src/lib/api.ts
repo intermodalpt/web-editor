@@ -117,6 +117,16 @@ export async function checkUsername(username: string, opts: ReqOpts) {
 
 // ----- Regions -----
 
+export async function getRegionStops(regionId: number, opts: ReqOpts) {
+	const res = await f(`/v1/regions/${regionId}/stops/full`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getRegionRoutes(regionId: number, opts: ReqOpts) {
+	const res = await f(`/v1/regions/${regionId}/routes/full`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getRegionTodo(regionId: number, opts: ReqOpts) {
 	const res = await f(`/v1/regions/${regionId}/stops/todo`, { opts });
 	return await handleResponse(res, opts);
@@ -133,6 +143,11 @@ export async function updateStopTodos(stopId: number, todos: [any], opts: ReqOpt
 }
 
 // ----- Operators -----
+
+export async function getOperators(opts: ReqOpts) {
+	const res = await f(`/v1/operators`, { opts });
+	return await handleResponse(res, opts);
+}
 
 export async function createOperator(data, opts: ReqOpts) {
 	const res = await f(`/v1/operators`, {

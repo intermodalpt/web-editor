@@ -1,24 +1,22 @@
-<script>
+<script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { liveQuery } from 'dexie';
 	import { tileStyle } from '$lib/settings';
 	import { permissions, toast, isAuthenticated } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions';
-	import { isDeepEqual } from '$lib/utils.js';
+	import { isDeepEqual } from '$lib/utils';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
-	import { fetchStops, getStops, patchStop, loadMissing } from '$lib/db.js';
 	import {
 		updateStopMeta,
 		contribUpdateStopMeta,
 		getStopPicsRels,
 		getOwnStopPatch,
 		getStopPics,
-		getAllStopPics
+		getAllStopPics,
+		getRegionStops
 	} from '$lib/api';
 	import {
 		logStopScore,
@@ -31,8 +29,6 @@
 	import PicDialog from '$lib/pics/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
 	import StopAttributesForm from './forms/StopAttributesForm.svelte';
-
-	const hasAdminPerm = isAdmin($permissions);
 
 	let picsPerStop = {};
 	let map;
@@ -71,7 +67,7 @@
 		}
 	}
 
-	const stops = liveQuery(() => getStops());
+	const stops = writable(null);
 	const userPatches = writable([]);
 
 	const patchedStops = derived([stops, userPatches], ([$stops, $userPatches], set) => {
@@ -88,51 +84,41 @@
 	});
 
 	async function loadData() {
-		Promise.all([
-			// Ensure that stops are available in indexedDB
-			fetchStops().then((r) => {
-				stopsLoaded = true;
-				return r;
-			}),
-			// Get the pictures each stop has (TODO this can be loaded in background)
-			fetch(`${apiServer}/v1/stop_pics/by_stop`)
-				.then((r) => r.json())
-				.then((r) => {
-					stopPicsLoaded = true;
-					return r;
-				}),
-			// Either get the current user's patches or an empty array if no user is logged in
-			$isAuthenticated
-				? fetch(`${apiServer}/v1/contrib/pending_stop_patch/own`, { credentials: 'include' }).then(
-						(res) => res.json()
-					)
-				: new Promise((resolve) => {
-						resolve([]);
-					})
-		])
-			.then(async ([unpatchedStops, pictures, patches]) => {
-				$userPatches = patches;
-				picsPerStop = pictures;
-
-				await tick();
-				if (mapLoaded) {
-					loadStops();
+		await Promise.all([
+			getRegionStops(1, {
+				onSuccess: async (r) => {
+					$stops = Object.fromEntries((await r.json()).map((stop) => [stop.id, stop]));
+				},
+				onError: (res) => {
+					toast('Erro a carregar as paragens', 'error');
+				},
+				onAfter: () => {
+					stopsLoaded = true;
 				}
-			})
-			.catch((e) => {
-				toast('Failed to load stops', 'error');
-				console.log(e);
-			})
-			.then(async () => {
-				console.log('data loaded');
-				await loadMissing();
-			});
+			}),
+			getStopPicsRels({
+				onSuccess: async (r) => {
+					stopPicsLoaded = true;
+					picsPerStop = await r.json();
+				},
+				onError: (res) => {
+					toast('Erro a carregar as fotografias', 'error');
+				}
+			}),
+			$isAuthenticated
+				? getOwnStopPatch({
+						onSuccess: async (r) => {
+							$userPatches = await r.json();
+						},
+						onError: (res) => {
+							toast('Erro a carregar as contribuições pendentes', 'error');
+						}
+					})
+				: null
+		]).then(async () => {
+			if (mapLoaded) loadStops();
+		});
 	}
-
-	loadData().then(async () => {
-		console.log('data loaded');
-		await loadMissing();
-	});
 
 	let selectedStop = writable(null);
 	selectedStop.subscribe((stop) => {
@@ -224,17 +210,18 @@
 		[selectedStop, stopPicturesNonce],
 		([$selectedStop, stopPicturesNonce], set) => {
 			if ($selectedStop) {
-				if ($isAuthenticated) {
-					fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures/all`, {
-						credentials: 'include'
-					})
-						.then((r) => r.json())
-						.then((pictureList) => set(pictureList));
-				} else {
-					fetch(`${apiServer}/v1/stops/${$selectedStop.id}/pictures`)
-						.then((r) => r.json())
-						.then((pictureList) => set(pictureList));
-				}
+				const callbacks = {
+					onSuccess: async (r) => {
+						set(await r.json());
+					},
+					onError: () => {
+						toast('Erro a carregar as fotografias', 'error');
+					}
+				};
+				($isAuthenticated
+					? getAllStopPics($selectedStop.id, callbacks)
+					: getStopPics($selectedStop.id, callbacks)
+				).then(() => {});
 			} else {
 				return [];
 			}
@@ -474,29 +461,33 @@
 		});
 	}
 
-	function handleStopFormSave(e) {
+	async function handleStopFormSave(e) {
 		let currStop = $selectedStop;
 		let newStop = e.detail.stop;
 		const hasStopChanged = !isDeepEqual(newStop, currStop);
 
-		const headers = { 'Content-Type': 'application/json' };
-
 		if (!hasStopChanged) {
-			console.log('Não foram feitas alterações na paragem');
 			toast('Não foram feitas alterações na paragem');
 			$selectedStop = null;
 			return;
 		}
 
-		console.log('Foram feitas alterações');
-		let request;
-		if (hasAdminPerm) {
-			request = fetch(`${apiServer}/v1/stops/${currStop.id}`, {
-				method: 'PATCH',
-				headers: headers,
-				body: JSON.stringify(newStop)
+		const onError = async () => {
+			toast('Erro a atualizar', 'error');
+		};
+
+		if ($permissions.stops?.modify_attrs) {
+			await updateStopMeta(currStop.id, newStop, {
+				onSuccess: async (res) => {
+					let upstreamStop = await res.json();
+					Object.assign(currStop, upstreamStop);
+
+					map.getSource('stops').setData(getFilteredData());
+					$selectedStop = null;
+				},
+				onError
 			});
-		} else {
+		} else if ($permissions.stops?.contrib_modify_attrs) {
 			let comment = null;
 			if (
 				confirm(
@@ -506,54 +497,23 @@
 				comment = prompt('Insira o seu comentário');
 			}
 
-			request = fetch(`${apiServer}/v1/contrib/stops/update/${currStop.id}`, {
-				method: 'POST',
-				headers: headers,
-				body: JSON.stringify({ contribution: newStop, comment: comment })
-			});
-		}
-
-		// If the request answer is ok, update the stop in the stops array
-		// otherwise show an error message with the response body
-		request
-			.then(async (r) => {
-				if (r.ok) {
-					if (hasAdminPerm) {
-						let upstreamStop = await r.json();
-
-						// Object.assign(currStop, newStop);
-						Object.assign(currStop, upstreamStop);
-
-						patchStop(upstreamStop).then(() => {
-							console.log('Stop database updated');
-						});
+			await contribUpdateStopMeta(currStop.id, newStop, comment, {
+				onSuccess: async (res) => {
+					let id = await res.json();
+					if (id === -1) {
+						toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
+					} else {
+						Object.assign(currStop, newStop);
 						map.getSource('stops').setData(getFilteredData());
 						$selectedStop = null;
-					} else {
-						let id = await r.json();
-						if (id === -1) {
-							toast('Erro a atualizar: O servidor não reconheceu as alterações', 'error');
-						} else {
-							Object.assign(currStop, newStop);
-							map.getSource('stops').setData(getFilteredData());
-							$selectedStop = null;
-							toast('Contribuição submetida. Registada com o ID ' + id);
-						}
+						toast('Contribuição submetida. Registada com o ID ' + id);
 					}
-				} else {
-					r.text()
-						.then((error) => {
-							toast(`Erro a atualizar:\n${error}`, 'error');
-						})
-						.catch(() => {
-							toast('Erro a atualizar', 'error');
-						});
-				}
-			})
-			.catch((e) => {
-				console.error('Error requesting update', e);
-				toast('Error requesting update');
+				},
+				onError
 			});
+		} else {
+			toast('Sem permissões para alterar a paragem', 'error');
+		}
 	}
 
 	function addSourcesAndLayers() {
@@ -631,8 +591,8 @@
 		});
 	}
 
-	onMount(() => {
-		map = new Map({
+	onMount(async () => {
+		map = new maplibre.Map({
 			container: 'map',
 			style: tileStyle,
 			center: [-9.0, 38.605],
@@ -645,11 +605,11 @@
 			]
 		});
 
-		map.addControl(new NavigationControl());
+		map.addControl(new maplibre.NavigationControl());
 		map.addControl(new SearchControl());
 
 		map.addControl(
-			new GeolocateControl({
+			new maplibre.GeolocateControl({
 				positionOptions: {
 					enableHighAccuracy: true
 				},
@@ -663,17 +623,16 @@
 			addEvents();
 
 			mapLoaded = true;
-			await tick();
 
-			if (stopsLoaded) {
-				loadStops();
-			}
+			if (stopsLoaded) loadStops();
 		});
+
+		await loadData();
 	});
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 
@@ -803,8 +762,6 @@
 				{selectedStop}
 				{stopPictures}
 				{latestPictureDate}
-				readOnly={$permissions.length == 0}
-				isAdmin={hasAdminPerm}
 				on:pictureClick={(e) => (previewedPic = e.detail.picture)}
 				on:pictureEditorRequest={(e) => (editingStopPics = true)}
 				on:save={handleStopFormSave}

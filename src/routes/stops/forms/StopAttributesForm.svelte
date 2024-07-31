@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { deepCopy } from '$lib/utils';
-	import { toast } from '$lib/stores';
+	import { toast, permissions } from '$lib/stores';
 
 	import InfoForm from './InfoForm.svelte';
 	import ServiceForm from './ServiceForm.svelte';
@@ -16,8 +16,9 @@
 	export let selectedStop;
 	export let stopPictures;
 	export let latestPictureDate;
-	export let readOnly = true;
-	export let isAdmin = false;
+	export let readOnly = !(
+		$permissions?.stops?.modify_attrs || $permissions?.stops?.contrib_modify_attrs
+	);
 
 	let name = null;
 	let shortName = null;
@@ -296,7 +297,11 @@
 	<div class="flex gap-2 flex-grow justify-end">
 		<AuthenticityIndicator bind:value={verificationLevel} />
 		<span class="w-2" />
-		<button class="btn btn-success btn-xs" disabled={readOnly} on:click={saveStopMeta}>
+		<button
+			class="btn btn-success btn-xs"
+			disabled={!($permissions.stops.modify_attrs || $permissions.stops.contrib_modify_attrs)}
+			on:click={saveStopMeta}
+		>
 			Guardar
 		</button>
 		<button class="btn btn-error btn-xs" on:click={() => ($selectedStop = null)}>Fechar</button>
@@ -316,10 +321,9 @@
 			{infraAttrCount}
 			{totalInfraAttrCount}
 			{readOnly}
-			{isAdmin}
 		/>
 	{:else if currentSubform == subforms.pics}
-		<PicturesForm {stopPictures} {readOnly} on:pictureClick on:pictureEditorRequest />
+		<PicturesForm {stopPictures} on:pictureClick on:pictureEditorRequest {readOnly} />
 	{:else if currentSubform == subforms.service}
 		<ServiceForm
 			bind:hasFlags
