@@ -5,7 +5,6 @@
 	import { liveQuery } from 'dexie';
 	import { getOperator, getRegions, wipeOperators } from '$lib/db';
 	import { permissions, toast } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions';
 	import { isValidUri } from '$lib/utils';
 	import { patchOperator, uploadLogo } from '$lib/api';
 	import { isDeepEqual, deepCopy } from '$lib/utils';
@@ -21,9 +20,10 @@
 
 	const dispatch = createEventDispatcher();
 
-	const canEdit = isAdmin($permissions);
-
 	export let id = null;
+
+	const canEdit = (id && $permissions.operators.create) || (!id && $permissions.operators.edit);
+
 
 	export let routeTypes = [];
 
@@ -152,13 +152,11 @@
 
 		let updateRegions = async () => {
 			for (let region of newRegions) {
-				fetch(`${apiServer}/v1/regions/${region}/operators/${id}`, {
-					method: 'PUT',
-					credentials: 'include'
-				}).then((res) => {
-					if (res.ok) {
+				await attachOperatorToRegion(id, region, {
+					onSuccess: () => {
 						toast(`Região ${region} adicionada ao operador ${originalTag}`, 'success');
-					} else {
+					},
+					onError: async (res) => {
 						res
 							.text()
 							.then((error) => {
@@ -171,13 +169,11 @@
 				});
 			}
 			for (let region of removedRegions) {
-				fetch(`${apiServer}/v1/regions/${region}/operators/${id}`, {
-					method: 'DELETE',
-					credentials: 'include'
-				}).then((res) => {
-					if (res.ok) {
-						toast(`Região ${region} removida do operador ${originalTag}`, 'success');
-					} else {
+				await dettachOperatorFromRegion(id, region, {
+					onSuccess: () => {
+						toast(`Região ${region} removida do operador`, 'success');
+					},
+					onError: async (res) => {
 						res
 							.text()
 							.then((error) => {
@@ -192,31 +188,29 @@
 			originalRegions = deepCopy(operatorRegions);
 		};
 
-		let uploadLogo = async () => {
+		let handleUploadLogo = async () => {
 			if (!logoFiles || logoFiles.length == 0) {
 				return;
 			}
-			let formData = new FormData();
+			const formData = new FormData();
 			formData.append('logo', logoFiles[0]);
-			let res = await fetch(`${apiServer}/v1/operators/${id}/logo`, {
-				method: 'POST',
-				credentials: 'include',
-				body: formData
-			});
 
-			if (res.ok) {
-				toast(`Logotipo do operador ${originalTag} alterado com sucesso`, 'success');
-				logoFiles = null;
-			} else {
-				res
-					.text()
-					.then((error) => {
-						alert(`Erro a alterar logotipo do operador:\n${error}`);
-					})
-					.catch(() => {
-						alert('Erro a alterar logotipo do operador');
-					});
-			}
+			await uploadLogo(id, formData, {
+				onSuccess: () => {
+					toast(`Logotipo do operador ${originalTag} alterado`, 'success');
+					logoFiles = null;
+				},
+				onError: (res) => {
+					res
+						.text()
+						.then((error) => {
+							alert(`Erro a alterar logotipo:\n${error}`);
+						})
+						.catch(() => {
+							alert('Erro a alterar logotipo');
+						});
+				}
+			});
 		};
 
 		let updateRouteTypes = async () => {
@@ -225,24 +219,22 @@
 			);
 
 			for (const rt of deletedRouteTypes) {
-				let res = await fetch(`${apiServer}/v1/operators/${id}/routes/types/${rt.id}`, {
-					method: 'DELETE',
-					credentials: 'include'
+				await deleteOperatorRouteType(id, rt.id, {
+					onSuccess: () => {
+						toast(`Tipo de rota ${rt.id} (${rt.name}) apagada`, 'success');
+						originalRouteTypes = originalRouteTypes.filter((ort) => ort.id != rt.id);
+					},
+					onError: (res) => {
+						res
+							.text()
+							.then((error) => {
+								alert(`Erro a apagar tipo de rota:\n${error}`);
+							})
+							.catch(() => {
+								alert('Erro a apagar tipo de rota');
+							});
+					}
 				});
-
-				if (res.ok) {
-					toast(`Tipo de rota ${rt.id} (${rt.name}) apagada`, 'success');
-					originalRouteTypes = originalRouteTypes.filter((rt) => rt.id != rt.id);
-				} else {
-					res
-						.text()
-						.then((error) => {
-							alert(`Erro a apagar tipo de rota:\n${error}`);
-						})
-						.catch(() => {
-							alert('Erro a apagar tipo de rota');
-						});
-				}
 			}
 
 			for (const rt of routeTypes) {
@@ -260,132 +252,116 @@
 				}
 
 				if (rt.id < 0) {
-					let res = await fetch(`${apiServer}/v1/operators/${id}/routes/types`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						credentials: 'include',
-						body: JSON.stringify(body)
+					await createOperatorRouteType(id, body, {
+						onSuccess: (id) => {
+							toast(`Tipo de rota ${rt.id} (${rt.name}) criado com sucesso`, 'success');
+							rt.id = id;
+							originalRouteTypes.push(deepCopy(rt));
+						},
+						onError: (res) => {
+							res
+								.text()
+								.then((error) => {
+									toast(`Erro a criar tipo de rota:\n${error}`, 'error');
+								})
+								.catch(() => {
+									toast('Erro a criar tipo de rota', 'error');
+								});
+						}
 					});
-
-					if (res.ok) {
-						toast(`Tipo de rota ${rt.id} (${rt.name}) criado com sucesso`, 'success');
-						let id = await res.json();
-						rt.id = id;
-						originalRouteTypes.push(deepCopy(rt));
-					} else {
-						res
-							.text()
-							.then((error) => {
-								alert(`Erro a criar tipo de rota:\n${error}`);
-							})
-							.catch(() => {
-								alert('Erro a criar tipo de rota');
-							});
-					}
 				} else {
-					let res = await fetch(`${apiServer}/v1/operators/${id}/routes/types/${rt.id}`, {
-						method: 'PATCH',
-						headers: { 'Content-Type': 'application/json' },
-						credentials: 'include',
-						body: JSON.stringify(body)
+					await patchOperatorRouteType(id, rt.id, body, {
+						onSuccess: () => {
+							toast(`Tipo de rota ${rt.id} (${rt.name}) alterado`, 'success');
+							originalRouteTypes = originalRouteTypes.map((ort) =>
+								ort.id == rt.id ? deepCopy(rt) : ort
+							);
+						},
+						onError: (res) => {
+							res
+								.text()
+								.then((error) => {
+									toast(`Erro a alterar tipo de rota:\n${error}`, 'error');
+								})
+								.catch(() => {
+									toast('Erro a alterar tipo de rota', 'error');
+								});
+						}
 					});
-
-					if (res.ok) {
-						toast(`Tipo de rota ${rt.id} (${rt.name}) alterado com sucesso`, 'success');
-						originalRouteTypes = originalRouteTypes.map((ort) =>
-							ort.id == rt.id ? deepCopy(rt) : ort
-						);
-					} else {
-						res
-							.text()
-							.then((error) => {
-								alert(`Erro a alterar tipo de rota:\n${error}`);
-							})
-							.catch(() => {
-								alert('Erro a alterar tipo de rota');
-							});
-					}
 				}
 			}
 		};
 
 		if (id && !dataChanged) {
-			await Promise.all([updateRegions(), uploadLogo(), updateRouteTypes()]);
+			await Promise.all([updateRegions(), handleUploadLogo(), updateRouteTypes()]);
 		} else if (id) {
 			const [dataRes] = await Promise.all([
-				fetch(`${apiServer}/v1/operators/${id}`, {
-					method: 'PATCH',
-					headers: { 'Content-Type': 'application/json' },
-					credentials: 'include',
-					body: JSON.stringify(data)
+				patchOperator(id, data, {
+					onSuccess: () => {
+						copyCurrentToOriginal();
+						toast(`Operador ${tag} alterado com sucesso`, 'success');
+					},
+					onError: (error) => {
+						dataRes
+							.text()
+							.then((error) => {
+								alert(`Erro a alterar operador:\n${error}`);
+							})
+							.catch(() => {
+								alert('Erro a alterar operador');
+							});
+					}
 				}),
 				updateRegions(),
-				uploadLogo()
+				handleUploadLogo()
 			]);
-			if (dataRes.ok) {
-				copyCurrentToOriginal();
-				toast(`Operador ${tag} alterado com sucesso`, 'success');
-			} else {
-				dataRes
-					.text()
-					.then((error) => {
-						alert(`Erro a alterar operador:\n${error}`);
-					})
-					.catch(() => {
-						alert('Erro a alterar operador');
-					});
-			}
 		} else {
-			let res = await fetch(`${apiServer}/v1/operators`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				body: JSON.stringify(data)
+			await createOperator(data, {
+				onSuccess: async (res) => {
+					id = await res.json().then((data) => data.id);
+					copyCurrentToOriginal();
+					toast(`Operador ${originalTag} alterado com sucesso`, 'success');
+					await Promise.all([updateRegions(), handleUploadLogo(), updateRouteTypes()]);
+				},
+				onError: (res) => {
+					res
+						.text()
+						.then((error) => {
+							alert(`Erro a criar operador:\n${error}`);
+						})
+						.catch(() => {
+							alert('Erro a criar operador');
+						});
+				}
 			});
-
-			if (res.ok) {
-				id = await res.json().then((data) => data.id);
-				copyCurrentToOriginal();
-				toast(`Operador ${originalTag} alterado com sucesso`, 'success');
-			} else {
-				res
-					.text()
-					.then((error) => {
-						alert(`Erro a criar operador:\n${error}`);
-					})
-					.catch(() => {
-						alert('Erro a criar operador');
-					});
-				return;
-			}
-
-			await Promise.all([updateRegions(), uploadLogo(), updateRouteTypes()]);
 		}
 
 		await wipeOperators();
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		if (!id) return;
 
-		fetch(`${apiServer}/v1/operators/${id}`, {
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include'
-		})
-			.then((r) => r.json())
-			.then((item) => {
-				name = originalName = item.name;
-				tag = originalTag = item.tag;
-				description = originalDescription = item.description;
-				isComplete = originalIsComplete = item.is_complete ?? false;
-				websiteUrl = originalWebsiteUrl = item.website_url;
-				libraryUrl = originalLibraryUrl = item.library_url;
-				forumUrl = originalForumUrl = item.forum_url;
-				contactUris = originalContactUris = item.contact_uris.join(';') ?? '';
-				originalRegions = item.regions || [];
+		await getOperator(id, {
+			onSuccess: async (res) => {
+				const operator = res.join();
+
+				name = originalName = operator.name;
+				tag = originalTag = operator.tag;
+				description = originalDescription = operator.description;
+				isComplete = originalIsComplete = operator.is_complete ?? false;
+				websiteUrl = originalWebsiteUrl = operator.website_url;
+				libraryUrl = originalLibraryUrl = operator.library_url;
+				forumUrl = originalForumUrl = operator.forum_url;
+				contactUris = originalContactUris = operator.contact_uris.join(';') ?? '';
+				originalRegions = operator.regions || [];
 				operatorRegions = originalRegions ? deepCopy(originalRegions) : [];
-				originalRouteTypes = item.route_types ? deepCopy(item.route_types) : [];
-			});
+				originalRouteTypes = operator.route_types ? deepCopy(operator.route_types) : [];
+			},
+			onError: () => {
+				toast('Erro a carregar operador', 'error');
+			}
+		});
 	});
 </script>
 
