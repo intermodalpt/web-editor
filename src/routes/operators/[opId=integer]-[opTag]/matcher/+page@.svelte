@@ -1,7 +1,6 @@
 <script>
 	import { onDestroy, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
 	import { softInvalidateStops, selectedRegion, loadMissing } from '$lib/db';
 	import {
@@ -14,7 +13,6 @@
 	} from '$lib/api';
 	import { regionMapParams } from '$lib/utils';
 	import { permissions, toast } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions.ts';
 	import { credibleSources } from '$lib/settings';
 	import Icon from '$lib/components/Icon.svelte';
 	import MatchViewer from './MatchViewer.svelte';
@@ -25,7 +23,6 @@
 	export let data;
 
 	const operator = data.operator;
-	const operatorId = operator.id;
 
 	// IML stops that are linked
 	const operatorStopRels = writable(data.operatorStopRels);
@@ -33,7 +30,8 @@
 	const regionStops = writable(data.regionStops);
 	const gtfsStops = writable(data.gtfsStops);
 	const gtfsRoutes = writable(data.gtfsRoutes);
-	const osmStops = writable({});
+	// const osmStops = writable(data.osmStops);
+	const osmStops = writable(Object.fromEntries(data.osmStops.map((stop) => [stop.id, stop])));
 
 	const knownGtfsIds = new Set(Object.values(data.gtfsStops).map((stop) => stop.stop_id));
 
@@ -44,39 +42,8 @@
 	// Get rid of these if we decide to stay with page.js's load()
 	let gtfsStopsLoaded = true;
 	let gtfsTripsLoaded = true;
-	let osmStopsLoaded = false;
+	let osmStopsLoaded = true;
 	$: loading = !stopsLoaded || !gtfsStopsLoaded || !gtfsTripsLoaded || !mapLoaded;
-
-	async function loadData() {
-		Promise.all([
-			fetch(`${apiServer}/v1/osm/stops`)
-				.then((r) => r.json())
-				.then((r) => {
-					$osmStops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
-					console.log('Sup?');
-					osmStopsLoaded = true;
-				})
-		])
-			.then(async ([osmStops]) => {
-				if (mapLoaded) {
-					// loadStops();
-					loadOsmStops();
-				}
-			})
-			.catch((e) => {
-				toast('Failed to load the OSM stops', 'error');
-				console.log(e);
-			})
-			.then(async () => {
-				console.log('data loaded');
-				await loadMissing();
-			});
-	}
-
-	loadData().then(async () => {
-		console.log('data loaded');
-		await loadMissing();
-	});
 
 	const genericNames = derived(regionStops, ($regionStops) => {
 		if (!$regionStops) return {};
@@ -303,7 +270,8 @@
 				},
 				properties: {
 					id: stop.id,
-					missing: !knownGtfsIds.has(stop.stop_ref)
+					missing: !knownGtfsIds.has(stop.stop_ref),
+					label: `${stop.id} - ${stop.name}`
 				}
 			};
 		});
@@ -316,7 +284,8 @@
 					coordinates: [stop.lon, stop.lat]
 				},
 				properties: {
-					id: stop.id
+					id: stop.id,
+					label: `${stop.id} - ${stop.name}`
 				}
 			};
 		});
@@ -378,19 +347,13 @@
 			}
 		}
 
-		fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stop.id}`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
-			body: JSON.stringify({
-				official_name: pairing.official_name,
-				stop_ref: pairing.stop_ref,
-				source: 'h1'
-			})
-		}).then(async (r) => {
-			if (r.ok) {
+		const pairingData = {
+			official_name: pairing.official_name,
+			stop_ref: pairing.stop_ref,
+			source: 'h1'
+		};
+		await attachStopToOperator(stop.id, operator.id, pairingData, {
+			onSuccess: async () => {
 				toast('Informação guardada', 'success');
 
 				if (usedStopIds.has(stop.id)) {
@@ -422,14 +385,15 @@
 				refreshStops();
 
 				await softInvalidateStops();
-			} else {
-				alert('Erro a atualizar o ID da paragem.\nRecarregue e tente novamente.');
-				console.error(r);
+			},
+			onError: () => {
+				toast('Erro a associar paragem ao operador', 'error');
 			}
 		});
 	}
 
-	function unpairStop(stop) {
+	async function handleUnpairStop(e) {
+		const stop = e.detail.operatorStop;
 		const originalStop = stop._ori;
 		const gtfsStop = stop.gtfsStop;
 		if (!originalStop) {
@@ -449,14 +413,8 @@
 			}
 		}
 
-		fetch(`${apiServer}/v1/operators/${operatorId}/stops/${stop.id}`, {
-			method: 'DELETE',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			}
-		}).then(async (r) => {
-			if (r.ok) {
+		await detachStopFromOperator(stop.id, operator.id, {
+			onSuccess: async () => {
 				toast('Informação guardada', 'info');
 				// Drop the stop from the "used" collections
 				$operatorStopRels = $operatorStopRels.filter((stop) => stop.id != originalStop.id);
@@ -469,8 +427,9 @@
 				refreshStops();
 
 				await softInvalidateStops();
-			} else {
-				alert('Erro a desligar paragens.\nRecarregue e tente novamente.');
+			},
+			onError: () => {
+				toast('Erro a desligar paragem', 'error');
 			}
 		});
 	}
@@ -493,128 +452,90 @@
 			source: 'h1'
 		};
 
-		let res = await fetch(`${apiServer}/v1/stops`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${$token}`
-			},
-			body: JSON.stringify(newStop)
-		});
+		// Create the stop
+		await createStop(newStop, {
+			onSuccess: async (newStopId) => {
+				toast('Paragem criada', 'success');
+				await softInvalidateStops();
+				newStop.id = newStopId;
+				console.log(newStop);
 
-		if (res.ok) {
-			toast('Paragem criada', 'success');
-
-			await softInvalidateStops();
-			let dummy = await res.json();
-			newStop.id = dummy.id;
-
-			console.log(dummy);
-			console.log(newStop);
-
-			$regionStops.push({
-				id: newStop.id,
-				lat: newStop.lat,
-				lon: newStop.lon,
-				name: newStop.name
-			});
-
-			// Force the recalculation of the unused stops
-			$regionStops = $regionStops;
-		} else {
-			toast('Erro a criar a paragem', 'error');
-			console.error(res);
-			return;
-		}
-
-		console.log('A associar à região');
-		res = await fetch(`${apiServer}/v1/regions/${$selectedRegion.id}/stops/${newStop.id}`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
-		});
-
-		if (res.ok) {
-			toast('Paragem associada à região', 'success');
-		} else {
-			toast('Erro a associar paragem à região', 'error');
-			console.error(res);
-			return;
-		}
-
-		if (e.detail.tagUnverified) {
-			console.log('A colocar como não verificado');
-			res = await fetch(`${apiServer}/v1/stops/${newStop.id}/todo`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${$token}`
-				},
-				body: JSON.stringify(['verifyLocation'])
-			});
-
-			if (res.ok) {
-				toast('Paragem marcada como pendente de verificação', 'success');
-			} else {
-				toast('Erro a ligar a paragem', 'error');
-				console.error(res);
-				return;
-			}
-		}
-
-		if (e.detail.pair) {
-			res = await fetch(`${apiServer}/v1/operators/${operatorId}/stops/${newStop.id}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${$token}`
-				},
-				body: JSON.stringify({
-					official_name: e.detail.stop.officialName,
-					stop_ref: e.detail.stop.ref,
-					source: 'h1'
-				})
-			});
-
-			if (res.ok) {
-				toast('Paragem ligada', 'success');
-
-				const gtfsStop = $gtfsStops[e.detail.stop.ref];
-				gtfsStop.seen = true;
-
-				// Add the stop to the "used" collections
-				$operatorStopRels.push({
+				$regionStops.push({
 					id: newStop.id,
-					official_name: e.detail.stop.officialName,
-					stop_ref: e.detail.stop.ref,
-					source: 'h1',
 					lat: newStop.lat,
 					lon: newStop.lon,
-					gtfsStop: gtfsStop
+					name: newStop.name
 				});
-				usedStopIds.add(newStop.id);
 
-				if (usedStopIds.has(stop.id)) {
-					$operatorStopRels = $operatorStopRels.filter((s) => s.id != stop.id);
-					usedStopIds.delete(stop.id);
+				const requests = [
+					attachStopToRegion($selectedRegion.id, newStopId, {
+						onSuccess: () => {
+							toast('Paragem associada à região', 'success');
+						},
+						onError: (err) => {
+							toast('Erro a associar paragem à região', 'error');
+						}
+					}),
+					attachStopToOperator(newStopId, operator.id, pairing, {
+						onSuccess: () => {
+							toast('Paragem associada ao operador', 'success');
+
+							const gtfsStop = $gtfsStops[e.detail.stop.ref];
+							gtfsStop.seen = true;
+
+							// Add the stop to the "used" collections
+							$operatorStopRels.push({
+								id: newStop.id,
+								official_name: pairing.official_name,
+								stop_ref: pairing.stop_ref,
+								source: 'h1',
+								lat: newStop.lat,
+								lon: newStop.lon,
+								gtfsStop: gtfsStop
+							});
+							usedStopIds.add(newStop.id);
+
+							if (usedStopIds.has(stop.id)) {
+								$operatorStopRels = $operatorStopRels.filter((s) => s.id != stop.id);
+								usedStopIds.delete(stop.id);
+							}
+						},
+						onError: () => {
+							toast('Erro a associar paragem ao operador', 'error');
+						}
+					})
+				];
+
+				if (e.detail.tagUnverified) {
+					requests.push(
+						updateStopTodos(stopId, ['verifyLocation'], {
+							onSuccess: () => {
+								toast('Paragem marcada como pendente de verificação', 'success');
+							},
+							onError: (err) => {
+								toast('Erro a marcar paragem como pendente de verificação', 'error');
+							}
+						})
+					);
 				}
-			} else {
-				toast('Erro a ligar a paragem', 'error');
-				console.error(res);
-				return;
+
+				await Promise.all(requests);
+			},
+			onError: (err) => {
+				toast('Erro a criar a paragem', 'error');
+				console.error(err);
+			},
+			onAfter: () => {
+				// Force the recalculation of the unused stops
+				$regionStops = $regionStops;
+
+				// Change the selected stop to the non-operator one
+				// Do it this way to prevent a data race with the user changing stops in the meantime
+				$selectedOperatorStop = $stopIndex[newStop.id];
+				// Redraw
+				refreshStops();
 			}
-		}
-
-		// Force the recalculation of the unused stops
-		$regionStops = $regionStops;
-
-		// Change the selected stop to the non-operator one
-		// Do it this way to prevent a data race with the user changing stops in the meantime
-		$selectedOperatorStop = $stopIndex[newStop.id];
-		// Redraw
-		refreshStops();
+		});
 	}
 
 	selectedRegion.subscribe((region) => {
@@ -697,7 +618,7 @@
 			class:w-[300px]={!areStopsSelected}
 		>
 			<MatchViewer
-				canEdit={isAdmin($permissions)}
+				canEdit={$permissions?.operators?.modify_stops}
 				{operator}
 				gtfsStops={$gtfsStops}
 				{selectedGtfsStop}

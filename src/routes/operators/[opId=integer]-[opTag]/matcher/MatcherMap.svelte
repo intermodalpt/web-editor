@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-	import { Map as Maplibre, NavigationControl, GeolocateControl, LngLatBounds } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import { tileStyle } from '$lib/settings';
@@ -125,7 +125,7 @@
 	}
 
 	export function flyToTrip(coords) {
-		const bounds = new LngLatBounds();
+		const bounds = new maplibre.LngLatBounds();
 
 		coords.forEach((c) => {
 			bounds.extend([c.lon, c.lat]);
@@ -490,7 +490,7 @@
 	}
 
 	onMount(() => {
-		map = new Maplibre({
+		map = new maplibre.Map({
 			container: 'map',
 			style: tileStyle,
 			center: mapParams.center,
@@ -500,10 +500,10 @@
 		});
 		map.easeTo({ padding: { left: DEFAULT_PADDING } });
 
-		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
 		map.addControl(new SearchControl(() => searchDialog.showModal()), 'top-right');
 		map.addControl(
-			new GeolocateControl({
+			new maplibre.GeolocateControl({
 				positionOptions: {
 					enableHighAccuracy: true
 				},
@@ -519,9 +519,7 @@
 		});
 	});
 
-	onDestroy(() => {
-		map.remove();
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <div id="map" class="h-full relative">
