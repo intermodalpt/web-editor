@@ -11,17 +11,32 @@ interface ReqOpts {
 	onError?: ErrorCallback;
 	onAfter?: AfterCallback;
 	fetch?: (url: string, params?: any) => Promise<Response>;
+	toJson?: boolean;
 }
 
 async function handleResponse(
 	res: Response,
-	{ onSuccess, onError, onAfter }: ReqOpts
+	{ onSuccess, onError, onAfter, toJson = false }: ReqOpts
 ): Promise<any> {
 	let ret;
+	let goodParse = true;
 
 	if (res.ok) {
+		if (toJson) {
+			try {
+				ret = await res.json();
+			} catch (e) {
+				console.error('Json conversion error', e);
+				goodParse = false;
+			}
+		} else {
+			ret = res;
+		}
+	}
+
+	if (res.ok && goodParse) {
 		if (onSuccess) {
-			ret = await ensureAwaited(onSuccess(res));
+			await ensureAwaited(onSuccess(toJson ? ret : res));
 		}
 	} else {
 		console.error(res);
