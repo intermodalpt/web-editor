@@ -4,7 +4,6 @@
 	import { liveQuery } from 'dexie';
 	import { calendarStr, isDeepEqual } from '$lib/utils';
 	import { permissions, toast } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions';
 	import { fetchOperators, getOperators, fetchCalendars, getCalendars, loadMissing } from '$lib/db';
 	import { deleteCalendar } from '$lib/api';
 
@@ -102,46 +101,33 @@
 		});
 	});
 
-	function createCalendar() {
+	async function handleCreateCalendar() {
 		if (!formTitle) {
 			alert('É necessário um título para o calendário');
 			return;
 		}
-		fetch(`${apiServer}/v1/operators/${selectedOperatorId}/calendars`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify({
-				name: formTitle,
-				calendar: formCalendar
-			})
-		})
-			.then(async (response) => {
-				if (response.ok) {
-					await fetchCalendars(false);
-				} else {
-					alert('Erro ao criar calendário');
-				}
-			})
-			.catch((error) => {
-				console.error('Error:', error);
-			});
-		formTitle = null;
-		resetFormCalendar();
+		await createCalendar(selectedOperatorId, formTitle, formCalendar, {
+			onSuccess: async () => {
+				toast('Calendário criado', 'error');
+				await fetchCalendars(false);
+				formTitle = null;
+				resetFormCalendar();
+			},
+			onError: (error) => {
+				toast('Erro ao criar calendário', 'error');
+			}
+		});
 	}
 
-	function deleteCalendar(calendar) {
-		if (!confirm(`Confirma que quer apagar o calendário ${calendar.name}?`)) {
-			return;
-		}
-		fetch(`${apiServer}/v1/operators/${selectedOperatorId}/calendars/${calendar.id}`, {
-			method: 'DELETE',
-			credentials: 'include'
-		}).then(async (response) => {
-			if (response.ok) {
+	function handleDelete(calendar) {
+		if (!confirm(`Confirma que quer apagar o calendário ${calendar.name}?`)) return;
+
+		deleteCalendar(selectedOperatorId, calendar.id, {
+			onSuccess: async () => {
 				await fetchCalendars(false);
-			} else {
-				alert('Erro ao apagar calendário');
+			},
+			onError: () => {
+				toast('Erro ao apagar calendário', 'error');
 			}
 		});
 	}
@@ -180,11 +166,11 @@
 								<td>{calendar.name}</td>
 								<td>{calendarStr(calendar.calendar)}</td>
 								<td>
-									{#if isAdmin($permissions)}
+									{#if $permissions?.operators?.modify_calendars}
 										<button
 											class="btn btn-error btn-xs btn-outline"
 											on:click={() => {
-												deleteCalendar(calendar);
+												handleDelete(calendar);
 											}}>Apagar</button
 										>
 									{/if}
@@ -197,7 +183,7 @@
 		</div>
 	</div>
 
-	{#if selectedOperatorId && isAdmin($permissions)}
+	{#if selectedOperatorId && $permissions?.operators?.modify_calendars}
 		<div class="card max-w-5xl bg-base-100 shadow-md">
 			<div class="card-body">
 				<h2 class="card-title">Novo calendário</h2>
@@ -424,7 +410,7 @@
 					</span>
 				</div>
 				<div class="card-actions justify-end">
-					<button class="btn btn-primary" on:mouseup={createCalendar}>Criar</button>
+					<button class="btn btn-primary" on:click={handleCreateCalendar}>Criar</button>
 				</div>
 			</div>
 		</div>
