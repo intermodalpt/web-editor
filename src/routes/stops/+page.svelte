@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount, tick } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -86,36 +86,37 @@
 	async function loadData() {
 		await Promise.all([
 			getRegionStops(1, {
-				onSuccess: async (r) => {
-					$stops = Object.fromEntries((await r.json()).map((stop) => [stop.id, stop]));
+				onSuccess: (r) => {
+					$stops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
 				},
 				onError: (res) => {
 					toast('Erro a carregar as paragens', 'error');
 				},
 				onAfter: () => {
-					stopsLoaded = true;
-				}
+				},
+				toJson: true
 			}),
 			getStopPicsRels({
-				onSuccess: async (r) => {
+				onSuccess: (r) => {
 					stopPicsLoaded = true;
-					picsPerStop = await r.json();
+					picsPerStop = r;
 				},
 				onError: (res) => {
 					toast('Erro a carregar as fotografias', 'error');
-				}
+				},
+				toJson: true
 			}),
 			$isAuthenticated
 				? getOwnStopPatch({
-						onSuccess: async (r) => {
-							$userPatches = await r.json();
-						},
+						onSuccess: (r) => ($userPatches = r),
 						onError: (res) => {
 							toast('Erro a carregar as contribuições pendentes', 'error');
-						}
+						},
+						toJson: true
 					})
 				: null
 		]).then(async () => {
+			stopsLoaded = true;
 			if (mapLoaded) loadStops();
 		});
 	}
@@ -482,8 +483,11 @@
 					let upstreamStop = await res.json();
 					Object.assign(currStop, upstreamStop);
 
+					$stops = $stops;
+
 					map.getSource('stops').setData(getFilteredData());
 					$selectedStop = null;
+					toast('Guardado', 'success');
 				},
 				onError
 			});
