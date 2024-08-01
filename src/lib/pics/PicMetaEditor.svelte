@@ -18,36 +18,41 @@
 	let image = null;
 
 	onMount(async () => {
-		const res = await fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
-			credentials: 'include'
-		}).then((r) => r.json());
+		await getStopPic(imageId, {
+			onSuccess: async (res) => {
+				image = await res.json();
 
-		image = res;
+				lon = image.lon;
+				lat = image.lat;
+				notes = image.notes;
+				$stopIds = [...image.tags];
+				$stopRels = deepCopy(image.stops);
+				$stopIds = image.stops.map((rel) => rel.id);
+				isPublic = image.public;
+				isSensitive = image.sensitive;
+				quality = image.quality;
 
-		lon = image.lon;
-		lat = image.lat;
-		notes = image.notes;
-		$stopIds = [...image.tags];
-		$stopRels = deepCopy(image.stops);
-		$stopIds = image.stops.map((rel) => rel.id);
-		isPublic = image.public;
-		isSensitive = image.sensitive;
-		quality = image.quality;
+				// Focuses
+				attrHasFlag = (image.attrs || []).includes('flag');
+				attrHasSchedule = (image.attrs || []).includes('schedule');
+				attrHasDefect = (image.attrs || []).includes('defect');
+				attrHasVehicle = (image.attrs || []).includes('vehicle');
+				attrHasInfra = (image.attrs || []).includes('infra');
+				attrIsNocturnal = (image.attrs || []).includes('nocturnal');
 
-		// Focuses
-		attrHasFlag = (image.attrs || []).includes('flag');
-		attrHasSchedule = (image.attrs || []).includes('schedule');
-		attrHasDefect = (image.attrs || []).includes('defect');
-		attrHasVehicle = (image.attrs || []).includes('vehicle');
-		attrHasInfra = (image.attrs || []).includes('infra');
-		attrIsNocturnal = (image.attrs || []).includes('nocturnal');
-
-		await tick();
-		adjustQualityLabel();
-		locationPicker?.setMarkerPosition(lon, lat);
+				await tick();
+				locationPicker?.setMarkerPosition(lon, lat);
+				adjustQualityLabel();
+			},
+			onError: () => {
+				toast('Erro a carregar a imagem', 'error');
+			}
+		});
 	});
 
-	const editable = image?.uploader === $uid || isAdmin($permissions);
+	const editable =
+		(image?.uploader === $uid && $permissions?.stopPics?.modifyOthers) ||
+		$permissions?.stopPics?.modifyOthers;
 	let saveInProgress = false;
 
 	let qualityLabelElem;
@@ -217,17 +222,8 @@
 			}
 		}
 
-		fetch(`${apiServer}/v1/stop_pics/${imageId}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify(savedPic)
-		})
-			.catch((e) => {
-				alert('Failed to save the stop meta. Error: ' + e.message);
-				saveInProgress = false;
-			})
-			.then(() => {
+		updateStopPic(imageId, savedPic, {
+			onSuccess: () => {
 				image.tagged = true;
 				image.lon = savedPic.lon;
 				image.lat = savedPic.lat;
@@ -244,20 +240,28 @@
 				setAttrPresence(image, 'vehicle', attrHasVehicle);
 				setAttrPresence(image, 'infra', attrHasInfra);
 				setAttrPresence(image, 'nocturnal', attrIsNocturnal);
-				saveInProgress = false;
 
 				dispatch('save', { picture: image });
-			});
+			},
+			onError: () => {
+				toast('Erro ao guardar a imagem', 'error');
+			},
+			onAfter: () => {
+				saveInProgress = false;
+			}
+		});
 	}
 
-	function deleteImage() {
-		if (confirm('Tem certeza que quer apagar esta imagem?')) {
-			fetch(`${apiServer}/v1/stop_pics/${imageId}`, { method: 'DELETE', credentials: 'include' })
-				.catch(() => alert('Failed to delete the image'))
-				.then(() => {
-					dispatch('delete', { id: imageId });
-				});
-		}
+	async function handleDelete() {
+		if (!confirm('Tem a certeza que quer apagar esta imagem?')) return;
+		await deleteStopPic(imageId, {
+			onSuccess: () => {
+				dispatch('delete', { id: imageId });
+			},
+			onError: () => {
+				toast('Failed to delete the image', 'error');
+			}
+		});
 	}
 </script>
 
@@ -274,7 +278,7 @@
 				>
 				<button
 					class="absolute top-0 right-0 btn btn-error btn-sm rounded-tl-none rounded-br-none"
-					on:click={deleteImage}>Apagar</button
+					on:click={handleDelete}>Apagar</button
 				>
 			</div>
 			<div class="w-full hidden lg:block">

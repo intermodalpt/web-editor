@@ -1,22 +1,31 @@
-<script>
+<script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { uploadDanglingStopPic, uploadLinkedStopPic } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 
 	const dispatch = createEventDispatcher();
 
-	export let stopId;
+
+	export let stopId: number | undefined;
 
 	const captureSupported = document.createElement('input').capture != undefined;
 
-	let files = [];
+	let files: File[] = [];
 
-	let uploadQueue = [];
+	type UploadEntry = {
+		file: File;
+		isUploaded: boolean,
+		isUploading: boolean,
+		isConflict: boolean,
+		isError: boolean,
+		error?: string,
+	};
+	let uploadQueue: UploadEntry[] = [];
 	let pendingUploadCount = 0;
 
 	$: updatePendingFiles(files);
 
-	function updatePendingFiles(files) {
+	function updatePendingFiles(files: File[]) {
 		let newFiles = [];
 
 		for (let i = 0; i < files.length; i++) {
@@ -64,39 +73,38 @@
 
 			const formData = new FormData();
 			formData.append('images[]', entry.file);
-			const url = stopId
-				? `${apiServer}/v1/stop_pics/linked/${stopId}`
-				: `${apiServer}/v1/stop_pics/dangling`;
 
-			try {
-				let res = await fetch(url, {
-					method: 'POST',
-					credentials: 'include',
-					body: formData
-				});
-
-				entry.isUploading = false;
-
-				// HTTP 200 means successful upload
-				// HTTP 409 means successful upload and conflict
-				// Every other http 4xx or 5xx means error
-				if (res) {
-					entry.isUploaded = res.status === 200 || res.status === 409;
+			const callbacks = {
+				onSuccess: () => {
+					entry.isUploaded = true;
+					entry.isConflict = false;
+					entry.isError = false;
+				},
+				onError: async (res: Response) => {
+					entry.isUploaded = res.status === 409;
 					entry.isConflict = res.status === 409;
-					entry.isError = res.status >= 400 && res.status < 600 && res.status !== 409;
-				}
+					entry.isError = res.status !== 409;
 
-				const json = await res.json();
-				if (json.message) {
-					entry.error = json.message;
-				}
+					const json = await res.json();
+					if (json.message) {
+						entry.error = json.message;
+					}
+				},
+				onAfter: () => {
+					entry.isUploading = false;
+				},
+				toJson: true
+			};
 
-				if (entry.isUploaded && !entry.isConflict && !entry.isError) {
-					dispatch('new-pic', { pic: json });
-				}
-			} catch (e) {
-				entry.isUploading = false;
-				console.error('Error parsing response', e);
+			let newPic;
+			if (stopId) {
+				newPic = await uploadLinkedStopPic(stopId, formData, callbacks);
+			} else {
+				newPic = await uploadDanglingStopPic(formData, callbacks);
+			}
+
+			if (entry.isUploaded) {
+				dispatch('new-pic', { pic: newPic });
 			}
 
 			// Force update
