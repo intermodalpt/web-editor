@@ -1,5 +1,5 @@
 <script>
-	import { Map, Marker } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { listDifferences, getNearestStops } from '$lib/utils';
 	import { tileStyle } from '$lib/settings';
@@ -69,7 +69,7 @@
 		: [];
 
 	onMount(() => {
-		map = new Map({
+		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
 			center: [change.original.lon, change.original.lat],
@@ -82,7 +82,7 @@
 			]
 		});
 
-		new Marker()
+		new maplibre.Marker()
 			.setLngLat(
 				originalStop
 					? [originalStop.lon, originalStop.lat]
@@ -121,9 +121,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		if (map) {
-			map.remove();
-		}
+		map?.remove();
 	});
 </script>
 

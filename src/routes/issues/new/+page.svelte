@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { Map, Marker } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
 	import {
@@ -117,7 +117,7 @@
 			]
 		});
 
-		pointPickerMarker = new Marker();
+		pointPickerMarker = new maplibre.Marker();
 
 		pointPickerMap.on('click', function (e) {
 			let lngLat = e.lngLat;

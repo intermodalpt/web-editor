@@ -85,7 +85,7 @@
 				if (marker) {
 					marker.setLngLat([pano.lon, pano.lat]);
 				} else {
-					marker = new Marker().setLngLat([pano.lon, pano.lat]).setDraggable(true).addTo(map);
+					marker = new maplibre.Marker().setLngLat([pano.lon, pano.lat]).setDraggable(true).addTo(map);
 					marker.on('dragend', markerMoved);
 				}
 			} else {
@@ -416,8 +416,8 @@
 			]
 		});
 
-		map.addControl(new NavigationControl(), 'top-right');
-		map.addControl(new GeolocateControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
+		map.addControl(new maplibre.GeolocateControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -435,7 +435,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 

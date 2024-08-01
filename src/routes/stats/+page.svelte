@@ -394,7 +394,7 @@
 			]
 		});
 
-		map.addControl(new NavigationControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -412,7 +412,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 

@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { tileStyle } from '$lib/settings';
-	import { Map, Marker } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { writable } from 'svelte/store';
 
@@ -177,7 +177,7 @@
 	onMount(() => {
 		const lastPos = JSON.parse(sessionStorage.getItem('lastPos'));
 
-		map = new Map({
+		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
 			center: [-9.0, 38.605],
@@ -202,7 +202,7 @@
 		}
 
 		if (location.lon && location.lat) {
-			marker = new Marker().setLngLat([location.lon, location.lat]).setDraggable(true).addTo(map);
+			marker = new maplibre.Marker().setLngLat([location.lon, location.lat]).setDraggable(true).addTo(map);
 			marker.on('dragend', markerMoved);
 		}
 
@@ -263,7 +263,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 

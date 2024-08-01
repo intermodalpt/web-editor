@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { tileStyle } from '$lib/settings';
-	import { Map as Maplibre, NavigationControl, GeolocateControl } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 
 	const dispatch = createEventDispatcher();
 
@@ -212,7 +212,7 @@
 	}
 
 	onMount(() => {
-		map = new Maplibre({
+		map = new maplibre.Map({
 			container: mapEl,
 			style: tileStyle,
 			center: [-9.0, 38.65],
@@ -225,8 +225,8 @@
 			]
 		});
 
-		map.addControl(new NavigationControl(), 'top-right');
-		map.addControl(new GeolocateControl(), 'top-right');
+		map.addControl(new maplibre.NavigationControl(), 'top-right');
+		map.addControl(new maplibre.GeolocateControl(), 'top-right');
 
 		map.on('load', function () {
 			addSourcesAndLayers();
@@ -239,7 +239,7 @@
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 
