@@ -1,12 +1,10 @@
-import { error } from '@sveltejs/kit';
 import {
-	getRegions,
 	getOperator,
 	getOperatorFullRoutes,
-	getOperatorIssues,
 	getOperatorStops,
-	getOperatorCalendars
+	getRegions
 } from '$lib/api';
+import { error } from '@sveltejs/kit';
 
 /** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
