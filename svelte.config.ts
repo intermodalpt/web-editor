@@ -1,6 +1,6 @@
 import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-/** @type {import('@sveltejs/kit').Config} */
 const config = {
 	kit: {
 		adapter: adapter()
@@ -8,9 +8,9 @@ const config = {
 	// Disable prerendering, as this is a dynamic app
 	prerender: {
 		crawl: false,
-		handleHttpError: "warn",
-
+		handleHttpError: 'warn'
 	},
+	preprocess: vitePreprocess()
 };
 
 export default config;
