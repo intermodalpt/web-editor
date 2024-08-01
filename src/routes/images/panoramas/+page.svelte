@@ -433,10 +433,7 @@
 		});
 	});
 
-	onDestroy(() => {
-		mapLoaded = false;
-		map?.remove();
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <svelte:head>

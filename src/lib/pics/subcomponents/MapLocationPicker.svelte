@@ -261,10 +261,7 @@
 		});
 	});
 
-	onDestroy(() => {
-		mapLoaded = false;
-		map?.remove();
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <div class="rounded-lg grow-1 max-w-96 h-96 w-full cursor-crosshair" bind:this={mapElem} />

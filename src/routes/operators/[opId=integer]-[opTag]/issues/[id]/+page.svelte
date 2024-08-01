@@ -100,9 +100,7 @@
 	});
 
 	onDestroy(() => {
-		if (map) {
-			map.remove();
-		}
+		map?.remove();
 	});
 </script>
 

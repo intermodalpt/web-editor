@@ -410,10 +410,7 @@
 		});
 	});
 
-	onDestroy(() => {
-		mapLoaded = false;
-		map?.remove();
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <div class="self-center max-w-[80em] w-full my-4">

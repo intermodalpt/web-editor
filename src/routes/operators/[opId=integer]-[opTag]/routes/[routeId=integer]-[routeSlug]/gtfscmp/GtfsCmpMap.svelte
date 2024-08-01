@@ -241,10 +241,7 @@
 		});
 	});
 
-	onDestroy(() => {
-		mapLoaded = false;
-		map?.remove();
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <div bind:this={mapEl} class="w-full h-[25em]" />

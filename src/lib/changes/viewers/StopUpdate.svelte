@@ -119,10 +119,7 @@
 		});
 	});
 
-	onDestroy(() => {
-		mapLoaded = false;
-		map?.remove();
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <h3 class="font-bold">

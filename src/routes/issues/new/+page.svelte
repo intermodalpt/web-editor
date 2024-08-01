@@ -163,7 +163,8 @@
 	});
 
 	onDestroy(() => {
-		pointPickerMap.remove();
+		pointPickerMap?.remove();
+		geojsonMap?.remove();
 	});
 </script>
 

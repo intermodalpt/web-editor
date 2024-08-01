@@ -144,9 +144,7 @@
 		$selectedStop = regionStopTodos[e.detail.id];
 	}
 
-	onDestroy(() => {
-		mapLoaded = false;
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <TodoMap

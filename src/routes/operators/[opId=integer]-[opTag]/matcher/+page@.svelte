@@ -545,9 +545,7 @@
 		map.setCenterAndZoom(mapParams.center, mapParams.zoom);
 	});
 
-	onDestroy(() => {
-		mapLoaded = false;
-	});
+	onDestroy(() => map?.remove());
 </script>
 
 <MatcherMap
