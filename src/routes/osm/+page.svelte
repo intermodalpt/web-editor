@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { GeolocateControl, Map, NavigationControl } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { liveQuery } from 'dexie';
 	import { apiServer, tileStyle } from '$lib/settings';
@@ -10,105 +10,62 @@
 	import { fetchRegions, getRegions, loadMissing } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';
 	import OsmStopData from './OsmStopData.svelte';
+	import { invalidate } from '$app/navigation';
+
+	export let data;
+	const regions = data.regions;
+	const osmStops = data.osmStops;
+	const osmIndex = Object.fromEntries(osmStops.map((stop) => [stop.id, stop]));
+	$: stops = data.stops;
 
 	let map;
 	let searchDialog;
 
-	let stopsLoaded = false;
-	let osmStopsLoaded = false;
+	let stopsLoaded = true;
+	let osmStopsLoaded = true;
 	let mapLoaded = false;
 
 	$: loading = !stopsLoaded || !osmStopsLoaded || !mapLoaded;
-
-	const regions = liveQuery(() => getRegions());
-	const stops = writable({});
-	const osmStops = writable({});
-
-	async function fetchStops() {
-		return await fetch(`${apiServer}/v1/stops`)
-			.then((r) => r.json())
-			.then((r) => {
-				$stops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
-				stopsLoaded = true;
-				return r;
-			});
-	}
-
-	async function loadData() {
-		Promise.all([
-			fetchRegions(),
-			fetchStops(),
-			fetch(`${apiServer}/v1/osm/stops`)
-				.then((r) => r.json())
-				.then((r) => {
-					$osmStops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
-					osmStopsLoaded = true;
-				})
-		])
-			.then(async ([regions, stops, osmStops]) => {
-				await tick();
-				if (mapLoaded) {
-					loadStops();
-					loadOsmStops();
-				}
-			})
-			.catch((e) => {
-				toast('Failed to load stops', 'error');
-				console.log(e);
-			})
-			.then(async () => {
-				console.log('data loaded');
-				await loadMissing();
-			});
-	}
-
-	loadData().then(async () => {
-		console.log('data loaded');
-		await loadMissing();
-	});
 
 	let selectedOsmStop = writable(null);
 
 	const stopSearchInput = writable(null);
 
-	const stopSearchResults = derived(
-		[stopSearchInput, osmStops],
-		([$stopSearchInput, $osmStops]) => {
-			if (!$stopSearchInput || $stopSearchInput.length < 3 || !$osmStops) return [];
+	const stopSearchResults = derived(stopSearchInput, ($stopSearchInput) => {
+		if (!$stopSearchInput || $stopSearchInput.length < 3) return [];
 
-			let lowerInput = $stopSearchInput.toLowerCase();
+		let lowerInput = $stopSearchInput.toLowerCase();
 
-			let result = Object.values($osmStops)
-				.map((stop) => {
-					let id_score = 0;
-					let name_score = 0;
+		let result = osmStops
+			.map((stop) => {
+				let id_score = 0;
+				let name_score = 0;
 
-					if (('' + stop.id).includes($stopSearchInput)) {
-						'' + stop.id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
-					}
+				if (('' + stop.id).includes($stopSearchInput)) {
+					'' + stop.id == $stopSearchInput ? (id_score += 100) : (id_score += 50);
+				}
 
-					if (stop.name && stop.name.toLowerCase().includes(lowerInput)) {
-						name_score = Math.max(name_score, stop.name.toLowerCase() == lowerInput ? 100 : 50);
-					}
+				if (stop.name && stop.name.toLowerCase().includes(lowerInput)) {
+					name_score = Math.max(name_score, stop.name.toLowerCase() == lowerInput ? 100 : 50);
+				}
 
-					const score = id_score + name_score;
-					return [score, stop];
-				})
-				.filter(([score, result]) => score > 0)
-				.sort((a, b) => a[0] - b[0])
-				.map(([, result]) => result);
-			return result;
-		}
-	);
+				const score = id_score + name_score;
+				return [score, stop];
+			})
+			.filter(([score, result]) => score > 0)
+			.sort((a, b) => a[0] - b[0])
+			.map(([, result]) => result);
+		return result;
+	});
 
 	export function selectStop(stopId) {
-		$selectedOsmStop = $osmStops[stopId];
+		$selectedOsmStop = osmIndex[stopId];
 	}
 
-	function loadStops() {
+	function drawStops() {
 		const features = {
 			type: 'FeatureCollection',
-			features: Object.values($stops).map((stop) => {
+			features: stops.map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -122,13 +79,24 @@
 				};
 			})
 		};
+
 		map.getSource('stops').setData(features);
 	}
 
-	function loadOsmStops() {
+	function fitMap() {
+		const bounds = new maplibre.LngLatBounds();
+		stops.forEach((stop) => {
+			bounds.extend([stop.lon, stop.lat]);
+		});
+		map.fitBounds(bounds, {
+			padding: 50
+		});
+	}
+
+	function drawOsmStops() {
 		const features = {
 			type: 'FeatureCollection',
-			features: Object.values($osmStops).map((stop) => {
+			features: osmStops.map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -263,29 +231,30 @@
 		});
 
 		map.on('click', 'osm-stop-points', (e) => {
-			$selectedOsmStop = $osmStops[e.features[0].properties.stopId];
+			$selectedOsmStop = osmIndex[e.features[0].properties.stopId];
 		});
 	}
 
+	async function handleCreateStop() {
+		await invalidate('stops:osm');
+		drawStops();
+	}
+
 	onMount(() => {
-		map = new Map({
+		map = new maplibre.Map({
 			container: 'map',
 			style: tileStyle,
-			center: [-9.0, 38.605],
-			zoom: 11,
-			minZoom: 6,
-			maxZoom: 20
-			// maxBounds: [
-			// 	[-10.0, 38.3],
-			// 	[-8.0, 39.35]
-			// ]
+			minZoom: 6.0,
+			maxZoom: 20,
+			zoom: 7,
+			center: [-8.5, 39.5]
 		});
 
-		map.addControl(new NavigationControl());
+		map.addControl(new maplibre.NavigationControl());
 		map.addControl(new SearchControl(() => searchDialog.showModal()));
 
 		map.addControl(
-			new GeolocateControl({
+			new maplibre.GeolocateControl({
 				positionOptions: {
 					enableHighAccuracy: true
 				},
@@ -302,17 +271,16 @@
 			await tick();
 
 			if (stopsLoaded) {
-				loadStops();
+				drawStops();
+				fitMap();
 			}
-			if (osmStopsLoaded) {
-				loadOsmStops();
-			}
+			if (osmStopsLoaded) drawOsmStops();
 		});
 	});
 
 	onDestroy(() => {
 		mapLoaded = false;
-		map.remove();
+		map?.remove();
 	});
 </script>
 
@@ -357,14 +325,7 @@
 	>
 		<div class="h-[350px] w-full bg-base-100 lg:w-[95%] lg:rounded-t-xl shadow-md">
 			{#if $selectedOsmStop}
-				<OsmStopData
-					{regions}
-					osmStop={selectedOsmStop}
-					on:stopcreated={async () => {
-						await fetchStops();
-						loadStops();
-					}}
-				/>
+				<OsmStopData {regions} osmStop={selectedOsmStop} on:stopcreated={handleCreateStop} />
 			{/if}
 		</div>
 	</div>
@@ -387,14 +348,9 @@
 		{#if $stopSearchResults}
 			<div class="flex flex-col gap-1 mt-2 overflow-y-scroll">
 				{#each $stopSearchResults as result}
-					<div
+					<button
 						class="card card-compact w-full bg-base-100 border-2 shadow-sm cursor-pointer"
-						on:click={() => {
-							flyToStop(result);
-						}}
-						on:keypress={() => {
-							flyToStop(result);
-						}}
+						on:click={() => flyToStop(result)}
 					>
 						<div class="card-body">
 							<h2 class="text-md font-semibold">
@@ -402,7 +358,7 @@
 								{result.name}
 							</h2>
 						</div>
-					</div>
+					</button>
 				{/each}
 			</div>
 		{/if}

@@ -3,10 +3,15 @@
 	import { writable, derived } from 'svelte/store';
 	import { apiServer, movementTreshold } from '$lib/settings';
 	import { toast, permissions } from '$lib/stores';
-	import { canCreateStops, canMoveStops } from '$lib/permissions.ts';
-	import { createStop, attachStopToRegion, setStopPosition } from '$lib/api';
+	import {
+		createStop,
+		attachStopToRegion,
+		setStopPosition,
+		getOsmStop,
+		getOsmPairedStop
+	} from '$lib/api';
 	import { distance } from '$lib/utils';
-	import { regionId } from '$lib/db.ts';
+	import { regionId } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import CoordViewer from '$lib/components/CoordViewer.svelte';
@@ -16,9 +21,6 @@
 	export let osmStop;
 	export let regions;
 
-	let hasCreateStopsPerm = canCreateStops($permissions);
-	let hasModifyPosPerm = canMoveStops($permissions);
-
 	let isCreating = false;
 	let creationDialog;
 
@@ -27,24 +29,30 @@
 
 	const stopHistory = derived(osmStop, ($osmStop, set) => {
 		if (!$osmStop) return [];
-		fetch(`${apiServer}/v1/osm/stops/${$osmStop.id}`)
-			.then((res) => res.json())
-			.then((data) => {
+		getOsmStop($osmStop.id, {
+			onSuccess: (data) => {
 				set(data);
 				$versionIndex = data.length - 1;
-			});
+			},
+			onError: () => {
+				toast('Falha ao obter histórico da paragem', 'error');
+			},
+			toJson: true
+		});
 	});
 
 	const nounce = writable(0);
 
 	const derivedStop = derived([osmStop, nounce], async ([$osmStop, $nounce], set) => {
 		if (!$osmStop) return;
-		let res = await fetch(`${apiServer}/v1/osm/stops/${$osmStop.id}/paired`);
-		if (res.ok) {
-			set(await res.json());
-		} else {
-			set(null);
-		}
+		await getOsmPairedStop($osmStop.id, {
+			onSuccess: (stop) => set(stop),
+			onError: (res) => {
+				set(null);
+				if (res.status != 404) toast('Falha ao obter paragem associada', 'error');
+			},
+			toJson: true
+		});
 	});
 
 	const derivedStopDistance = derived([derivedStop, osmStop], ([$derivedStop, $osmStop]) => {
@@ -78,74 +86,54 @@
 			license: 'ODbL',
 			is_ghost: false
 		};
-		let res = await fetch(`${apiServer}/v1/stops`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			},
-			body: JSON.stringify(newStop)
-		});
 
-		if (!res.ok) {
-			res
-				.json()
-				.catch((e) => {
-					toast('Falha ao criar paragem', 'error');
-					console.error(e);
-				})
-				.then((data) => {
-					toast('Falha ao criar paragem:' + data.message, 'error');
+		await createStop(newStop, {
+			onSuccess: async (newStopId) => {
+				creationDialog.close();
+				dispatch('stopcreated', { id: newStopId });
+
+				await updateStopTodos(stopId, ['verifyLocation'], {
+					onSuccess: () => {
+						toast('Marcada não verificada', 'success');
+					},
+					onError: (err) => {
+						toast('Erro a marcar paragem como pendente de verificação', 'error');
+					}
 				});
-			console.error(res);
-			isCreating = false;
-			return;
-		}
-		const newStopId = (await res.json()).id;
 
-		$nounce++;
-		creationDialog.close();
-
-		dispatch('stopcreated', { id: newStopId });
-
-		for (const newRegionId of newStopRegions) {
-			res = await fetch(`${apiServer}/v1/regions/${newRegionId}/stops/${newStopId}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${$token}`
+				toast('Paragem criada', 'success');
+				for (const regionId of newStopRegions) {
+					await attachStopToRegion(newStopId, regionId, {
+						onSuccess: () => {
+							toast('Paragem associada à região', 'success');
+						},
+						onError: (e) => {
+							toast('Falha ao associar paragem à região', 'error');
+						}
+					});
 				}
-			});
-			if (!res.ok) {
-				toast('Falha ao associar paragem à região', 'error');
-				console.error(res);
+				$nounce++;
+			},
+			onError: () => {
+				toast('Falha ao criar paragem', 'error');
+			},
+			onAfter: () => {
 				isCreating = false;
-				return;
+				creationDialog.close();
 			}
-		}
-
-		isCreating = false;
+		});
 	}
 
-	function handleSyncPosition() {
-		fetch(`${apiServer}/v1/stops/${$derivedStop.id}/position`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${$token}`
-			}
-		})
-			.then((res) => {
-				if (res.ok) {
-					toast('Posição sincronizada', 'success');
-				} else {
-					toast('Falha ao sincronizar posição', 'error');
-				}
-			})
-			.catch((e) => {
+	async function handleSyncPosition() {
+		await setStopPosition($derivedStop.id, $osmStop.lat, $osmStop.lon, {
+			onSuccess: () => {
+				toast('Posição sincronizada', 'success');
+				// TODO: update derived stop
+			},
+			onError: () => {
 				toast('Falha ao sincronizar posição', 'error');
-				console.error(e);
-			});
+			}
+		});
 	}
 
 	function handleKeydown(e) {
@@ -329,7 +317,7 @@
 						<button
 							class="btn grow btn-primary"
 							on:click={handleSyncPosition}
-							disabled={!hasModifyPosPerm ||
+							disabled={!$permissions.stops.modifyPos ||
 								!$derivedStopDistance ||
 								Math.abs($derivedStopDistance) < movementTreshold}
 						>
@@ -340,7 +328,7 @@
 				</div>
 			{:else}
 				<span>Sem equivalente</span>
-				{#if hasCreateStopsPerm}
+				{#if $permissions.stops.create}
 					<button class="btn btn-primary" on:click={handlePrecreate} disabled={isCreating}
 						>Criar</button
 					>
@@ -370,7 +358,7 @@
 			</div>
 			<span class="text-xs">Regiões</span>
 			<select class="w-full select select-bordered" multiple bind:value={newStopRegions}>
-				{#each Object.values($regions || {}) as region}
+				{#each regions as region}
 					<option value={region.id}>{region.name}</option>
 				{/each}
 			</select>

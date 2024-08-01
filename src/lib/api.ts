@@ -382,8 +382,20 @@ export async function detachStopFromOperator(stopId: number, operatorId: number,
 	return await handleResponse(res, opts);
 }
 
+// ----- OSM -----
+
 export async function getOsmStops(opts: ReqOpts) {
 	const res = await f(`/v1/osm/stops`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOsmStop(osmId: number, opts: ReqOpts) {
+	const res = await f(`/v1/osm/stops/${osmId}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOsmPairedStop(osmId: number, opts: ReqOpts) {
+	const res = await f(`/v1/osm/stops/${osmId}/paired`, { opts });
 	return await handleResponse(res, opts);
 }
 
@@ -499,8 +511,6 @@ export async function changeSubrouteStops(
 	{ from, to }: { from: [number]; to: [number] },
 	opts: ReqOpts
 ) {
-	return await handleResponse(res, opts);
-	// With betterFetch
 	const res = await f(`/v1/subroutes/${subrouteId}/stops`, {
 		method: 'PATCH',
 		isJson: true,
