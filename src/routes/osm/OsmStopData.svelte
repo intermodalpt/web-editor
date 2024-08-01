@@ -317,7 +317,7 @@
 						<button
 							class="btn grow btn-primary"
 							on:click={handleSyncPosition}
-							disabled={!$permissions.stops.modifyPos ||
+							disabled={!$permissions?.stops?.modifyPos ||
 								!$derivedStopDistance ||
 								Math.abs($derivedStopDistance) < movementTreshold}
 						>
@@ -328,7 +328,7 @@
 				</div>
 			{:else}
 				<span>Sem equivalente</span>
-				{#if $permissions.stops.create}
+				{#if $permissions?.stops?.create}
 					<button class="btn btn-primary" on:click={handlePrecreate} disabled={isCreating}
 						>Criar</button
 					>

@@ -64,7 +64,7 @@
 					bind:value={name}
 					placeholder="Vale das Quintas, Rua Pessoa, 29"
 					class="input input-bordered w-full input-sm"
-					disabled={!$permissions.stops.modify_attrs}
+					disabled={!$permissions?.stops?.modifyAttrs}
 				/>
 			</label>
 		</div>
@@ -76,7 +76,7 @@
 					bind:value={shortName}
 					placeholder="Vl. Quintas, Pessoa"
 					class="input input-bordered w-full input-sm"
-					disabled={!$permissions.stops.modify_attrs}
+					disabled={!$permissions?.stops?.modifyAttrs}
 				/>
 			</label>
 		</div>
@@ -88,7 +88,7 @@
 					bind:value={locality}
 					placeholder="Vale das Quintas"
 					class="input input-bordered w-full input-sm"
-					disabled={!($permissions.stops.modify_attrs || $permissions.stops.contrib_modify_attrs)}
+					disabled={!($permissions?.stops?.modifyAttrs || $permissions?.stops?.contribModifyAttrs)}
 				/>
 			</label>
 		</div>
@@ -100,7 +100,7 @@
 					bind:value={street}
 					placeholder="Rua Pessoa"
 					class="input input-bordered w-full input-sm"
-					disabled={!($permissions.stops.modify_attrs || $permissions.stops.contrib_modify_attrs)}
+					disabled={!($permissions?.stops?.modifyAttrs || $permissions?.stops?.contribModifyAttrs)}
 				/>
 			</label>
 		</div>
@@ -112,7 +112,7 @@
 					bind:value={door}
 					placeholder="29"
 					class="input input-bordered w-full input-sm"
-					disabled={!($permissions.stops.modify_attrs || $permissions.stops.contrib_modify_attrs)}
+					disabled={!($permissions?.stops?.modifyAttrs || $permissions?.stops?.contribModifyAttrs)}
 				/>
 			</label>
 		</div>
@@ -131,7 +131,7 @@
 		</div>
 		<span>Autenticidade</span>
 		<div class="flex flex-col gap-2 ml-2 text-base border rounded-lg p-2">
-			<AuthenticitySelectors bind:value={verificationLevel} disabled={!$permissions.stops.authenticate} />
+			<AuthenticitySelectors bind:value={verificationLevel} disabled={!$permissions?.stops?.authenticate} />
 		</div>
 	</div>
 </div>

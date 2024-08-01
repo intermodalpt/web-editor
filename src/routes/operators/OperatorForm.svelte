@@ -22,8 +22,7 @@
 
 	export let id = null;
 
-	const canEdit = (id && $permissions.operators.create) || (!id && $permissions.operators.edit);
-
+	const canEdit = (id && $permissions?.operators?.create) || (!id && $permissions?.operators?.edit);
 
 	export let routeTypes = [];
 

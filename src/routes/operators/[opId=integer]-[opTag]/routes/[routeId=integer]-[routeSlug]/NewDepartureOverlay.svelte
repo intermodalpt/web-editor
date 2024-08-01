@@ -43,8 +43,8 @@
 						const fixable =
 							!total &&
 							((pic.uploader === $uid &&
-								($permissions?.stop_pics?.contrib_upload || $permissions?.stop_pics?.modify_own)) ||
-								$permissions?.stop_pics?.modify_others);
+								($permissions?.stopPics?.contribUpload || $permissions?.stopPics?.modifyOwn)) ||
+								$permissions?.stopPics?.modifyOthers);
 
 						pic.metaCompleteness = {
 							position: position,

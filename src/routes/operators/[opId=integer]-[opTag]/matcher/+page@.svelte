@@ -616,7 +616,7 @@
 			class:w-[300px]={!areStopsSelected}
 		>
 			<MatchViewer
-				canEdit={$permissions?.operators?.modify_stops}
+				canEdit={$permissions?.operators?.modifyCalendars}
 				{operator}
 				gtfsStops={$gtfsStops}
 				{selectedGtfsStop}

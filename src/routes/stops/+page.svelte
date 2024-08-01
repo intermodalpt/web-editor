@@ -92,8 +92,6 @@
 				onError: (res) => {
 					toast('Erro a carregar as paragens', 'error');
 				},
-				onAfter: () => {
-				},
 				toJson: true
 			}),
 			getStopPicsRels({
@@ -101,7 +99,7 @@
 					stopPicsLoaded = true;
 					picsPerStop = r;
 				},
-				onError: (res) => {
+				onError: () => {
 					toast('Erro a carregar as fotografias', 'error');
 				},
 				toJson: true
@@ -109,7 +107,7 @@
 			$isAuthenticated
 				? getOwnStopPatch({
 						onSuccess: (r) => ($userPatches = r),
-						onError: (res) => {
+						onError: () => {
 							toast('Erro a carregar as contribuições pendentes', 'error');
 						},
 						toJson: true
@@ -477,7 +475,7 @@
 			toast('Erro a atualizar', 'error');
 		};
 
-		if ($permissions.stops?.modify_attrs) {
+		if ($permissions?.stops?.modifyAttrs) {
 			await updateStopMeta(currStop.id, newStop, {
 				onSuccess: async (res) => {
 					let upstreamStop = await res.json();
@@ -491,7 +489,7 @@
 				},
 				onError
 			});
-		} else if ($permissions.stops?.contrib_modify_attrs) {
+		} else if ($permissions?.stops?.contribModifyAttrs) {
 			let comment = null;
 			if (
 				confirm(

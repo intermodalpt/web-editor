@@ -24,65 +24,65 @@ interface Permissions {
 	};
 	operators?: {
 		create?: boolean;
-		modify_base?: boolean;
-		modify_stops?: boolean;
-		modify_calendars?: boolean;
+		modifyBase?: boolean;
+		modifyStops?: boolean;
+		modifyCalendars?: boolean;
 		delete?: boolean;
 	};
 	routes?: {
 		create?: boolean;
-		modify_base?: boolean;
-		modify_subroutes?: boolean;
-		modify_stops?: boolean;
-		modify_departures?: boolean;
+		modifyBase?: boolean;
+		modifySubroutes?: boolean;
+		modifyStops?: boolean;
+		modifyDepartures?: boolean;
 		authenticate?: boolean;
 		delete?: boolean;
 	};
 	stops?: {
 		create?: boolean;
-		modify_pos?: boolean;
-		modify_attrs?: boolean;
-		modify_map_features?: boolean;
+		modifyPos?: boolean;
+		modifyAttrs?: boolean;
+		modifyMapFeatures?: boolean;
 		authenticate?: boolean;
 		delete?: boolean;
-		contrib_modify_attrs?: boolean;
+		contribModifyAttrs?: boolean;
 	};
-	osm_stops?: {
+	osmStops?: {
 		update?: boolean;
 		delete?: boolean;
 	};
-	stop_pics?: {
+	stopPics?: {
 		upload?: boolean;
-		view_untagged?: boolean;
-		view_sensitive?: boolean;
-		modify_own?: boolean;
-		modify_others?: boolean;
+		viewUntagged?: boolean;
+		viewSensitive?: boolean;
+		modifyOwn?: boolean;
+		modifyOthers?: boolean;
 		delete?: boolean;
-		contrib_upload?: boolean;
-		contrib_modify?: boolean;
+		contribUpload?: boolean;
+		contribModify?: boolean;
 	};
 	news?: {
 		create?: boolean;
 		modify?: boolean;
 		delete?: boolean;
 	};
-	external_news?: {
-		read_private?: boolean;
+	externalNews?: {
+		readPrivate?: boolean;
 		modify?: boolean;
 		delete?: boolean;
 	};
 	admin?: {
-		read_audit_log?: boolean;
-		manage_user_sessions?: boolean;
-		change_passwords?: boolean;
-		change_permissions?: boolean;
-		suspend_users?: boolean;
+		readAuditLog?: boolean;
+		manageUserSessions?: boolean;
+		changePasswords?: boolean;
+		changePermissions?: boolean;
+		suspendUsers?: boolean;
 	};
 	misc?: {
-		modify_issues?: boolean;
-		contrib_evaluator?: boolean;
-		expensive_calls?: boolean;
-		patch_gtfs?: boolean;
+		modifyIssues?: boolean;
+		contribEvaluator?: boolean;
+		expensiveCalls?: boolean;
+		patchGtfs?: boolean;
 	};
 }
 

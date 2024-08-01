@@ -56,7 +56,7 @@
 
 <div class="card-body">
 	<div class="flex justify-end">
-		<a class="btn" class:hidden={!$permissions?.misc?.modify_issues} href="/issues/new">
+		<a class="btn" class:hidden={!$permissions?.misc?.modifyIssues} href="/issues/new">
 			Adicionar problema
 		</a>
 	</div>

@@ -784,7 +784,7 @@
 			</div>
 		{:else if tab == tabs.validation}
 			<div class="flex flex-col rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto">
-				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={$permissions.} />
+				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={$permissions?.routes?.authenticate} />
 			</div>
 		{/if}
 	</div>
@@ -794,7 +794,7 @@
 		>
 			<button
 				class="btn btn-sm normal-case"
-				class:hidden={!$permissions?.routes?.modify_stops}
+				class:hidden={!$permissions?.routes?.modifyStops}
 				on:click={handleStopIdImport}>Import</button
 			>
 			<button
@@ -837,7 +837,7 @@
 						/>
 					{/key}
 				</div>
-				{#if $permissions?.routes?.modify_stops}
+				{#if $permissions?.routes?.modifyStops}
 					<div class="divider px-6 m-2" />
 					<div class="flex">
 						<button

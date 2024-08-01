@@ -12,7 +12,7 @@
 
 	let ignoredKeys = [];
 
-	const isEvaluation = $permissions.misc.contrib_evaluator && contribution.accepted == null;
+	const isEvaluation = $permissions?.misc?.contribEvaluator && contribution.accepted == null;
 
 	const dispatch = createEventDispatcher();
 

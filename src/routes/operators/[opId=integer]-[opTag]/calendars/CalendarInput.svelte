@@ -55,7 +55,7 @@
 				name="weekdays"
 				type="checkbox"
 				value={0}
-				disabled={!$permissions?.operators?.modify_calendars}
+				disabled={!$permissions?.operators?.modifyCalendars}
 				bind:group={calendar.weekdays}
 			/> Segunda</label
 		>
@@ -75,7 +75,7 @@
 				name="weekdays"
 				type="checkbox"
 				value={2}
-				disabled={!$permissions?.operators?.modify_calendars}
+				disabled={!$permissions?.operators?.modifyCalendars}
 				bind:group={calendar.weekdays}
 			/> Quarta</label
 		>
@@ -85,7 +85,7 @@
 				name="weekdays"
 				type="checkbox"
 				value={3}
-				disabled={!$permissions?.operators?.modify_calendars}
+				disabled={!$permissions?.operators?.modifyCalendars}
 				bind:group={calendar.weekdays}
 			/> Quinta</label
 		>
@@ -95,7 +95,7 @@
 				name="weekdays"
 				type="checkbox"
 				value={4}
-				disabled={!$permissions?.operators?.modify_calendars}
+				disabled={!$permissions?.operators?.modifyCalendars}
 				bind:group={calendar.weekdays}
 			/> Sexta</label
 		>
@@ -105,7 +105,7 @@
 				name="weekdays"
 				type="checkbox"
 				value={5}
-				disabled={!$permissions?.operators?.modify_calendars}
+				disabled={!$permissions?.operators?.modifyCalendars}
 				bind:group={calendar.weekdays}
 			/> Sábado</label
 		>
@@ -115,7 +115,7 @@
 				name="weekdays"
 				type="checkbox"
 				value={6}
-				disabled={!$permissions?.operators?.modify_calendars}
+				disabled={!$permissions?.operators?.modifyCalendars}
 				bind:group={calendar.weekdays}
 			/> Domingo</label
 		>
@@ -130,7 +130,7 @@
 					name="exception-type"
 					type="radio"
 					value="only_if"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:group={conditionType}
 				/>
 				Apenas
@@ -141,7 +141,7 @@
 					name="exception-type"
 					type="radio"
 					value="except_if"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:group={conditionType}
 				/>
 				Exceto
@@ -152,7 +152,7 @@
 					name="exception-type"
 					type="radio"
 					value="also_if"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:group={conditionType}
 				/>
 				Também
@@ -167,7 +167,7 @@
 					name="period"
 					type="radio"
 					value="Summer"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:group={conditionPeriod}
 				/>
 				Verão
@@ -178,7 +178,7 @@
 					name="period"
 					type="radio"
 					value="School"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:group={conditionPeriod}
 				/>
 				Escola
@@ -189,7 +189,7 @@
 					name="period"
 					type="radio"
 					value="Holiday"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:group={conditionPeriod}
 				/>
 				Feriados
@@ -201,7 +201,7 @@
 						name="period"
 						type="radio"
 						value="Nth"
-						disabled={!$permissions?.operators?.modify_calendars}
+						disabled={!$permissions?.operators?.modifyCalendars}
 						bind:group={conditionPeriod}
 					/>
 					Ocorrência #
@@ -214,7 +214,7 @@
 							min="1"
 							max="5"
 							class="input input-bordered input-xs w-16 h-10"
-							disabled={conditionPeriod !== 'Nth' || !$permissions?.operators?.modify_calendars}
+							disabled={conditionPeriod !== 'Nth' || !$permissions?.operators?.modifyCalendars}
 							bind:value={nth}
 						/>
 					</label>
@@ -237,7 +237,7 @@
 						<input
 							type="date"
 							class="input input-bordered input-xs w-fit"
-							disabled={conditionPeriod !== 'Range' || !$permissions?.operators?.modify_calendars}
+							disabled={conditionPeriod !== 'Range' || !$permissions?.operators?.modifyCalendars}
 							bind:value={rangeStart}
 						/>
 					</label>
@@ -248,7 +248,7 @@
 						<input
 							type="date"
 							class="input input-bordered input-xs w-fit"
-							disabled={conditionPeriod !== 'Range' || !$permissions?.operators?.modify_calendars}
+							disabled={conditionPeriod !== 'Range' || !$permissions?.operators?.modifyCalendars}
 							bind:value={rangeEnd}
 						/>
 					</label>
@@ -259,7 +259,7 @@
 			<button
 				class="btn btn-info btn-xs mt-2"
 				disabled={!(newConditionPeriodReady && conditionType) ||
-					!$permissions?.operators?.modify_calendars}
+					!$permissions?.operators?.modifyCalendars}
 				on:mouseup={addModifier}
 			>
 				Adicionar modificador

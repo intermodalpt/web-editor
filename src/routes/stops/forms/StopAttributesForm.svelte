@@ -17,7 +17,7 @@
 	export let stopPictures;
 	export let latestPictureDate;
 	export let readOnly = !(
-		$permissions?.stops?.modify_attrs || $permissions?.stops?.contrib_modify_attrs
+		$permissions?.stops?.modifyAttrs || $permissions?.stops?.contribModifyAttrs
 	);
 
 	let name = null;
@@ -299,7 +299,7 @@
 		<span class="w-2" />
 		<button
 			class="btn btn-success btn-xs"
-			disabled={!($permissions.stops.modify_attrs || $permissions.stops.contrib_modify_attrs)}
+			disabled={!($permissions?.stops?.modifyAttrs || $permissions?.stops?.contribModifyAttrs)}
 			on:click={saveStopMeta}
 		>
 			Guardar

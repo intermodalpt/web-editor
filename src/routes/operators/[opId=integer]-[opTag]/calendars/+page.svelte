@@ -133,13 +133,13 @@
 					type="text"
 					placeholder="Ex: Dias úteis de verão"
 					class="input input-bordered"
-					disabled={!$permissions?.operators?.modify_calendars}
+					disabled={!$permissions?.operators?.modifyCalendars}
 					bind:value={editedCalendarName}
 				/>
 			</div>
 			<CalendarInput bind:calendar={editedCalendar} />
 			<div class="flex gap-2 justify-end">
-				{#if !$permissions?.operators?.modify_calendars}
+				{#if !$permissions?.operators?.modifyCalendars}
 					<button class="btn btn-neutral">Fechar</button>
 				{:else if !editedCalendarId}
 					<button class="btn btn-primary" on:click|preventDefault={handleCreate}>Criar</button>
