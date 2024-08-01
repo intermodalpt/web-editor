@@ -38,7 +38,7 @@
 		if (marker) {
 			marker.setLngLat([lon, lat]);
 		} else {
-			marker = new Marker({ draggable: true }).setLngLat([lon, lat]).setDraggable(true).addTo(map);
+			marker = new maplibre.Marker({ draggable: true }).setLngLat([lon, lat]).setDraggable(true).addTo(map);
 			marker.on('dragend', markerMoved);
 		}
 	}
@@ -235,7 +235,7 @@
 			if (marker) {
 				marker.setLngLat(e.lngLat).addTo(map);
 			} else {
-				marker = new Marker({ draggable: true }).setLngLat(e.lngLat).setDraggable(true).addTo(map);
+				marker = new maplibre.Marker({ draggable: true }).setLngLat(e.lngLat).setDraggable(true).addTo(map);
 				marker.on('dragend', markerMoved);
 			}
 
