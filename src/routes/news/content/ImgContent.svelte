@@ -22,9 +22,8 @@
 	let isUploading = false;
 
 	async function upload() {
-		if (files.length === 0) {
-			return;
-		}
+		if (files.length === 0) return;
+
 		const file = files[0];
 
 		isUploading = true;
@@ -32,39 +31,22 @@
 		const formData = new FormData();
 		formData.append('images[]', file);
 
-		try {
-			let res = await fetch(`${apiServer}/v1/news/images`, {
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				method: 'POST',
-				body: formData
-			});
-
-			// HTTP 200 means successful upload
-			// HTTP 409 means successful upload and conflict
-			// Every other http 4xx or 5xx means error
-			const isUploaded = res.status === 200;
-			const isConflict = res.status === 409;
-			const isError = res.status >= 400 && res.status < 600 && res.status !== 409;
-
-			const json = await res.json();
-			if (isUploaded) {
+		await uploadNewsImg(formData, {
+			onSuccess: async (res) => {
+				const data = await res.json();
 				toast('Imagem enviada', 'success');
-				dispatch('new-img', { img: json });
-				selectImg(json);
-			} else if (isConflict) {
-				toast('Imagem já enviada', 'warning');
-			} else if (isError) {
-				toast(`Erro ao enviar imagem: ${JSON.stringify(json)}`, 'FileListerror');
-			} else {
-				toast(`Problema desconhecido ao enviar imagem: ${JSON.stringify(json)}`, 'error');
-				console.error('Unknown response', res);
-				console.error(json);
+				dispatch('new-img', { img: data });
+				selectImg(data);
+			},
+			onError: (res) => {
+				if (res.status === 409) {
+					toast('Imagem já existente', 'info');
+					// Should we select the image here?
+				} else {
+					toast(`Erro ao enviar imagem`, 'error');
+				}
 			}
-		} catch (e) {
-			toast('Erro ao enviar imagem', 'error');
-			console.error('Error parsing response', e);
-		}
+		});
 
 		isUploading = false;
 	}

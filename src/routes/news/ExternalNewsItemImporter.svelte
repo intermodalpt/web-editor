@@ -75,24 +75,22 @@
 		uploadingImages.add(extImageId);
 		uploadingImages = uploadingImages;
 
-		const res = await fetch(`${apiServer}/v1/news/images/import_external/${extImageId}`, {
-			method: 'POST',
-			credentials: 'include'
+		importExternalNewsImage(extImageId, {
+			onSuccess: async (res) => {
+				importedImages.add(extImageId);
+				importedImages = importedImages;
+				const importedImg = await res.json();
+
+				dispatch('import-img', { img: importedImg });
+			},
+			onError: (res) => {
+				toast(`Erro ao importar imagem`, 'error');
+			},
+			onAfter: () => {
+				uploadingImages.delete(extImageId);
+				uploadingImages = uploadingImages;
+			}
 		});
-
-		uploadingImages.delete(extImageId);
-		uploadingImages = uploadingImages;
-
-		if (!res.ok) {
-			toast(`Erro ao importar imagem ${extImageId}`, 'error');
-			return;
-		}
-
-		importedImages.add(extImageId);
-		importedImages = importedImages;
-		const importedImg = await res.json();
-
-		dispatch('import-img', { img: importedImg });
 	}
 </script>
 

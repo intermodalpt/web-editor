@@ -3,7 +3,7 @@
 	import { Map } from 'maplibre-gl?client';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { tileStyle } from '$lib/settings';
-	import { isValidGeoJson } from './utils.js';
+	import { isValidGeoJson } from './utils';
 
 	export let data;
 
@@ -51,7 +51,7 @@
 	}
 
 	onMount(() => {
-		map = new Map({
+		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
 			center: [data.lon, data.lat],
@@ -100,9 +100,7 @@
 	});
 
 	onDestroy(() => {
-		if (map) {
-			map.remove();
-		}
+		map?.remove();
 	});
 </script>
 

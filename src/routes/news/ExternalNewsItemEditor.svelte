@@ -49,7 +49,7 @@
 
 	$: loaded = id == original?.id;
 
-	async function save() {
+	async function handleSave() {
 		const data = {
 			id: original.id,
 			title: original.title,
@@ -67,43 +67,35 @@
 			url: original.url
 		};
 
-		const res = await fetch(`${apiServer}/v1/news/external/${id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify(data)
+		await updateExternalNewsItem(id, data, {
+			onSuccess: () => {
+				toast(`Item ${id} guardado`, 'success');
+				dispatch('save', { id });
+			},
+			onError: () => {
+				toast(`Erro ao guardar`, 'error');
+			}
 		});
-
-		if (res.ok) {
-			toast(`Item ${id} guardado`, 'success');
-			dispatch('save', { id });
-		} else {
-			toast(`Erro ao guardar`, 'error');
-		}
 	}
 
-	async function deleteItem() {
-		if (!confirm('Apagar item?')) {
-			return;
-		}
+	async function handleDelete() {
+		if (!confirm('Apagar item?')) return;
 
-		const res = awaitfetch(`${apiServer}/v1/news/external/${id}`, {
-			method: 'DELETE',
-			credentials: 'include'
+		await deleteExternalNewsItem(id, {
+			onSuccess: () => {
+				toast(`Item ${id} apagado`, 'info');
+				dispatch('delete', { id });
+			},
+			onError: () => {
+				toast(`Erro ao apagar item ${id}`, 'error');
+			}
 		});
-
-		if (res.ok) {
-			toast(`Item ${id} apagado`, 'info');
-			dispatch('delete', { id });
-		} else {
-			toast(`Erro ao apagar item ${id}`, 'error');
-		}
 	}
 
-	onMount(() => {
-		fetch(`${apiServer}/v1/news/external/${id}/full`, { credentials: 'include' })
-			.then((r) => r.json())
-			.then((item) => {
+	onMount(async () => {
+		await getExternalNewsItem(id, {
+			onSuccess: async (res) => {
+				const item = await res.json();
 				original = item;
 				selectedRegions = item.region_ids.map((id) => {
 					return { value: id };
@@ -117,7 +109,11 @@
 				is_relevant = item.is_relevant;
 				is_sensitive = item.is_sensitive;
 				is_validated = overrideIsValidated ? true : item.is_validated;
-			});
+			},
+			onError: () => {
+				toast(`Erro ao carregar item`, 'error');
+			}
+		});
 	});
 </script>
 
@@ -204,15 +200,18 @@
 	</div>
 
 	<div class="flex gap-2 justify-between">
-		<button class="btn btn-error" class:hidden={!canEdit} on:click={deleteItem}>Apagar</button>
+		<button class="btn btn-error" class:hidden={!canEdit} on:click={handleDelete}>Apagar</button>
 		<div class="flex gap-2">
 			<a
 				class="btn btn-primary"
 				class:hidden={!canEdit || !original?.is_validated}
 				href="/news/import/{id}">Importar</a
 			>
-			<button class="btn btn-primary" class:hidden={!canEdit} on:click={save} disabled={!formValid}
-				>Guardar</button
+			<button
+				class="btn btn-primary"
+				class:hidden={!canEdit}
+				on:click={handleSave}
+				disabled={!formValid}>Guardar</button
 			>
 		</div>
 	</div>

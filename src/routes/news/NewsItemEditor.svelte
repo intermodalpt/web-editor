@@ -39,19 +39,16 @@
 	let newExternalDialog;
 	const newExternalId = writable(null);
 	const newExternalItem = derived(newExternalId, async ($newExternalId, set) => {
-		if (!$newExternalId) {
-			return;
-		}
-		const res = await fetch(`${apiServer}/v1/news/external/${$newExternalId}/full`, {
-			credentials: 'include'
+		if (!$newExternalId) return;
+
+		await getExternalNewsItem($newExternalId, {
+			onSuccess: async (res) => {
+				set(await res.json());
+			},
+			onError: () => {
+				toast(`Erro ao carregar notícia externa ${$newExternalId}`, 'error');
+			}
 		});
-
-		if (!res.ok) {
-			toast(`Erro ao carregar notícia externa ${$newExternalId}`, 'error');
-			return;
-		}
-
-		set(await res.json());
 	});
 
 	// Foreign dialog inside ExternalSourceRow
@@ -89,64 +86,54 @@
 		external_ids: externalIds,
 		publish_datetime: nonBlankString(pubDatetime)
 			? new Date(pubDatetime).toISOString()
-			: original?.publish_datetime ?? new Date().toISOString(),
+			: (original?.publish_datetime ?? new Date().toISOString()),
 		edit_datetime: nonBlankString(editDatetime)
 			? new Date(editDatetime).toISOString()
-			: original?.edit_datetime ?? null,
+			: (original?.edit_datetime ?? null),
 		author_override,
 		is_visible
 	};
 
-	async function save() {
+	async function handleSave() {
 		const id = original?.id;
 		if (id) {
-			const res = await fetch(`${apiServer}/v1/news/${id}`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				body: JSON.stringify(resultingData)
+			await createNewsItem(id, resultingData, {
+				onSuccess: async (res) => {
+					toast(`Item ${id} guardado`, 'success');
+					dispatch('save', { id });
+				},
+				onError: () => {
+					toast(`Erro ao guardar`, 'error');
+				}
 			});
-
-			if (res.ok) {
-				toast(`Item ${id} guardado`, 'success');
-				dispatch('save', { id });
-			} else {
-				toast(`Erro ao guardar`, 'error');
-			}
 		} else {
-			const res = await fetch(`${apiServer}/v1/news`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				body: JSON.stringify(resultingData)
+			await createNewsItem(resultingData, {
+				onSuccess: async (res) => {
+					const id = await res.json().id;
+					toast(`Novo item guardado (${id})`, 'success');
+					dispatch('save', { id });
+				},
+				onError: () => {
+					toast(`Erro ao guardar`, 'error');
+				}
 			});
-
-			if (res.ok) {
-				const id = await res.json().id;
-				toast(`Novo item guardado (${id})`, 'success');
-				dispatch('save', { id });
-			} else {
-				toast(`Erro ao guardar`, 'error');
-			}
 		}
 	}
 
-	async function deleteItem() {
+	async function handleDelete() {
 		if (!confirm('Apagar item?')) {
 			return;
 		}
 
-		const res = awaitfetch(`${apiServer}/v1/news/external/${id}`, {
-			method: 'DELETE',
-			credentials: 'include'
+		await deleteNewsItem(resultingData, {
+			onSuccess: async (res) => {
+				toast(`Item ${id} apagado`, 'info');
+				dispatch('delete', { id });
+			},
+			onError: () => {
+				toast(`Erro ao apagar item ${id}`, 'error');
+			}
 		});
-
-		if (res.ok) {
-			toast(`Item ${id} apagado`, 'info');
-			dispatch('delete', { id });
-		} else {
-			toast(`Erro ao apagar item ${id}`, 'error');
-		}
 	}
 
 	function addContentBlock(type) {
@@ -242,33 +229,32 @@
 		return [{ md: data.content }, refBlock];
 	}
 
-	onMount(() => {
-		if (!id) {
-			return;
-		}
-		fetch(`${apiServer}/v1/news/${id}`, {
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include'
-		})
-			.then((r) => r.json())
-			.then((item) => {
-				original = item;
-				title = item.title;
-				summary = item.summary;
-				content = item.content;
-				pubDatetime = stripTimezone(item.publish_datetime);
-				editDatetime = stripTimezone(item.edit_datetime);
-				author_override = item.author_override;
-				is_visible = item.is_visible;
+	onMount(async () => {
+		if (!id) return;
 
-				selectedRegions = item.region_ids.map((id) => {
+		await getNewsItem(id, {
+			onSuccess: async (res) => {
+				original = await res.json();
+				title = original.title;
+				summary = original.summary;
+				content = original.content;
+				pubDatetime = stripTimezone(original.publish_datetime);
+				editDatetime = stripTimezone(original.edit_datetime);
+				author_override = original.author_override;
+				is_visible = original.is_visible;
+
+				selectedRegions = original.region_ids.map((id) => {
 					return { value: id };
 				});
-				selectedOperators = item.operator_ids.map((id) => {
+				selectedOperators = original.operator_ids.map((id) => {
 					return { value: id };
 				});
 				calcImgs();
-			});
+			},
+			onError: () => {
+				toast(`Erro ao carregar item ${id}`, 'error');
+			}
+		});
 	});
 </script>
 
@@ -504,13 +490,16 @@
 
 	<div class="flex gap-2 justify-between">
 		{#if id}
-			<button class="btn btn-error" class:hidden={!canEdit} on:click={deleteItem}>Apagar</button>
+			<button class="btn btn-error" class:hidden={!canEdit} on:click={handleDelete}>Apagar</button>
 		{:else}
 			<span></span>
 		{/if}
 		<div class="flex gap-2">
-			<button class="btn btn-primary" class:hidden={!canEdit} on:click={save} disabled={!formValid}
-				>Guardar</button
+			<button
+				class="btn btn-primary"
+				class:hidden={!canEdit}
+				on:click={handleSave}
+				disabled={!formValid}>Guardar</button
 			>
 		</div>
 	</div>

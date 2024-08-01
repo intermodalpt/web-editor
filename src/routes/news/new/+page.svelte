@@ -1,7 +1,6 @@
 <script>
 	import { liveQuery } from 'dexie';
 	import { permissions } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import NewsItemEditor from '../NewsItemEditor.svelte';
 
@@ -26,7 +25,7 @@
 <div class="self-center max-w-[80em] w-full my-4">
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-sm self-start">
 		<div class="card-body">
-			<NewsItemEditor {operators} {regions} canEdit={isAdmin($permissions)} />
+			<NewsItemEditor {operators} {regions} />
 		</div>
 	</div>
 </div>
