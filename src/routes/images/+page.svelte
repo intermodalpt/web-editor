@@ -4,7 +4,6 @@
 	import { apiServer } from '$lib/settings';
 	import { Gallery } from '$lib/pics/utils.js';
 	import { isAuthenticated, permissions } from '$lib/stores';
-	import { canUploadPics, canContribUploadPics } from '$lib/permissions.ts';
 	import { fetchStops, getStops, loadMissing } from '$lib/db';
 	import SinglePicMetaEditor from '$lib/pics/wrappers/SinglePicMetaEditor.svelte';
 	import PicUploader from '$lib/pics/PicUploader.svelte';
@@ -382,10 +381,12 @@
 		{:else if $tab === tabs.upload}
 			<div class="card-body">
 				<h2 class="card-title">Enviar imagens</h2>
-				{#if canUploadPics($permissions) || canContribUploadPics($permissions)}
+				{#if $permissions?.stopPics?.upload || $permissions?.stopPics?.contribUpload}
 					<PicUploader />
+				{:else if $isAuthenticated}
+					<p class="text-lg">Não tem as permissões necessárias para enviar imagens.</p>
 				{:else}
-					<p class="text-lg">Precisa de estar autenticado para enviar imagens</p>
+					<p class="text-lg">Precisa de estar autenticado para enviar imagens.</p>
 				{/if}
 			</div>
 		{/if}

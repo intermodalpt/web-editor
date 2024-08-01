@@ -5,7 +5,6 @@
 	import { isAuthenticated, permissions, uid } from '$lib/stores';
 	import PicMetaEditor from '$lib/pics/PicMetaEditor.svelte';
 	import PicUploader from '$lib/pics/PicUploader.svelte';
-	import { isAdmin } from '$lib/permissions';
 
 	const POSITION_REQUIRED = false;
 
@@ -41,7 +40,10 @@
 						const quality = pic.tagged;
 						const stops = pic.stops != null && pic.stops.length > 0;
 						const total = !(POSITION_REQUIRED && !position) && visibility && quality && stops;
-						const fixable = !total && (pic.uploader === $uid || isAdmin($permissions));
+						const fixable =
+							!total &&
+							((pic.uploader === $uid && $permissions?.stopPics?.modifyOwn) ||
+								$permissions?.stopPics?.modifyOthers);
 
 						pic.metaCompleteness = {
 							position: position,

@@ -3,7 +3,6 @@
 	import { movementTreshold } from '$lib/settings';
 	import { writable } from 'svelte/store';
 	import { permissions, toast, uid } from '$lib/stores';
-	import { isAdmin } from '$lib/permissions';
 	import { isDeepEqual, deepCopy } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import MapLocationPicker from './subcomponents/MapLocationPicker.svelte';

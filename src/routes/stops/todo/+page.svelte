@@ -4,7 +4,6 @@
 	import { selectedRegion } from '$lib/db';
 	import { regionMapParams } from '$lib/utils';
 	import { toast, permissions } from '$lib/stores';
-	import { canModifyStopAttrs, canContribModifyStopAttrs } from '$lib/permissions';
 	import Icon from '$lib/components/Icon.svelte';
 	import StopTodoViewer from './StopTodoViewer.svelte';
 	import TodoMap from './TodoMap.svelte';
@@ -203,7 +202,7 @@
 						<Icon name="close" class="h-6 w-6" />
 					</button>
 					<StopTodoViewer
-						canEdit={canModifyStopAttrs($permissions) || canContribModifyStopAttrs($permissions)}
+						canEdit={$permissions?.stops?.modifyAttrs || $permissions?.stops?.contribModifyAttrs}
 						{selectedStop}
 						on:todo-update={refreshStops}
 						on:fly-to={(e) => map.flyTo(...e.detail)}

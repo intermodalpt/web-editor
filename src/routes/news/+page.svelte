@@ -4,7 +4,6 @@
 	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings';
 	import { permissions } from '$lib/stores';
-	import { canCreateNews, canModifyNews } from '$lib/permissions';
 	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
@@ -296,7 +295,7 @@
 						id={editItemId}
 						{operators}
 						{regions}
-						canEdit={canCreateNews($permissions) || canModifyNews($permissions)}
+						canEdit={$permissions?.news?.create || $permissions?.news?.modify}
 						on:save={() => {
 							editDialog.close();
 							refreshData();
