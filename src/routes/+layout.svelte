@@ -1,9 +1,8 @@
 <script type="ts">
 	import '../app.css';
-	import { writable } from 'svelte/store';
 	import { page, navigating } from '$app/stores';
 	import { showDebugInfo } from '$lib/settings';
-	import { toasts } from '$lib/stores';
+	import { toasts, selectedRegion } from '$lib/stores';
 	import Header from './Header.svelte';
 	import RegionPicker from '$lib/components/RegionPicker.svelte';
 	import DbLoadingInfo from '$lib/components/DbLoadingInfo.svelte';
@@ -12,7 +11,6 @@
 	export let data;
 
 	let regionModal;
-	let selectedRegion = writable(null);
 
 	let minimized = false;
 </script>
@@ -37,103 +35,198 @@
 		<div class="drawer-side z-[10000] h-full border-slate-300 shadow-sm">
 			<label for="mobile-drawer" class="drawer-overlay" />
 			<div class="h-full w-fit flex flex-col justify-between bg-white">
-				<ul class="menu bg-base-200" class:w-56={!minimized}>
+				<ul
+					class="menu bg-slate-50 border-b-[1px] border-base-300"
+					class:min-w-56={!minimized}
+					class:max-w-64={!minimized}
+				>
+					{#if $selectedRegion}
+						{#if minimized}
+							<li>
+								<a
+									href="/stops"
+									class="place-content-center"
+									class:active={$page.url.pathname.startsWith('/stops')}
+								>
+									<Icon name="shelter" class="h-4 fill-current" />
+								</a>
+							</li>
+							<li>
+								<a
+									href="/images"
+									class="place-content-center"
+									class:active={$page.url.pathname.startsWith('/images')}
+								>
+									<Icon name="camera" class="h-4 fill-current" />
+								</a>
+							</li>
+							<li>
+								<a
+									href="/todo"
+									class="place-content-center"
+									class:active={$page.url.pathname.startsWith('/todo')}
+								>
+									<Icon name="checklist" class="h-4 fill-current" />
+								</a>
+							</li>
+							<li>
+								<a
+									href="/stats"
+									class="place-content-center"
+									class:active={$page.url.pathname.startsWith('/stats')}
+								>
+									<Icon name="chart" class="h-4 fill-current" />
+								</a>
+							</li>
+							<li>
+								<a
+									href="/regions"
+									class="place-content-center"
+									class:active={$page.url.pathname == '/regions'}
+								>
+									<Icon name="location" class="h-4 fill-current" />
+								</a>
+							</li>
+						{:else}
+							<li>
+								<details open>
+									<summary>{$selectedRegion?.name}</summary>
+									<ul>
+										<li>
+											<a href="/stops" class:active={$page.url.pathname.startsWith('/stops')}>
+												<Icon name="shelter" class="h-4 fill-current" />
+												<span>Paragens</span>
+											</a>
+										</li>
+										<li>
+											<a href="/images" class:active={$page.url.pathname.startsWith('/images')}>
+												<Icon name="camera" class="h-4 fill-current" />
+												<span>Imagens</span>
+											</a>
+										</li>
+										<li>
+											<a href="/todo" class:active={$page.url.pathname.startsWith('/todo')}>
+												<Icon name="checklist" class="h-4 fill-current" />
+												<span>Tarefas</span>
+											</a>
+										</li>
+										<li>
+											<a href="/stats" class:active={$page.url.pathname.startsWith('/stats')}>
+												<Icon name="chart" class="h-4 fill-current" />
+												<span>Estado</span>
+											</a>
+										</li>
+										<li>
+											<a href="/regions" class:active={$page.url.pathname == '/regions'}>
+												<Icon name="location" class="h-4 fill-current" />
+												<span>Outras regiões</span>
+											</a>
+										</li>
+									</ul>
+								</details>
+							</li>
+						{/if}
+					{:else}
+						<li>
+							<a
+								href="/regions"
+								class:active={$page.url.pathname.startsWith('/regions')}
+								class:place-content-center={minimized}
+							>
+								<Icon name="location" class="h-4 fill-current" />
+								<span class:hidden={minimized}>Regiões</span>
+							</a>
+						</li>
+					{/if}
 					<li>
-						<a href="/regions" class:active={$page.url.pathname.startsWith('/regions')}>
-							<Icon name="location" class="h-4 fill-current" />
-							<span class:hidden={minimized}>Regiões</span>
-						</a>
-					</li>
-					<li>
-						<details open>
-							<summary>{minimized ? '' : 'nome-da-região'}</summary>
-							<ul>
-								<li>
-									<a href="/stops" class:active={$page.url.pathname.startsWith('/stops')}>
-										<Icon name="shelter" class="h-4 fill-current" />
-										<span class:hidden={minimized}>Paragens</span>
-									</a>
-								</li>
-								<li>
-									<a href="/images" class:active={$page.url.pathname.startsWith('/images')}>
-										<Icon name="camera" class="h-4 fill-current" />
-										<span class:hidden={minimized}>Imagens</span>
-									</a>
-								</li>
-								<li>
-									<a href="/todo" class:active={$page.url.pathname.startsWith('/todo')}>
-										<Icon name="checklist" class="h-4 fill-current" />
-										<span class:hidden={minimized}>Tarefas</span>
-									</a>
-								</li>
-								<li>
-									<a href="/stats" class:active={$page.url.pathname.startsWith('/stats')}>
-										<Icon name="chart" class="h-4 fill-current" />
-										<span class:hidden={minimized}>Estado</span>
-									</a>
-								</li>
-								<li>
-									<a href="/regions" class:active={$page.url.pathname == '/regions'}>
-										<Icon name="location" class="h-4 fill-current" />
-										<span class:hidden={minimized}>Outras regiões</span>
-									</a>
-								</li>
-							</ul>
-						</details>
-					</li>
-					<li>
-						<a href="/operators" class:active={$page.url.pathname.startsWith('/operators')}>
+						<a
+							href="/operators"
+							class:active={$page.url.pathname.startsWith('/operators')}
+							class:place-content-center={minimized}
+						>
 							<Icon name="bus" class="h-4 fill-current" />
 							<span class:hidden={minimized}>Operadores</span>
 						</a>
 					</li>
 					<li>
-						<a href="/news" class:active={$page.url.pathname.startsWith('/news')}>
+						<a
+							href="/news"
+							class:active={$page.url.pathname.startsWith('/news')}
+							class:place-content-center={minimized}
+						>
 							<Icon name="news" class="h-4 fill-current" />
 							<span class:hidden={minimized}>Noticias</span>
 						</a>
 					</li>
 					<li>
-						<a href="/issues" class:active={$page.url.pathname.startsWith('/issues')}>
+						<a
+							href="/issues"
+							class:active={$page.url.pathname.startsWith('/issues')}
+							class:place-content-center={minimized}
+						>
 							<Icon name="issue" class="h-4 fill-current" />
 							<span class:hidden={minimized}>Problemas</span>
 						</a>
 					</li>
-					<li>
-						<details open>
-							<summary>
-								<Icon name="magnifying-glass" class="h-4 fill-current" />
-								<span class:hidden={minimized}>Validação</span>
-							</summary>
-							<ul>
-								<li>
-									<a href="/osm" class:active={$page.url.pathname.startsWith('/osm')}>
-										<Icon name="map" class="h-4 fill-current" />
-										<span class:hidden={minimized}>OpenStreetMap</span>
-									</a>
-								</li>
-								<li>
-									<a href="/contrib" class:active={$page.url.pathname.startsWith('/contrib')}>
-										<Icon name="timeline" class="h-4 fill-current" />
-										<span class:hidden={minimized}>Contribuições</span>
-									</a>
-								</li>
-							</ul>
-						</details>
-					</li>
+
+					{#if minimized}
+						<li>
+							<a
+								href="/osm"
+								class="place-content-center"
+								class:active={$page.url.pathname.startsWith('/osm')}
+							>
+								<Icon name="map" class="h-4 fill-current" />
+							</a>
+						</li>
+						<li>
+							<a
+								href="/contrib"
+								class="place-content-center"
+								class:active={$page.url.pathname.startsWith('/contrib')}
+							>
+								<Icon name="timeline" class="h-4 fill-current" />
+							</a>
+						</li>
+					{:else}
+						<li>
+							<details open>
+								<summary>
+									<Icon name="magnifying-glass" class="h-4 fill-current" />
+									<span>Validação</span>
+								</summary>
+								<ul>
+									<li>
+										<a href="/osm" class:active={$page.url.pathname.startsWith('/osm')}>
+											<Icon name="map" class="h-4 fill-current" />
+											<span>OpenStreetMap</span>
+										</a>
+									</li>
+									<li>
+										<a href="/contrib" class:active={$page.url.pathname.startsWith('/contrib')}>
+											<Icon name="timeline" class="h-4 fill-current" />
+											<span>Contribuições</span>
+										</a>
+									</li>
+								</ul>
+							</details>
+						</li>
+					{/if}
 				</ul>
 				<div>
 					<button
-						class="flex flex-col bg-slate-50 hover:bg-slate-100 p-4 w-full border-y-[1px] border-slate-300"
+						class="flex flex-col bg-slate-50 hover:bg-slate-100 p-4 w-full border-y-[1px] border-base-300"
 						on:click={() => regionModal.showModal()}
 					>
-						<div class="flex gap-2">
+						<div class="flex gap-2" class:justify-center={minimized}>
 							<Icon name="globe" class="w-6" />
-							<span>{minimized ? '' : 'Região'}</span>
+							{#if !minimized}
+								<span>Região</span>
+							{/if}
 						</div>
 						{#if !minimized}
 							{#if $selectedRegion}
-								<span class="font-bold">{$selectedRegion?.name}</span>
+								<span class="font-bold text-left">{$selectedRegion?.name}</span>
 							{:else}
 								<span class="font-bold">Sem região escolhida</span>
 							{/if}
@@ -176,12 +269,19 @@
 	<div class="modal-box !max-w-[60em]">
 		{#if $selectedRegion}
 			<h2 class="text-lg font-bold">Região atual</h2>
-			<span class="ml-2">{$selectedRegion?.name}</span>
+			<span class="ml-2 text-left">{$selectedRegion?.name}</span>
 			<h2 class="text-lg font-bold mt-2">Alterar região</h2>
 		{:else}
 			<h2 class="text-lg font-bold text-center">Escolha a sua região</h2>
 		{/if}
-		<RegionPicker setsUserRegion={true} requestsConfirmation={true} compact={true} />
+		<RegionPicker
+			setsUserRegion={true}
+			requestsConfirmation={true}
+			compact={true}
+			on:select={() => {
+				regionModal.close();
+			}}
+		/>
 	</div>
 	<form method="dialog" class="modal-backdrop">
 		<button>Fechar</button>

@@ -19,6 +19,7 @@
 	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { tileStyle } from '$lib/settings';
+	import { getRegions } from '$lib/api';
 
 	const dispatch = createEventDispatcher();
 
@@ -58,7 +59,7 @@
 
 	async function confirmPendingRegion() {
 		if (setsUserRegion) {
-			await setRegion($pendingRegionId);
+			document.cookie = `regionId=${$pendingRegionId};path=/;max-age=31536000`;
 		}
 		dispatch('select', { id: $pendingRegionId });
 		explicitRegionChange = false;
@@ -152,7 +153,7 @@
 		});
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
@@ -171,6 +172,16 @@
 		map.addControl(new maplibre.NavigationControl(), 'top-right');
 		map.addControl(mapGeolocateControl, 'top-right');
 
+		if (regions.length == 0) {
+			await getRegions({
+				onSuccess: (data) => {
+					regions = data;
+					drawRegions();
+				},
+				toJson: true
+			});
+		}
+
 		map.on('load', () => {
 			addSourcesAndLayers();
 			addEvents();
@@ -182,22 +193,17 @@
 	onDestroy(() => map?.remove());
 </script>
 
-<div>
-	<div
-		bind:this={mapElem}
-		class="w-full h-[65vh] rounded-lg relative"
-		class:h-[50vh]={compact}
-		class:h-[min(75vh,900px)]={!compact}
-	></div>
-</div>
+<div
+	bind:this={mapElem}
+	class="w-full h-[65vh] rounded-lg relative"
+	class:h-[50vh]={compact}
+	class:h-[min(75vh,900px)]={!compact}
+></div>
 <dialog bind:this={regionConfirmationModal} class="modal modal-bottom sm:modal-middle">
 	<div class="modal-box">
 		{#if setsUserRegion}
 			<h3 class="font-bold text-lg">Escolher <b>{$pendingRegion?.name || ''}</b> como região?</h3>
-			<p class="py-4">
-				Esta definição serve para mostrar os serviços relevantes para a sua região. Pode alterar em
-				qualquer momento a partir do menu.
-			</p>
+			<p class="py-4">Esta definição configura atalhos para esta região na navegação.</p>
 		{:else}
 			<h3 class="font-bold text-lg">Seleccionar <b>{$pendingRegion?.name || ''}</b>?</h3>
 		{/if}

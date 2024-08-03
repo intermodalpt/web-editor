@@ -1,8 +1,11 @@
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 
-export const permissions = writable({});
+export const permissions: Writable<Permissions> = writable({});
 export const isAuthenticated = writable(false);
+
 export const uid = writable(null);
+
+export const selectedRegion = writable();
 
 export const toasts = writable([]);
 

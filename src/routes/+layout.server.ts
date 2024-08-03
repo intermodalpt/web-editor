@@ -1,5 +1,6 @@
+export async function load({ locals, cookies }) {
+	const regionId = cookies.get('regionId');
 
-export async function load({ locals }) {
 	return {
 		accessData: locals.accessData,
 		accessExp: locals.accessExp,
@@ -7,6 +8,7 @@ export async function load({ locals }) {
 		refreshData: locals.refreshData,
 		refreshExp: locals.refreshExp,
 		uid: locals.refreshData?.uid,
-		uname: locals.refreshData?.uname
+		uname: locals.refreshData?.uname,
+		regionId
 	};
 }
