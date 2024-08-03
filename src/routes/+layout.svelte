@@ -13,6 +13,8 @@
 
 	let regionModal;
 	let selectedRegion = writable(null);
+
+	let minimized = false;
 </script>
 
 {#if $navigating}
@@ -35,32 +37,45 @@
 		<div class="drawer-side z-[10000] h-full border-slate-300 shadow-sm">
 			<label for="mobile-drawer" class="drawer-overlay" />
 			<div class="h-full w-fit flex flex-col justify-between bg-white">
-				<ul class="menu bg-base-200 w-56">
+				<ul class="menu bg-base-200" class:w-56={!minimized}>
 					<li>
-						<a href="/regions" class:active={$page.url.pathname.startsWith('/regions')}>Regiões</a>
+						<a href="/regions" class:active={$page.url.pathname.startsWith('/regions')}>
+							<Icon name="location" class="h-4 fill-current" />
+							<span class:hidden={minimized}>Regiões</span>
+						</a>
 					</li>
 					<li>
 						<details open>
-							<summary>nome-da-região</summary>
+							<summary>{minimized ? '' : 'nome-da-região'}</summary>
 							<ul>
 								<li>
 									<a href="/stops" class:active={$page.url.pathname.startsWith('/stops')}>
-										Paragens
+										<Icon name="shelter" class="h-4 fill-current" />
+										<span class:hidden={minimized}>Paragens</span>
 									</a>
 								</li>
 								<li>
 									<a href="/images" class:active={$page.url.pathname.startsWith('/images')}>
-										Imagens
+										<Icon name="camera" class="h-4 fill-current" />
+										<span class:hidden={minimized}>Imagens</span>
 									</a>
 								</li>
 								<li>
 									<a href="/todo" class:active={$page.url.pathname.startsWith('/todo')}>
-										Tarefas
+										<Icon name="checklist" class="h-4 fill-current" />
+										<span class:hidden={minimized}>Tarefas</span>
 									</a>
 								</li>
 								<li>
 									<a href="/stats" class:active={$page.url.pathname.startsWith('/stats')}>
-										Estado
+										<Icon name="chart" class="h-4 fill-current" />
+										<span class:hidden={minimized}>Estado</span>
+									</a>
+								</li>
+								<li>
+									<a href="/regions" class:active={$page.url.pathname == '/regions'}>
+										<Icon name="location" class="h-4 fill-current" />
+										<span class:hidden={minimized}>Outras regiões</span>
 									</a>
 								</li>
 							</ul>
@@ -68,27 +83,39 @@
 					</li>
 					<li>
 						<a href="/operators" class:active={$page.url.pathname.startsWith('/operators')}>
-							Operadores
+							<Icon name="bus" class="h-4 fill-current" />
+							<span class:hidden={minimized}>Operadores</span>
 						</a>
 					</li>
 					<li>
-						<a href="/news" class:active={$page.url.pathname.startsWith('/news')}> Noticias</a>
+						<a href="/news" class:active={$page.url.pathname.startsWith('/news')}>
+							<Icon name="news" class="h-4 fill-current" />
+							<span class:hidden={minimized}>Noticias</span>
+						</a>
 					</li>
 					<li>
-						<a href="/issues" class:active={$page.url.pathname.startsWith('/issues')}> Problemas</a>
+						<a href="/issues" class:active={$page.url.pathname.startsWith('/issues')}>
+							<Icon name="issue" class="h-4 fill-current" />
+							<span class:hidden={minimized}>Problemas</span>
+						</a>
 					</li>
 					<li>
 						<details open>
-							<summary>Validação</summary>
+							<summary>
+								<Icon name="magnifying-glass" class="h-4 fill-current" />
+								<span class:hidden={minimized}>Validação</span>
+							</summary>
 							<ul>
 								<li>
 									<a href="/osm" class:active={$page.url.pathname.startsWith('/osm')}>
-										OpenStreetMap
+										<Icon name="map" class="h-4 fill-current" />
+										<span class:hidden={minimized}>OpenStreetMap</span>
 									</a>
 								</li>
 								<li>
 									<a href="/contrib" class:active={$page.url.pathname.startsWith('/contrib')}>
-										Contribuições
+										<Icon name="timeline" class="h-4 fill-current" />
+										<span class:hidden={minimized}>Contribuições</span>
 									</a>
 								</li>
 							</ul>
@@ -102,15 +129,31 @@
 					>
 						<div class="flex gap-2">
 							<Icon name="globe" class="w-6" />
-							<span>Região</span>
+							<span>{minimized ? '' : 'Região'}</span>
 						</div>
-						{#if $selectedRegion}
-							<span class="font-bold">{$selectedRegion?.name}</span>
-						{:else}
-							<span class="font-bold">Sem região escolhida</span>
+						{#if !minimized}
+							{#if $selectedRegion}
+								<span class="font-bold">{$selectedRegion?.name}</span>
+							{:else}
+								<span class="font-bold">Sem região escolhida</span>
+							{/if}
 						{/if}
 					</button>
-					<button class="w-full h-12">Colapsar</button>
+					<button
+						class="w-full h-12 flex gap-2 items-center justify-center"
+						class:hidden={minimized}
+						on:click={() => (minimized = true)}
+					>
+						<Icon name="left" class="h-4" />
+						<span>Minimizar</span>
+					</button>
+					<button
+						class="w-full h-12 flex gap-2 items-center justify-center"
+						class:hidden={!minimized}
+						on:click={() => (minimized = false)}
+					>
+						<Icon name="right" class="h-4" />
+					</button>
 				</div>
 			</div>
 		</div>
