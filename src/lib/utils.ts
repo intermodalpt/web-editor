@@ -590,3 +590,13 @@ export function isValidUri(uri: string) {
 export function isValidEmail(email: string) {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+export function slugify(string: string) {
+	return string
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+/, '')
+		.replace(/-+$/, '');
+}
