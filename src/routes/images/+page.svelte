@@ -227,31 +227,29 @@
 </svelte:head>
 
 <div class="self-center w-full sm:w-11/12 my-4">
-	<div class="tabs ml-4">
-		<button
-			class="tab tab-bordered lg:tab-lifted"
-			class:tab-active={$tab === tabs.map}
-			on:click={() => ($tab = tabs.map)}>Mapa</button
+	<div class="tabs tabs-bordered lg:tabs-lifted ml-4">
+		<button class="tab" class:tab-active={$tab === tabs.map} on:click={() => ($tab = tabs.map)}
+			>Mapa</button
 		>
 		<button
-			class="tab tab-bordered lg:tab-lifted"
+			class="tab"
 			class:tab-active={$tab === tabs.tagged}
 			on:click={() => ($tab = tabs.tagged)}>Catalogadas</button
 		>
 		<button
-			class="tab tab-bordered lg:tab-lifted"
+			class="tab"
 			class:tab-active={$tab === tabs.untagged}
 			on:click={() => ($tab = tabs.untagged)}>Por catalogar</button
 		>
 		{#if $isAuthenticated}
 			<button
-				class="tab tab-bordered lg:tab-lifted"
+				class="tab"
 				class:tab-active={$tab === tabs.unpositioned}
 				on:click={() => ($tab = tabs.unpositioned)}>Por posicionar</button
 			>
 		{/if}
 		<button
-			class="tab tab-bordered lg:tab-lifted"
+			class="tab"
 			class:tab-active={$tab === tabs.upload}
 			on:click={() => ($tab = tabs.upload)}>Enviar</button
 		>

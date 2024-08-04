@@ -95,14 +95,14 @@
 			<div role="tablist" class="tabs tabs-bordered tabs-xl mb-4">
 				<button
 					role="tab"
-					class="tab tab-bordered"
+					class="tab"
 					class:tab-active={tab == tabs.login}
 					on:click={() => (tab = tabs.login)}
 					>Conta existente
 				</button>
 				<button
 					role="tab"
-					class="tab tab-bordered"
+					class="tab"
 					class:tab-active={tab == tabs.registration}
 					on:click={() => (tab = tabs.registration)}>Registar</button
 				>

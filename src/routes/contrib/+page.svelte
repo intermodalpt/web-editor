@@ -132,27 +132,27 @@
 </svelte:head>
 
 <div class="self-center max-w-[80em] w-full my-4">
-	<div class="tabs ml-4">
-		<a
-			class="tab tab-md lg:tab-lg tab-lifted"
+	<div class="tabs tabs-lifted tabs-md lg:tabs-lg ml-4">
+		<button
+			class="tab"
 			class:tab-active={$tab === mapTabs.undecided}
 			on:click={() => {
 				$tab = mapTabs.undecided;
-			}}>Por decidir</a
+			}}>Por decidir</button
 		>
-		<a
-			class="tab tab-md lg:tab-lg tab-lifted"
+		<button
+			class="tab"
 			class:tab-active={$tab === mapTabs.decided}
 			on:click={() => {
 				$tab = mapTabs.decided;
-			}}>Decididas</a
+			}}>Decididas</button
 		>
-		<a
-			class="tab tab-md lg:tab-lg tab-lifted"
+		<button
+			class="tab"
 			class:tab-active={$tab === mapTabs.changelog}
 			on:click={() => {
 				$tab = mapTabs.changelog;
-			}}>Alterações</a
+			}}>Alterações</button
 		>
 	</div>
 	<div class="card card-compact 2xl:card-normal bg-base-100 shadow-sm self-start">

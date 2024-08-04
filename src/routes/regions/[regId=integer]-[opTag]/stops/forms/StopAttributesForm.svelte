@@ -267,29 +267,29 @@
 </script>
 
 <div class="flex gap-1 justify-between flex-wrap-reverse p-2">
-	<div class="btn-group btn-group-horizontal tabs tabs-boxed">
+	<div class="btn-group btn-group-horizontal tabs tabs-sm tabs-boxed">
 		<button
-			class="tab tab-sm"
+			class="tab"
 			class:tab-active={currentSubform === subforms.info}
 			on:click={() => (currentSubform = subforms.info)}>Info</button
 		>
 		<button
-			class="tab tab-sm"
+			class="tab"
 			class:tab-active={currentSubform === subforms.pics}
 			on:click={() => (currentSubform = subforms.pics)}>Fotos</button
 		>
 		<button
-			class="tab tab-sm"
+			class="tab"
 			class:tab-active={currentSubform === subforms.service}
 			on:click={() => (currentSubform = subforms.service)}>Serviço</button
 		>
 		<button
-			class="tab tab-sm"
+			class="tab"
 			class:tab-active={currentSubform === subforms.infra}
 			on:click={() => (currentSubform = subforms.infra)}>Infra</button
 		>
 		<button
-			class="tab tab-sm"
+			class="tab"
 			class:tab-active={currentSubform === subforms.extra}
 			on:click={() => (currentSubform = subforms.extra)}>Extra</button
 		>

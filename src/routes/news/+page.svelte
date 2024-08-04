@@ -122,23 +122,23 @@
 </svelte:head>
 
 <div class="self-center max-w-[80em] w-full my-4">
-	<div class="tabs ml-4">
+	<div class="tabs tabs-md lg:tabs-lg tabs-lifted ml-4">
 		<button
-			class="tab tab-md lg:tab-lg tab-lifted"
+			class="tab"
 			class:tab-active={$tab === mapTabs.pendingExt}
 			on:click={() => {
 				$tab = mapTabs.pendingExt;
 			}}>Externas pendentes</button
 		>
 		<button
-			class="tab tab-md lg:tab-lg tab-lifted"
+			class="tab"
 			class:tab-active={$tab === mapTabs.allExt}
 			on:click={() => {
 				$tab = mapTabs.allExt;
 			}}>Externas</button
 		>
 		<button
-			class="tab tab-md lg:tab-lg tab-lifted"
+			class="tab"
 			class:tab-active={$tab === mapTabs.allInt}
 			on:click={() => {
 				$tab = mapTabs.allInt;
