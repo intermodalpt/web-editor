@@ -5,9 +5,9 @@
 	import { page } from '$app/stores';
 	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { tileStyle } from '$lib/settings';
+	import { defaultMapBounds, tileStyle } from '$lib/settings';
 	import { permissions, toast, isAuthenticated } from '$lib/stores';
-	import { isDeepEqual } from '$lib/utils';
+	import { isDeepEqual, regionMapParams } from '$lib/utils';
 	import { SearchControl } from '$lib/stops/SearchControl.js';
 	import {
 		updateStopMeta,
@@ -25,10 +25,16 @@
 		weightedStopScore
 	} from './scoring.js';
 	import Icon from '$lib/components/Icon.svelte';
+	import Menu from '../Menu.svelte';
 	import StopPicsMetaEditor from '$lib/pics/wrappers/StopPicsMetaEditor.svelte';
 	import PicDialog from '$lib/pics/PicDialog.svelte';
 	import VisualizationSettings from './VisualizationSettings.svelte';
 	import StopAttributesForm from './forms/StopAttributesForm.svelte';
+
+	export let data;
+	const region = data.region;
+	console.log(region);
+
 
 	let picsPerStop = {};
 	let map;
@@ -122,9 +128,7 @@
 	let selectedStop = writable(null);
 	selectedStop.subscribe((stop) => {
 		if (stop) {
-			goto('/stops?id=' + stop.id);
-		} else if (queryStringDataLoaded) {
-			goto('/stops');
+			goto('?id=' + stop.id);
 		}
 
 		if (map) {
@@ -594,21 +598,20 @@
 	}
 
 	onMount(async () => {
+		const mapParams = regionMapParams(region);
 		map = new maplibre.Map({
 			container: 'map',
 			style: tileStyle,
-			center: [-9.0, 38.605],
-			zoom: 11,
+			center: mapParams.center,
+			zoom: mapParams.zoom,
 			minZoom: 8,
 			maxZoom: 20,
-			maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]
+			maxBounds: defaultMapBounds
 		});
 
 		map.addControl(new maplibre.NavigationControl());
 		map.addControl(new SearchControl());
+		map.addControl(new maplibre.FullscreenControl());
 
 		map.addControl(
 			new maplibre.GeolocateControl({
@@ -635,12 +638,11 @@
 	onDestroy(() => map?.remove());
 </script>
 
-<svelte:head>
-	<title>Intermodal - Paragens</title>
-	<meta name="description" content="Dados de paragens do Intermodal" />
-</svelte:head>
 
-<div id="map" class="h-full relative">
+
+<Menu {region} page="stops" />
+
+<div id="map" class="relative h-[min(75dvh,750px)]">
 	{#if loading}
 		<div style="background-color: #33336699" class="z-[2000] absolute inset-0 backdrop-blur-sm" />
 		<div class="absolute inset-x-0 m-auto w-full md:w-96 w z-[2001]">
@@ -752,6 +754,7 @@
 	<div
 		class="absolute bottom-0 z-10 flex justify-center w-full transition duration-750"
 		class:translate-y-[350px]={!$selectedStop}
+		class:hidden={!mapLoaded}
 	>
 		<div
 			class="h-[350px] w-full bg-base-100 grid grid-cols-1 lg:w-[95%] lg:rounded-t-xl shadow-md"
@@ -768,6 +771,13 @@
 		</div>
 	</div>
 </div>
+
+<div class="card-body">
+	<!-- <h2 class="card-title">Em falta</h2>
+	... -->
+</div>
+
+
 {#if editingStopPics}
 	<StopPicsMetaEditor
 		{stops}

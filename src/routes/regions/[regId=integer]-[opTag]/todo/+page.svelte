@@ -1,16 +1,16 @@
-<script>
+<script lang="ts">
 	import { onDestroy, tick } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { selectedRegion } from '$lib/db';
 	import { regionMapParams } from '$lib/utils';
-	import { toast, permissions } from '$lib/stores';
+	import { permissions } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
 	import StopTodoViewer from './StopTodoViewer.svelte';
 	import TodoMap from './TodoMap.svelte';
+	import Menu from '../Menu.svelte';
 
-	/** @type {import('./$types').PageData} */
 	export let data;
 
+	const region = data.region;
 	const regionStopTodos = data.regionStopTodos;
 
 	let map;
@@ -133,30 +133,20 @@
 		);
 	}
 
-	selectedRegion.subscribe((region) => {
-		if (!map || !region) return;
-
-		const mapParams = regionMapParams(region);
-		map.setCenterAndZoom(mapParams.center, mapParams.zoom);
-	});
-
 	function handleStopClick(e) {
 		$selectedStop = regionStopTodos[e.detail.id];
 	}
-
-	onDestroy(() => map?.remove());
 </script>
+
+<Menu {region} page="todo" />
 
 <TodoMap
 	bind:this={map}
-	mapParams={regionMapParams($selectedRegion)}
+	mapParams={regionMapParams(region)}
 	on:load={async () => {
 		mapLoaded = true;
 		await tick();
-
-		if (!loading) {
-			refreshStops();
-		}
+		refreshStops();
 	}}
 	on:stop-click={handleStopClick}
 >
@@ -251,3 +241,8 @@
 		{/if}
 	</div>
 </TodoMap>
+
+<div class="card-body">
+	<!-- <h2 class="card-title">Em falta</h2>
+	... -->
+</div>

@@ -234,6 +234,7 @@
 				trackUserLocation: true
 			})
 		);
+		map.addControl(new maplibre.FullscreenControl(), 'top-right');
 
 		map.on('load', async function () {
 			addSourcesAndLayers();
@@ -247,7 +248,7 @@
 	});
 </script>
 
-<div bind:this={mapElem} class="h-full relative">
+<div bind:this={mapElem} class="relative h-[min(75dvh,750px)]">
 	<dialog bind:this={searchDialog} class="modal modal-bottom sm:modal-middle">
 		<slot name="search-dialog" />
 	</dialog>

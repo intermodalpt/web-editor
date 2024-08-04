@@ -33,25 +33,25 @@
 		<a
 			role="tab"
 			class="tab tab-lg tab-bordered"
-			class:tab-active={page == 'attrs'}
+			class:tab-active={page == 'images'}
 			href={getRegionImagesUrl(region)}>Imagens</a
 		>
 		<a
 			role="tab"
 			class="tab tab-lg tab-bordered"
-			class:tab-active={page == 'attrs'}
+			class:tab-active={page == 'todo'}
 			href={getRegionTodoUrl(region)}>Tarefas</a
 		>
 		<a
 			role="tab"
 			class="tab tab-lg tab-bordered"
-			class:tab-active={page == 'state'}
+			class:tab-active={page == 'issues'}
 			href={getRegionIssuesUrl(region)}>Problemas</a
 		>
 		<a
 			role="tab"
 			class="tab tab-lg tab-bordered"
-			class:tab-active={page == 'state'}
+			class:tab-active={page == 'stats'}
 			href={getRegionStatsUrl(region)}>Estatisticas</a
 		>
 	</div>

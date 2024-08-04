@@ -148,7 +148,7 @@
 	</button>
 	<span class="font-bold">{$selectedStop?.name}</span>
 </div>
-<CoordViewer lat={$selectedStop.lat} lon={$selectedStop.lon} />
+<CoordViewer lat={$selectedStop?.lat} lon={$selectedStop?.lon} />
 
 <div class="flex flex-col gap-2 p-2">
 	{#each todo as item, i}
