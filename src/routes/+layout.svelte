@@ -7,6 +7,14 @@
 	import RegionPicker from '$lib/components/RegionPicker.svelte';
 	import DbLoadingInfo from '$lib/components/DbLoadingInfo.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import {
+		getRegionImagesUrl,
+		getRegionIssuesUrl,
+		getRegionStatsUrl,
+		getRegionStopsUrl,
+		getRegionTodoUrl,
+		REGIONS_URL
+	} from '$lib/urls';
 
 	export let data;
 
@@ -25,10 +33,10 @@
 
 <div class="h-full grid" style="grid-template-rows: auto 1fr;">
 	<Header username={data.uname} />
-	<div class="drawer lg:drawer-open border-t-[1px] border-slate-300">
+	<div class="drawer lg:drawer-open border-t-[1px]">
 		<input id="mobile-drawer" type="checkbox" class="drawer-toggle" />
-		<div class="drawer-content h-full bg-slate-100">
-			<main class="flex flex-col overflow-y-auto h-full">
+		<div class="drawer-content h-full">
+			<main class="flex flex-col h-full overflow-auto bg-slate-200">
 				<slot />
 			</main>
 		</div>
@@ -44,45 +52,54 @@
 						{#if minimized}
 							<li>
 								<a
-									href="/stops"
+									href={getRegionStopsUrl($selectedRegion)}
 									class="place-content-center"
-									class:active={$page.url.pathname.startsWith('/stops')}
+									class:active={$page.url.pathname == getRegionStopsUrl($selectedRegion)}
 								>
 									<Icon name="shelter" class="h-4 fill-current" />
 								</a>
 							</li>
 							<li>
 								<a
-									href="/images"
+									href={getRegionImagesUrl($selectedRegion)}
 									class="place-content-center"
-									class:active={$page.url.pathname.startsWith('/images')}
+									class:active={$page.url.pathname == getRegionImagesUrl($selectedRegion)}
 								>
 									<Icon name="camera" class="h-4 fill-current" />
 								</a>
 							</li>
 							<li>
 								<a
-									href="/todo"
+									href={getRegionTodoUrl($selectedRegion)}
 									class="place-content-center"
-									class:active={$page.url.pathname.startsWith('/todo')}
+									class:active={($page.url.pathname = getRegionTodoUrl($selectedRegion))}
 								>
 									<Icon name="checklist" class="h-4 fill-current" />
 								</a>
 							</li>
 							<li>
 								<a
-									href="/stats"
+									href={getRegionIssuesUrl($selectedRegion)}
 									class="place-content-center"
-									class:active={$page.url.pathname.startsWith('/stats')}
+									class:active={$page.url.pathname == getRegionIssuesUrl($selectedRegion)}
+								>
+									<Icon name="issue" class="h-4 fill-current" />
+								</a>
+							</li>
+							<li>
+								<a
+									href={getRegionStatsUrl($selectedRegion)}
+									class="place-content-center"
+									class:active={$page.url.pathname == getRegionStatsUrl($selectedRegion)}
 								>
 									<Icon name="chart" class="h-4 fill-current" />
 								</a>
 							</li>
 							<li>
 								<a
-									href="/regions"
+									href={REGIONS_URL}
 									class="place-content-center"
-									class:active={$page.url.pathname == '/regions'}
+									class:active={$page.url.pathname == REGIONS_URL}
 								>
 									<Icon name="location" class="h-4 fill-current" />
 								</a>
@@ -93,31 +110,52 @@
 									<summary>{$selectedRegion?.name}</summary>
 									<ul>
 										<li>
-											<a href="/stops" class:active={$page.url.pathname.startsWith('/stops')}>
+											<a
+												href={getRegionStopsUrl($selectedRegion)}
+												class:active={$page.url.pathname == getRegionStopsUrl($selectedRegion)}
+											>
 												<Icon name="shelter" class="h-4 fill-current" />
 												<span>Paragens</span>
 											</a>
 										</li>
 										<li>
-											<a href="/images" class:active={$page.url.pathname.startsWith('/images')}>
+											<a
+												href={getRegionImagesUrl($selectedRegion)}
+												class:active={$page.url.pathname == getRegionImagesUrl($selectedRegion)}
+											>
 												<Icon name="camera" class="h-4 fill-current" />
 												<span>Imagens</span>
 											</a>
 										</li>
 										<li>
-											<a href="/todo" class:active={$page.url.pathname.startsWith('/todo')}>
+											<a
+												href={getRegionTodoUrl($selectedRegion)}
+												class:active={($page.url.pathname == getRegionTodoUrl($selectedRegion))}
+											>
 												<Icon name="checklist" class="h-4 fill-current" />
 												<span>Tarefas</span>
 											</a>
 										</li>
 										<li>
-											<a href="/stats" class:active={$page.url.pathname.startsWith('/stats')}>
+											<a
+												href={getRegionIssuesUrl($selectedRegion)}
+												class:active={$page.url.pathname == getRegionIssuesUrl($selectedRegion)}
+											>
+												<Icon name="issue" class="h-4 fill-current" />
+												<span>Problemas</span>
+											</a>
+										</li>
+										<li>
+											<a
+												href={getRegionStatsUrl($selectedRegion)}
+												class:active={$page.url.pathname == getRegionStatsUrl($selectedRegion)}
+											>
 												<Icon name="chart" class="h-4 fill-current" />
 												<span>Estado</span>
 											</a>
 										</li>
 										<li>
-											<a href="/regions" class:active={$page.url.pathname == '/regions'}>
+											<a href={REGIONS_URL} class:active={$page.url.pathname == REGIONS_URL}>
 												<Icon name="location" class="h-4 fill-current" />
 												<span>Outras regiões</span>
 											</a>
@@ -156,16 +194,6 @@
 						>
 							<Icon name="news" class="h-4 fill-current" />
 							<span class:hidden={minimized}>Noticias</span>
-						</a>
-					</li>
-					<li>
-						<a
-							href="/issues"
-							class:active={$page.url.pathname.startsWith('/issues')}
-							class:place-content-center={minimized}
-						>
-							<Icon name="issue" class="h-4 fill-current" />
-							<span class:hidden={minimized}>Problemas</span>
 						</a>
 					</li>
 
