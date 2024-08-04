@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { derived } from 'svelte/store';
 	import { regionId } from '$lib/db';
-	import OperatorCard from './OperatorCard.svelte';
+	import OperatorCard from '$lib/components/OperatorCard.svelte';
 
 	export let data;
 
