@@ -389,7 +389,7 @@
 				if (marker) {
 					marker.setLngLat(e.lngLat);
 				} else {
-					marker = new Marker({ draggable: true })
+					marker = new maplibre.Marker({ draggable: true })
 						.setLngLat(e.lngLat)
 						.setDraggable(true)
 						.addTo(map);
