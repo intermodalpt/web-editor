@@ -1,5 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import { renewAccessToken } from '$lib/api';
+import { apiServer } from '$lib/settings';
 
 export async function handle({ event, resolve }) {
 	const rawRefreshToken = event.cookies.get('refresh_token');
@@ -83,4 +84,12 @@ async function fetchNewAccessToken(event: Parameters<import('@sveltejs/kit').Han
 		},
 		fetch: event.fetch
 	});
+}
+
+export async function handleFetch({ event, request, fetch }) {
+	if (request.url.startsWith(apiServer + '/')) {
+		request.headers.set('cookie', event.request.headers.get('cookie'));
+	}
+
+	return fetch(request);
 }
