@@ -4,7 +4,7 @@
 	import { checkUsername, getCaptcha, register as registerCall } from '$lib/api';
 	import { toast } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
-	import IntrestRating from './IntrestRating.svelte';
+	import Survey from '$lib/components/Survey.svelte';
 
 	let step = 0;
 
@@ -32,31 +32,11 @@
 	}
 	$: isValidPassword = password && password.length >= 7;
 
-	let realName = null;
-	let age = null;
-
-	let publicTransitIntrest = null;
-	let pedestrianIntrest = null;
-	let bicycleIntrest = null;
-	let a11yIntrest = null;
-	let urbanismIntrest = null;
-	let ecologyIntrest = null;
-
-	let presentation = null;
-	let localKnowledge = null;
+	let surveyData;
 
 	let copyrightAck = false;
 	let privacyAck = false;
 	let termsAck = false;
-
-	$: intrests = {
-		publicTransit: publicTransitIntrest,
-		pedestrian: pedestrianIntrest,
-		bicycle: bicycleIntrest,
-		a11y: a11yIntrest,
-		urbanism: urbanismIntrest,
-		ecology: ecologyIntrest
-	};
 
 	$: consent = {
 		copyright: copyrightAck,
@@ -69,13 +49,7 @@
 		username,
 		email,
 		password,
-		survey: {
-			name: realName,
-			age,
-			presentation,
-			intrests,
-			localKnowledge
-		},
+		survey: surveyData,
 		consent,
 		captcha: {
 			uuid: captcha?.uuid,
@@ -245,7 +219,7 @@
 	</label>
 	<label
 		class="input input-bordered flex items-center gap-2 grow"
-		class:input-error={passwordTouched && (password ?? '').length < 7}
+		class:input-error={passwordTouched && !isValidPassword}
 	>
 		Password
 		<input id="registrationPassword" type="password" class="grow" bind:value={password} />
@@ -270,47 +244,7 @@
 		Todos os campos nesta página são <b>opcionais</b> e não serão partilhados.<br />
 		Servem para nos ajudar a perceber quem temos na comunidade.
 	</span>
-	<label class="input input-bordered flex items-center gap-2 grow">
-		Nome
-		<input type="text" class="grow" placeholder="Maria" bind:value={realName} />
-	</label>
-	<label class="input input-bordered flex items-center gap-2 grow">
-		Idade
-		<input type="text" class="grow" placeholder="24 ou 'Jovem adulto' ou ..." bind:value={age} />
-	</label>
-	<label class="form-control">
-		<div class="label">
-			<span class="label-text">Apresenta-te</span>
-		</div>
-		<textarea
-			bind:value={presentation}
-			class="textarea textarea-bordered h-32"
-			placeholder="Sou estudante. Estou a querer ajudar os transportes na minha freguesia. Gosto de plantas e era giro se o espaço público tivesse mais. Costumo fazer desporto mas não me sinto seguro a faze-lo na rua."
-		></textarea>
-	</label>
-
-	<h3 class="text-lg">O seu interesse por...</h3>
-	<h4 class="text-md">Transportes públicos</h4>
-	<IntrestRating bind:value={publicTransitIntrest} />
-	<h4 class="text-md">Mobilidade pedonal</h4>
-	<IntrestRating bind:value={pedestrianIntrest} />
-	<h4 class="text-md">Mobilidade em velocípedes</h4>
-	<IntrestRating bind:value={bicycleIntrest} />
-	<h4 class="text-md">Acessibilidades</h4>
-	<IntrestRating bind:value={a11yIntrest} />
-	<h4 class="text-md">Urbanismo</h4>
-	<IntrestRating bind:value={urbanismIntrest} />
-	<h4 class="text-md">Ecologia</h4>
-	<IntrestRating bind:value={ecologyIntrest} />
-
-	<h2 class="text-lg">Conhecimento local</h2>
-	<label class="form-control">
-		<textarea
-			bind:value={localKnowledge}
-			class="textarea textarea-bordered h-24"
-			placeholder="Exemplo: Moro no Norte. Conheço bem Braga e Guimarães. Trabalho em Aveiro. Vou frequentemente à Guarda."
-		></textarea>
-	</label>
+	<Survey bind:data={registration.survey} />
 {:else if step === 3}
 	<h2 class="text-lg">Compromissos</h2>
 	<label class="flex items-start gap-2">
