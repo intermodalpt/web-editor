@@ -74,20 +74,16 @@
 			operator_ids: issueOperators
 		};
 
-		let res = await fetch(`${apiServer}/v1/issues`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
-			body: JSON.stringify(issue)
+		await createIssue(issue, {
+			onSuccess: async (res) => {
+				const data = await res.json();
+				navigate(`/issues/${data.id}`);
+			},
+			onError: (res) => {
+				alert('Erro ao criar problema');
+				console.error(res);
+			}
 		});
-
-		if (res.ok) {
-			let data = await res.json();
-			navigate(`/issues/${data.id}`);
-		} else {
-			alert('Erro ao criar problema');
-			console.error(res);
-		}
 	}
 
 	onMount(() => {
