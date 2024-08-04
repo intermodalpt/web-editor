@@ -137,6 +137,11 @@ export async function getRegions(opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getRegion(regionId: number, opts: ReqOpts) {
+	const res = await f(`/v1/regions/${regionId}`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getRegionStops(regionId: number, opts: ReqOpts) {
 	const res = await f(`/v1/regions/${regionId}/stops/full`, { opts });
 	return await handleResponse(res, opts);
@@ -657,6 +662,12 @@ export async function importExternalNewsImage(extImageId: number, opts: ReqOpts)
 	return await handleResponse(res, opts);
 }
 
+// ----- Images
+export async function getStopPicMap(opts: ReqOpts) {
+	const res = await f(`/v1/stop_pics/map`, { opts });
+	return await handleResponse(res, opts);
+}
+
 // ----- Contrib -----
 
 export async function acceptContribution(
@@ -726,5 +737,10 @@ export async function createIssue(issue, opts: ReqOpts) {
 		body: issue,
 		opts
 	});
+	return await handleResponse(res, opts);
+}
+
+export async function getRegionParishes(regionId: number, opts: ReqOpts) {
+	const res = await f(`/v1/regions/${regionId}/parishes`, { opts });
 	return await handleResponse(res, opts);
 }
