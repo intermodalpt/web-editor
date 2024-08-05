@@ -8,12 +8,16 @@
 	import DbLoadingInfo from '$lib/components/DbLoadingInfo.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import {
+		NEWS_URL,
+		OPERATORS_URL,
+		OSM_URL,
+		REGIONS_URL,
+		CONTRIB_URL,
 		getRegionImagesUrl,
 		getRegionIssuesUrl,
 		getRegionStatsUrl,
 		getRegionStopsUrl,
-		getRegionTodoUrl,
-		REGIONS_URL
+		getRegionTodoUrl
 	} from '$lib/urls';
 
 	export let data;
@@ -40,7 +44,7 @@
 				<slot />
 			</main>
 		</div>
-		<div class="drawer-side z-[10000] h-full border-slate-300 shadow-sm">
+		<div class="drawer-side z-30 h-full border-r-[1px] border-slate-300 shadow-md">
 			<label for="mobile-drawer" class="drawer-overlay" />
 			<div class="h-full w-fit flex flex-col justify-between bg-white">
 				<ul
@@ -72,7 +76,7 @@
 								<a
 									href={getRegionTodoUrl($selectedRegion)}
 									class="place-content-center"
-									class:active={($page.url.pathname = getRegionTodoUrl($selectedRegion))}
+									class:active={$page.url.pathname == getRegionTodoUrl($selectedRegion)}
 								>
 									<Icon name="checklist" class="h-4 fill-current" />
 								</a>
@@ -130,7 +134,7 @@
 										<li>
 											<a
 												href={getRegionTodoUrl($selectedRegion)}
-												class:active={($page.url.pathname == getRegionTodoUrl($selectedRegion))}
+												class:active={$page.url.pathname == getRegionTodoUrl($selectedRegion)}
 											>
 												<Icon name="checklist" class="h-4 fill-current" />
 												<span>Tarefas</span>
@@ -167,8 +171,8 @@
 					{:else}
 						<li>
 							<a
-								href="/regions"
-								class:active={$page.url.pathname.startsWith('/regions')}
+								href={REGIONS_URL}
+								class:active={$page.url.pathname == REGIONS_URL}
 								class:place-content-center={minimized}
 							>
 								<Icon name="location" class="h-4 fill-current" />
@@ -178,8 +182,8 @@
 					{/if}
 					<li>
 						<a
-							href="/operators"
-							class:active={$page.url.pathname.startsWith('/operators')}
+							href={OPERATORS_URL}
+							class:active={$page.url.pathname == OPERATORS_URL}
 							class:place-content-center={minimized}
 						>
 							<Icon name="bus" class="h-4 fill-current" />
@@ -188,8 +192,8 @@
 					</li>
 					<li>
 						<a
-							href="/news"
-							class:active={$page.url.pathname.startsWith('/news')}
+							href={NEWS_URL}
+							class:active={$page.url.pathname == NEWS_URL}
 							class:place-content-center={minimized}
 						>
 							<Icon name="news" class="h-4 fill-current" />
@@ -200,18 +204,18 @@
 					{#if minimized}
 						<li>
 							<a
-								href="/osm"
+								href={OSM_URL}
 								class="place-content-center"
-								class:active={$page.url.pathname.startsWith('/osm')}
+								class:active={$page.url.pathname == OSM_URL}
 							>
 								<Icon name="map" class="h-4 fill-current" />
 							</a>
 						</li>
 						<li>
 							<a
-								href="/contrib"
+								href={CONTRIB_URL}
 								class="place-content-center"
-								class:active={$page.url.pathname.startsWith('/contrib')}
+								class:active={$page.url.pathname == CONTRIB_URL}
 							>
 								<Icon name="timeline" class="h-4 fill-current" />
 							</a>
@@ -225,13 +229,13 @@
 								</summary>
 								<ul>
 									<li>
-										<a href="/osm" class:active={$page.url.pathname.startsWith('/osm')}>
+										<a href={OSM_URL} class:active={$page.url.pathname == OSM_URL}>
 											<Icon name="map" class="h-4 fill-current" />
 											<span>OpenStreetMap</span>
 										</a>
 									</li>
 									<li>
-										<a href="/contrib" class:active={$page.url.pathname.startsWith('/contrib')}>
+										<a href={CONTRIB_URL} class:active={$page.url.pathname == CONTRIB_URL}>
 											<Icon name="timeline" class="h-4 fill-current" />
 											<span>Contribuições</span>
 										</a>

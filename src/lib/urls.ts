@@ -8,6 +8,9 @@ export const PROFILE_SETTINGS_URL = '/perfil/settings';
 
 export const OPERATORS_URL = '/operators';
 export const REGIONS_URL = '/regions';
+export const NEWS_URL = '/news';
+export const OSM_URL = '/osm';
+export const CONTRIB_URL = '/contrib';
 
 export function getRegionUrl(region): string {
 	return `${REGIONS_URL}/${region?.id}-${slugify(region?.name)}`;
