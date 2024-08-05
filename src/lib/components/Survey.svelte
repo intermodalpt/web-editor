@@ -2,6 +2,7 @@
 	import ConsentAnswer from '$lib/components/ConsentAnswer.svelte';
 	import IntrestRating from '$lib/components/IntrestRating.svelte';
 
+	// If this ever changes, do not forget to update the survey version
 	export let data = {
 		name: '',
 		age: '',

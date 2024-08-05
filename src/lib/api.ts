@@ -1,4 +1,4 @@
-import { apiServer } from '$lib/settings';
+import { apiServer, currentSurveyVersion } from '$lib/settings';
 
 // Boilerplate reduction
 
@@ -670,6 +670,16 @@ export async function getStopPicMap(opts: ReqOpts) {
 
 // ----- Contrib -----
 
+export async function getOwnDecidedContributions(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/contrib/contributions/own/decided?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOwnUndecidedContributions(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/contrib/contributions/own/undecided?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function acceptContribution(
 	contributionId: number,
 	ignoredKeys: [string],
@@ -725,6 +735,52 @@ export async function getOperatorGtfsStops(operatorId: number, opts: ReqOpts) {
 
 export async function getOperatorGtfsRoutes(operatorId: number, opts: ReqOpts) {
 	const res = await f(`/v1/operators/${operatorId}/gtfs/routes`, { opts });
+	return await handleResponse(res, opts);
+}
+
+// ----- Users -----
+
+export async function getUserInfo(opts: ReqOpts) {
+	const res = await f(`/v1/user/info`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getUserStats(opts: ReqOpts) {
+	const res = await f(`/v1/user/stats`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function changePassword(old_password: string, new_password: string, opts: ReqOpts) {
+	const res = await f(`/v1/auth/change_password`, {
+		method: 'POST',
+		isJson: true,
+		body: { old_password, new_password },
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
+export async function getLastSurvey(opts: ReqOpts) {
+	const res = await f(`/v1/survey`, { opts });
+	return await handleResponse(res, opts);
+}
+
+type SurveyUploadOpts = {
+	user_id?: number | null;
+	username?: string | null;
+	email?: string | null;
+	survey: any;
+};
+export async function uploadSurvey(
+	{ user_id = null, username = null, email = null, survey }: SurveyUploadOpts,
+	opts: ReqOpts
+) {
+	const res = await f(`/v1/survey`, {
+		method: 'POST',
+		isJson: true,
+		body: { user_id, username, email, survey, survey_version: currentSurveyVersion },
+		opts
+	});
 	return await handleResponse(res, opts);
 }
 

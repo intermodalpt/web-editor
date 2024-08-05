@@ -1,93 +1,70 @@
 <script lang="ts">
-	import ChangeViewer from '$lib/changes/ChangeViewer.svelte';
+	import Icon from '$lib/components/Icon.svelte';
+	import Menu from './Menu.svelte';
 
 	export let data;
-	const decidedContributions = data.decidedContributions;
-	const undecidedContributions = data.undecidedContributions;
-	const permissions = data.permissions;
+	const info = data.info;
+	const stats = data.stats;
+
+	const registrationDate = new Date(info.registration_date);
+	const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric' };
+	const formattedRegistrationDate = registrationDate.toLocaleDateString('pt-PT', dateOptions);
 </script>
 
-<svelte:head>
-	<title>Perfil</title>
-	<meta name="description" content="Perfil" />
-</svelte:head>
+<div class="card-body">
+	<Menu {data} page="root" />
 
-<div class="flex flex-col gap-4 py-4">
-	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
-		<div class="card-body">
-			<h2 class="card-title">
-				{data.uname}<span class="text-xs">(#{data.uid})</span>
-			</h2>
-			<h2 class="card-title">Permissões</h2>
-
-			<div class="flex flex-col gap-4">
-				{#each Object.entries(permissions) as [scope, perms]}
-					{#if Object.keys(perms).length > 0}
-						<div>
-							<h3 class="text-lg">{scope}</h3>
-							<div class="flex gap-4 ml-4 flex-wrap max-w-full">
-								{#each Object.entries(perms) as [key, val]}
-									<div class="flex items-start">
-										<span>{key}</span>
-										{#if val}
-											<i class="bg-success p-1 rounded-full"></i>
-										{:else}
-											<i class="bg-error p-1 rounded-full"></i>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/if}
-				{/each}
+	{#if info.survey_version == 0}
+		<div role="alert" class="alert border-info shadow-sm">
+			<Icon name="info" class="h-6 w-6" />
+			<div>
+				<h3 class="font-bold">Inquérito geral</h3>
+				<div class="text-xs">Conte-nos sobre si</div>
+			</div>
+			<div>
+				<button class="btn btn-sm btn-info">Abrir</button>
+				<!-- <button class="btn btn-sm btn-neutral">Não quero</button> -->
 			</div>
 		</div>
-	</div>
+	{/if}
 
-	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
-		<div class="card-body">
-			<h2 class="card-title">Alterações pendentes</h2>
-			{#if undecidedContributions.length === 0}
-				Sem contribuições pendentes.
-			{/if}
-			<ul>
-				{#each undecidedContributions as contribution}
-					<li>
-						<h2 class="card-title text-lg">
-							#{contribution.id}
-							{new Date(contribution.submission_date).toString().split(' GMT')[0]}
-						</h2>
-						<ChangeViewer change={contribution.change} />
-						{#if contribution.comment}
-							<h4 class="font-bold">Comentário:</h4>
-							<textarea disabled class="w-full">{contribution.comment}</textarea>
-						{/if}
-					</li>
-				{/each}
-			</ul>
+	{#if info.verification_level == 0}
+		<div role="alert" class="alert border-error shadow-sm">
+			<Icon name="envelope" class="h-6 w-6" />
+			<div>
+				<h3 class="font-bold">Conta não verificada</h3>
+				<div class="text-xs">Valide a sua conta através do seu email ou falando connosco</div>
+			</div>
+			<button class="btn btn-sm btn-error">Validar por email</button>
 		</div>
-	</div>
-	<div class="card card-compact self-center bg-base-100 shadow-sm w-full max-w-[900px]">
-		<div class="card-body">
-			<h2 class="card-title">Contribuições aceites</h2>
-			{#if decidedContributions.length === 0}
-				Sem contribuições aceites.
-			{/if}
-			<ul>
-				{#each decidedContributions as contribution}
-					<li>
-						<h2 class="card-title text-lg">
-							#{contribution.id}
-							{new Date(contribution.submission_date).toString().split(' GMT')[0]}
-						</h2>
-						<ChangeViewer change={contribution.change} />
-						{#if contribution.comment}
-							<h4 class="font-bold">Comentário:</h4>
-							<textarea disabled class="w-full">{contribution.comment}</textarea>
-						{/if}
-					</li>
-				{/each}
-			</ul>
+	{/if}
+
+	{#if info.is_suspended}
+		<div role="alert" class="alert border-neutral shadow-sm">
+			<Icon name="block" class="h-6 w-6" />
+			<div>
+				<h3 class="font-bold">A sua conta foi suspensa</h3>
+				<div class="text-xs">Não lhe será possível fazer qualquer edição</div>
+			</div>
+		</div>
+	{/if}
+
+	<div class="stats border-2 stats-vertical md:stats-horizontal">
+		<div class="stat place-items-center">
+			<div class="stat-title">Registo</div>
+			<div class="stat-value">{formattedRegistrationDate}</div>
+		</div>
+		<div class="stat place-items-center">
+			<div class="stat-title">Contribuições</div>
+			<div class="stat-value">{stats?.contributions_cnt}</div>
+		</div>
+		<div class="stat place-items-center">
+			<div class="stat-title">Alterações</div>
+			<div class="stat-value">{stats?.changelog_cnt}</div>
+		</div>
+		<div class="stat place-items-center">
+			<div class="stat-title">Fotografias</div>
+			<div class="stat-value">{stats?.pics_cnt}</div>
 		</div>
 	</div>
 </div>

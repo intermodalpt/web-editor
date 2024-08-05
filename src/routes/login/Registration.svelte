@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { isValidEmail } from '$lib/utils';
-	import { checkUsername, getCaptcha, register as registerCall } from '$lib/api';
+	import { checkUsername, getCaptcha, register as registerCall, uploadSurvey } from '$lib/api';
 	import { toast } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
 	import Survey from '$lib/components/Survey.svelte';
@@ -120,6 +120,26 @@
 				toast('A password não coincide com a confirmação', 'error');
 				return;
 			}
+		} else if (step == 2) {
+			isProcessing = true;
+			await uploadSurvey(
+				{
+					username,
+					email,
+					survey: surveyData
+				},
+				{
+					onSuccess: () => {
+						toast('Inquérito submetido com sucesso', 'success');
+					},
+					onError: () => {
+						toast('Erro ao submeter inquérito', 'error');
+					},
+					onAfter: () => {
+						isProcessing = false;
+					}
+				}
+			);
 		} else if (step == 3) {
 			if (!privacyAck || !copyrightAck || !termsAck) {
 				toast('Deve de aceitar os compromissos', 'error');
@@ -244,7 +264,7 @@
 		Todos os campos nesta página são <b>opcionais</b> e não serão partilhados.<br />
 		Servem para nos ajudar a perceber quem temos na comunidade.
 	</span>
-	<Survey bind:data={registration.survey} />
+	<Survey bind:data={surveyData} />
 {:else if step === 3}
 	<h2 class="text-lg">Compromissos</h2>
 	<label class="flex items-start gap-2">

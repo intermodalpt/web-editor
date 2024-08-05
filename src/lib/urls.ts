@@ -1,5 +1,11 @@
 import { slugify } from './utils';
 
+export const PROFILE_URL = '/perfil';
+export const PROFILE_SURVEY_URL = '/perfil/survey';
+export const PROFILE_PERMISSIONS_URL = '/perfil/permissions';
+export const PROFILE_CONTRIBUTIONS_URL = '/perfil/contributions';
+export const PROFILE_SETTINGS_URL = '/perfil/settings';
+
 export const OPERATORS_URL = '/operators';
 export const REGIONS_URL = '/regions';
 
