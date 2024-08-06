@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { browser } from '$app/environment';
 	import { uploadDanglingStopPic, uploadLinkedStopPic } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 
@@ -8,7 +9,7 @@
 
 	export let stopId: number | undefined;
 
-	const captureSupported = document.createElement('input').capture != undefined;
+	const captureSupported = browser ? document.createElement('input').capture != undefined : false;
 
 	let files: File[] = [];
 
