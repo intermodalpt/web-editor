@@ -544,8 +544,6 @@
 		const mapParams = regionMapParams(region);
 		map.setCenterAndZoom(mapParams.center, mapParams.zoom);
 	});
-
-	onDestroy(() => map?.remove());
 </script>
 
 <MatcherMap

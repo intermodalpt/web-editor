@@ -511,6 +511,7 @@
 				trackUserLocation: true
 			})
 		);
+		map.addControl(new maplibre.FullscreenControl());
 
 		map.on('load', async function () {
 			addSourcesAndLayers();
