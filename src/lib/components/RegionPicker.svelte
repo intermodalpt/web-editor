@@ -18,7 +18,13 @@
 	import { derived, writable } from 'svelte/store';
 	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { tileStyle } from '$lib/settings';
+	import {
+		defaultMapBounds,
+		defaultMapCenter,
+		defaultMapZoom,
+		mapMinZoom,
+		tileStyle
+	} from '$lib/settings';
 	import { getRegions } from '$lib/api';
 
 	const dispatch = createEventDispatcher();
@@ -38,11 +44,6 @@
 
 	let hoveredRegionId = null;
 	let explicitRegionChange = false;
-
-	const DEFAULT_BOUNDS = [
-		[-11, 36.5],
-		[-5.5, 42.35]
-	];
 
 	const pendingRegionId = writable();
 
@@ -157,11 +158,11 @@
 		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
-			minZoom: 6,
-			zoom: 6.1,
+			minZoom: mapMinZoom,
+			zoom: defaultMapZoom,
 			maxZoom: 11,
-			// maxBounds: DEFAULT_BOUNDS,
-			center: [-8.5, 39.5]
+			maxBounds: defaultMapBounds,
+			center: defaultMapCenter
 		});
 
 		mapGeolocateControl = new maplibre.GeolocateControl({
