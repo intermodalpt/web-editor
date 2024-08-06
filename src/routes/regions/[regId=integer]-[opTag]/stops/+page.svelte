@@ -35,7 +35,6 @@
 	const region = data.region;
 	console.log(region);
 
-
 	let picsPerStop = {};
 	let map;
 
@@ -638,8 +637,6 @@
 	onDestroy(() => map?.remove());
 </script>
 
-
-
 <Menu {region} page="stops" />
 
 <div id="map" class="relative h-[min(75dvh,750px)]">
@@ -777,10 +774,8 @@
 	... -->
 </div>
 
-
 {#if editingStopPics}
 	<StopPicsMetaEditor
-		{stops}
 		stop={selectedStop}
 		on:upload={() => {
 			$stopPicturesNonce = Date.now();
@@ -798,5 +793,5 @@
 {/if}
 
 {#if previewedPic}
-	<PicDialog picture={previewedPic} {stops} on:close={() => (previewedPic = undefined)} />
+	<PicDialog picture={previewedPic} on:close={() => (previewedPic = undefined)} />
 {/if}
