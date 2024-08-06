@@ -5,8 +5,9 @@
 	const permissions = data.permissions;
 </script>
 
+<Menu {data} page="perms" />
+
 <div class="card-body">
-	<Menu {data} page="perms" />
 	<div class="flex flex-col gap-4">
 		{#each Object.entries(permissions) as [scope, perms]}
 			{#if Object.keys(perms).length > 0}

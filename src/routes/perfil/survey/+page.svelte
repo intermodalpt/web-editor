@@ -39,9 +39,9 @@
 	}
 </script>
 
-<div class="card-body">
-	<Menu {data} page="survey" />
+<Menu {data} page="survey" />
 
+<div class="card-body">
 	<p>
 		Este inquérito serve para nos ajudar a saber quem temos na comunidade. É de preenchimento
 		<b>opcional</b>.

@@ -63,8 +63,9 @@
 	}
 </script>
 
+<Menu {data} page="settings" />
+
 <form class="card-body">
-	<Menu {data} page="settings" />
 	<h2 class="card-title">Alteração de palavra-chave</h2>
 	<label
 		class="input input-bordered flex items-center gap-2 grow"

@@ -11,11 +11,11 @@
 	export let data;
 </script>
 
-<h1 class="text-3xl font-bold flex align-top">
+<h1 class="text-3xl font-bold flex align-top p-4">
 	{data.uname}<span class="text-lg font-thin">(#{data.uid})</span>
 </h1>
 
-<div role="tablist" class="tabs tabs-bordered tabs-lg mr-4">
+<div role="tablist" class="tabs tabs-bordered tabs-lg overflow-x-auto menu-scroll-shadows">
 	<a role="tab" class="tab" class:tab-active={page == 'root'} href={PROFILE_URL}>Sumário</a>
 	<a role="tab" class="tab" class:tab-active={page == 'survey'} href={PROFILE_SURVEY_URL}
 		>Inquérito</a

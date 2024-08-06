@@ -7,8 +7,9 @@
 	const undecidedContributions = data.undecidedContributions;
 </script>
 
+<Menu {data} page="contrib" />
+
 <div class="card-body">
-	<Menu {data} page="contrib" />
 	<h2 class="card-title">Alterações pendentes</h2>
 	{#if undecidedContributions.length === 0}
 		Sem contribuições pendentes.

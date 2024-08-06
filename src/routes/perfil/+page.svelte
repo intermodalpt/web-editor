@@ -11,9 +11,8 @@
 	const formattedRegistrationDate = registrationDate.toLocaleDateString('pt-PT', dateOptions);
 </script>
 
+<Menu {data} page="root" />
 <div class="card-body">
-	<Menu {data} page="root" />
-
 	{#if info.survey_version == 0}
 		<div role="alert" class="alert border-info shadow-sm">
 			<Icon name="info" class="h-6 w-6" />
