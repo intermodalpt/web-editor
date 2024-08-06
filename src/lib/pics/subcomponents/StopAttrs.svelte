@@ -1,6 +1,7 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
-	import { onMount } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
+	import { getStop } from '$lib/api';
+	import { toast } from '$lib/stores';
 	import Icon from '$lib/components/Icon.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -14,10 +15,17 @@
 	};
 
 	export let rel;
-	export let stops;
 	export let editable;
 
-	$: stop = $stops ? $stops[rel.id] : undefined;
+	let stop;
+	getStop(rel.id, {
+		onError: () => {
+			toast(`Erro a carregar paragem (${id})`, 'error');
+		},
+		toJson: true
+	}).then((data) => {
+		stop = data;
+	});
 
 	let attrFront;
 	let attrBack;

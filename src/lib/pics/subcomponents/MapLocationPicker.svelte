@@ -4,13 +4,16 @@
 	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { writable } from 'svelte/store';
+	import { getStopArea } from '$lib/api';
+	import { toast } from '$lib/stores';
 
 	let mapElem;
 	export let lat;
 	export let lon;
-	export let stops;
 	export let canSelectStops = false;
 	export let selectedStopIds = writable([]);
+
+	let stops = {};
 
 	let map;
 	let marker = null;
@@ -38,7 +41,10 @@
 		if (marker) {
 			marker.setLngLat([lon, lat]);
 		} else {
-			marker = new maplibre.Marker({ draggable: true }).setLngLat([lon, lat]).setDraggable(true).addTo(map);
+			marker = new maplibre.Marker({ draggable: true })
+				.setLngLat([lon, lat])
+				.setDraggable(true)
+				.addTo(map);
 			marker.on('dragend', markerMoved);
 		}
 	}
@@ -46,7 +52,7 @@
 	const drawStops = () => {
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values($stops).map((stop) => {
+			features: Object.values(stops).map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -67,9 +73,9 @@
 		source.setData({
 			type: 'FeatureCollection',
 			features: $selectedStopIds
-				.filter((id) => $stops[id])
+				.filter((id) => stops[id])
 				.map((id) => {
-					const stop = $stops[id];
+					const stop = stops[id];
 					return {
 						type: 'Feature',
 						geometry: {
@@ -174,6 +180,34 @@
 		});
 	}
 
+	async function fetchStopWindow() {
+		if (map.getZoom() < 14) return;
+		const bounds = map.getBounds();
+		const sw = bounds.getSouthWest();
+		const ne = bounds.getNorthEast();
+
+		await getStopArea(
+			{
+				minLat: ne.lat,
+				minLon: sw.lng,
+				maxLat: sw.lat,
+				maxLon: ne.lng
+			},
+			{
+				onSuccess: (areaStops) => {
+					areaStops.forEach((stop) => {
+						stops[stop.id] = stop;
+					});
+					drawStops();
+				},
+				onError: (e) => {
+					toast('Erro ao obter paragens', 'error');
+				},
+				toJson: true
+			}
+		);
+	}
+
 	onMount(() => {
 		const lastPos = JSON.parse(sessionStorage.getItem('lastPos'));
 
@@ -202,7 +236,10 @@
 		}
 
 		if (location.lon && location.lat) {
-			marker = new maplibre.Marker().setLngLat([location.lon, location.lat]).setDraggable(true).addTo(map);
+			marker = new maplibre.Marker()
+				.setLngLat([location.lon, location.lat])
+				.setDraggable(true)
+				.addTo(map);
 			marker.on('dragend', markerMoved);
 		}
 
@@ -230,19 +267,20 @@
 			location.lat = e.lngLat.lat;
 			location.lon = e.lngLat.lng;
 
-			console.log('Map click');
-
 			if (marker) {
 				marker.setLngLat(e.lngLat).addTo(map);
 			} else {
-				marker = new maplibre.Marker({ draggable: true }).setLngLat(e.lngLat).setDraggable(true).addTo(map);
+				marker = new maplibre.Marker({ draggable: true })
+					.setLngLat(e.lngLat)
+					.setDraggable(true)
+					.addTo(map);
 				marker.on('dragend', markerMoved);
 			}
 
 			dispatchChange();
 		});
 
-		map.on('load', function () {
+		map.on('load', async () => {
 			addSourcesAndLayers();
 			mapLoaded = true;
 
@@ -251,13 +289,15 @@
 			if ($selectedStopIds?.length) {
 				drawSelectedStops();
 			}
+			await fetchStopWindow();
 		});
 
-		map.on('moveend', (e) => {
+		map.on('moveend', async (e) => {
 			sessionStorage.setItem(
 				'lastPos',
 				JSON.stringify([e.target.getCenter().lng, e.target.getCenter().lat, e.target.getZoom()])
 			);
+			await fetchStopWindow();
 		});
 	});
 

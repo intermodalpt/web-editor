@@ -326,6 +326,24 @@ export async function getStops(opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getStop(stopId: number, opts: ReqOpts) {
+	const res = await f(`/v1/stops/${stopId}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getStopList(ids: number[], opts: ReqOpts) {
+	const res = await f(`/v1/stops/list/${ids.join(',')}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+type Rectangle = { minLon: number; minLat: number; maxLon: number; maxLat: number };
+export async function getStopArea({ minLon, minLat, maxLon, maxLat }: Rectangle, opts: ReqOpts) {
+	const res = await f(`/v1/stops/within_boundary/${minLon}/${minLat}/${maxLon}/${maxLat}`, {
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
 export async function createStop(stopData, opts: ReqOpts) {
 	const res = await f(`/v1/stops`, {
 		method: 'POST',

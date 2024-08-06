@@ -8,8 +8,6 @@
 
 	const POSITION_REQUIRED = false;
 
-	export let stops;
-
 	export let stop;
 
 	const dispatch = createEventDispatcher();
@@ -142,7 +140,6 @@
 					{#key selectedImageId}
 						<PicMetaEditor
 							imageId={selectedImageId}
-							{stops}
 							on:save={() => {
 								currentImageHasChanges = false;
 								$stopPicturesNonce = Date.now();

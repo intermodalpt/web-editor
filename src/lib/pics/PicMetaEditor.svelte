@@ -13,7 +13,6 @@
 	const managedAttrs = ['flag', 'schedule', 'defect', 'vehicle', 'infra', 'nocturnal'];
 
 	export let imageId;
-	export let stops;
 
 	let image = null;
 
@@ -313,7 +312,6 @@
 				bind:this={locationPicker}
 				{lat}
 				{lon}
-				{stops}
 				selectedStopIds={stopIds}
 				canSelectStops={editable}
 				on:change={(e) => {
@@ -332,7 +330,6 @@
 						{#each $stopRels as rel}
 							<StopAttrs
 								bind:rel
-								{stops}
 								{editable}
 								on:delete={(e) => {
 									$stopIds = $stopIds.filter((id) => id !== e.detail.stop);

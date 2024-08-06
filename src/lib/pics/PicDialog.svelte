@@ -5,7 +5,6 @@
 	import SinglePicMetaEditor from '$lib/pics/wrappers/SinglePicMetaEditor.svelte';
 
 	export let picture;
-	export let stops;
 
 	const dispatch = createEventDispatcher();
 
@@ -48,7 +47,6 @@
 	<div class="absolute z-[1000]">
 		<SinglePicMetaEditor
 			selectedPicId={picture.id}
-			{stops}
 			on:save
 			on:delete
 			on:close={() => (editorOpened = false)}
