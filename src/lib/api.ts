@@ -477,6 +477,34 @@ export async function getStopPicsRels(opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getPicsForStop(stopId: number, opts: ReqOpts) {
+	const res = await f(`/v1/stops/${stopId}/pictures/all`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getLatestStopPics(
+	page: number,
+	{ user = null, taggedOnly = false, untaggedOnly = false },
+	opts: ReqOpts
+) {
+	let url = `/v1/stop_pics/latest?p=${page}`;
+	if (taggedOnly) {
+		url += '&tagged_only=true';
+	} else if (untaggedOnly) {
+		url += '&untagged_only=true';
+	}
+	if (user) {
+		url += `&user=${user}`;
+	}
+	const res = await f(url, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getUnpositionedStopPics(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/stop_pics/unpositioned?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
 // ----- Routes -----
 
 export async function createRoute(data, opts: ReqOpts) {

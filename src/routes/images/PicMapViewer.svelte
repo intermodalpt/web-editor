@@ -1,34 +1,30 @@
 <script>
-	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-	import { tileStyle } from '$lib/settings';
+	import { onDestroy, onMount, createEventDispatcher, tick } from 'svelte';
+	import {
+		defaultMapBounds,
+		defaultMapCenter,
+		defaultMapZoom,
+		mapMinZoom,
+		tileStyle
+	} from '$lib/settings';
 	import maplibre from 'maplibre-gl';
+	import { regionMapParams } from '$lib/utils';
 
 	const dispatch = createEventDispatcher();
 
 	export let pictures;
 	export let stops;
-	export let compact;
 
 	let map;
 	let mapEl;
 	let mapLoaded = false;
 
-	pictures.subscribe(() => {
-		updateData();
-	});
-
-	stops.subscribe(() => {
-		updateData();
-	});
-
 	function updateData() {
-		if (!mapLoaded || !$stops) {
-			return;
-		}
+		if (!mapLoaded) return;
 
 		map.getSource('pics').setData({
 			type: 'FeatureCollection',
-			features: $pictures
+			features: pictures
 				.filter((pic) => pic.lat && pic.lon)
 				.map((pic) => {
 					return {
@@ -46,7 +42,7 @@
 
 		map.getSource('stops').setData({
 			type: 'FeatureCollection',
-			features: Object.values($stops).map((stop) => {
+			features: Object.values(stops).map((stop) => {
 				return {
 					type: 'Feature',
 					geometry: {
@@ -62,11 +58,11 @@
 		});
 
 		let relFeatures = [];
-		$pictures
+		pictures
 			.filter((pic) => pic.lat && pic.lon)
 			.forEach((pic) => {
 				pic.stops.map((stopId) => {
-					let stop = $stops[stopId];
+					let stop = stops[stopId];
 					relFeatures.push({
 						type: 'Feature',
 						geometry: {
@@ -215,24 +211,24 @@
 		map = new maplibre.Map({
 			container: mapEl,
 			style: tileStyle,
-			center: [-9.0, 38.65],
-			zoom: 10,
-			minZoom: 8,
+			center: defaultMapCenter,
+			zoom: defaultMapZoom,
+			minZoom: mapMinZoom,
 			maxZoom: 20,
-			maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]
+			maxBounds: defaultMapBounds
 		});
 
 		map.addControl(new maplibre.NavigationControl(), 'top-right');
 		map.addControl(new maplibre.GeolocateControl(), 'top-right');
+		map.addControl(new maplibre.FullscreenControl(), 'top-right');
 
-		map.on('load', function () {
+		map.on('load', async () => {
 			addSourcesAndLayers();
 			addEvents();
 
 			mapLoaded = true;
+			await tick();
+
 			updateData();
 		});
 	});
@@ -240,9 +236,6 @@
 	onDestroy(() => map?.remove());
 </script>
 
-<div
-	bind:this={mapEl}
-	class="w-full max-h-[50vh]"
-	class:h-[40em]={$compact}
-	class:h-[50em]={!$compact}
-/>
+<div bind:this={mapEl} class="w-full h-full relative">
+	<slot />
+</div>

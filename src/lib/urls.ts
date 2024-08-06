@@ -8,6 +8,7 @@ export const PROFILE_SETTINGS_URL = '/perfil/settings';
 
 export const OPERATORS_URL = '/operators';
 export const REGIONS_URL = '/regions';
+export const IMAGES_URL = '/images';
 export const NEWS_URL = '/news';
 export const OSM_URL = '/osm';
 export const CONTRIB_URL = '/contrib';
@@ -22,10 +23,6 @@ export function getRegionEditUrl(region): string {
 
 export function getRegionStopsUrl(region): string {
 	return `${getRegionUrl(region)}/stops`;
-}
-
-export function getRegionImagesUrl(region): string {
-	return `${getRegionUrl(region)}/images`;
 }
 
 export function getRegionOperatorsUrl(region): string {

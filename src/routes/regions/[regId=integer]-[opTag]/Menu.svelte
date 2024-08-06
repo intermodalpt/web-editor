@@ -2,7 +2,6 @@
 	import {
 		getRegionUrl,
 		getRegionStopsUrl,
-		getRegionImagesUrl,
 		getRegionTodoUrl,
 		getRegionIssuesUrl,
 		getRegionStatsUrl
@@ -23,9 +22,6 @@
 		>
 		<a role="tab" class="tab" class:tab-active={page == 'stops'} href={getRegionStopsUrl(region)}
 			>Paragens</a
-		>
-		<a role="tab" class="tab" class:tab-active={page == 'images'} href={getRegionImagesUrl(region)}
-			>Imagens</a
 		>
 		<a role="tab" class="tab" class:tab-active={page == 'todo'} href={getRegionTodoUrl(region)}
 			>Tarefas</a
