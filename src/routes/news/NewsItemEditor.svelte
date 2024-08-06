@@ -7,8 +7,8 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import ExternalSourceRow from './ExternalSourceRow.svelte';
 	import BooleanToggle from '$lib/components/BooleanToggle.svelte';
-	import ContentBlock from './content/ContentBlock.svelte';
-	import { defaultContentBlock, nonBlankString } from './content/utils.js';
+	import ContentBlock from '$lib/content/ContentBlock.svelte';
+	import { defaultContentBlock, nonBlankString } from '$lib/content/utils.js';
 
 	const dispatch = createEventDispatcher();
 
