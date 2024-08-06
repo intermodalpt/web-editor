@@ -1,18 +1,20 @@
 <script>
 	import { tick } from 'svelte';
 	import { writable, derived } from 'svelte/store';
-	import { liveQuery } from 'dexie';
 	import { apiServer } from '$lib/settings';
 	import { permissions } from '$lib/stores';
-	import { getOperators, fetchOperators, getRegions, fetchRegions, loadMissing } from '$lib/db';
 	import Icon from '$lib/components/Icon.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
 	import NewsItem from './NewsItem.svelte';
 	import ExternalNewsItem from './ExternalNewsItem.svelte';
 	import ExternalNewsItemEditor from './ExternalNewsItemEditor.svelte';
+	import NewsItemEditor from './NewsItemEditor.svelte';
 
-	const operators = liveQuery(() => getOperators());
-	const regions = liveQuery(() => getRegions());
+	export let data;
+	const operators = data.operators;
+	const regions = data.regions;
+	const operatorIndex = Object.fromEntries(operators.map((o) => [o.id, o]));
+	const regionIndex = Object.fromEntries(regions.map((r) => [r.id, r]));
 
 	const mapTabs = {
 		pendingExt: 0,
@@ -23,6 +25,7 @@
 	const tab = writable(mapTabs.pendingExt);
 	let editDialog;
 	let editItemId;
+	let editExternalItemId;
 
 	const operatorFilter = writable(null);
 
@@ -45,10 +48,10 @@
 
 	const pendingExternalNews = derived(
 		[pendingExternalPage, operatorFilter, forceDerivedStoresToUpdate],
-		async ([$page, $OperatorFilter], set) => {
+		async ([$page, $operatorFilter], set) => {
 			pendingExternalLoaded = false;
 
-			const res = await ($OperatorFilter
+			const res = await ($operatorFilter
 				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/external_news/pending?p=${$page}`, {
 						credentials: 'include'
 					})
@@ -64,10 +67,10 @@
 
 	const allExternalNews = derived(
 		[pendingExternalPage, operatorFilter, forceDerivedStoresToUpdate],
-		async ([$page, $OperatorFilter], set) => {
+		async ([$page, $operatorFilter], set) => {
 			allExternalLoaded = false;
 
-			const res = await ($OperatorFilter
+			const res = await ($operatorFilter
 				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/external_news?p=${$page}`, {
 						credentials: 'include'
 					})
@@ -81,9 +84,9 @@
 
 	const allInternalNews = derived(
 		[allInternalPage, operatorFilter, forceDerivedStoresToUpdate],
-		async ([$page, $OperatorFilter], set) => {
+		async ([$page, $operatorFilter], set) => {
 			allInternalLoaded = false;
-			const res = await ($OperatorFilter
+			const res = await ($operatorFilter
 				? fetch(`${apiServer}/v1/operators/${$operatorFilter}/news?p=${$page}`, {
 						credentials: 'include'
 					})
@@ -105,24 +108,10 @@
 		// It doesn't. Let's drown a kitten
 		$forceDerivedStoresToUpdate = $forceDerivedStoresToUpdate + 1;
 	}
-
-	async function loadData() {
-		await Promise.all([fetchOperators(), fetchRegions()]);
-	}
-
-	loadData().then(async () => {
-		console.log('data loaded');
-		await loadMissing();
-	});
 </script>
 
-<svelte:head>
-	<title>Noticias</title>
-	<meta name="description" content="Noticias" />
-</svelte:head>
-
 <div class="self-center max-w-[80em] w-full my-4">
-	<div class="tabs tabs-md lg:tabs-lg tabs-lifted ml-4">
+	<div class="tabs tabs-md lg:tabs-lg tabs-lifted mx-4">
 		<button
 			class="tab"
 			class:tab-active={$tab === mapTabs.pendingExt}
@@ -157,18 +146,16 @@
 							$pendingExternalPage = e.detail.page;
 						}}
 					/>
-					{#if $operators}
-						<div class="input-group w-fit">
-							<span class="bg-base-200 label-text">Filtros</span>
-							<span class="label-text">Operador</span>
-							<select bind:value={$operatorFilter} class="input h-full input-bordered">
-								<option selected value>-------</option>
-								{#each Object.values($operators ?? {}) as operator}
-									<option value={operator.id}>{operator.name}</option>
-								{/each}
-							</select>
-						</div>
-					{/if}
+					<div class="input-group w-fit">
+						<span class="bg-base-200 label-text">Filtros</span>
+						<span class="label-text">Operador</span>
+						<select bind:value={$operatorFilter} class="input h-full input-bordered">
+							<option selected value>-------</option>
+							{#each operators as operator}
+								<option value={operator.id}>{operator.name}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
 				{#if pendingExternalLoaded}
 					<div class="flex flex-col gap-2">
@@ -176,12 +163,13 @@
 							<button
 								class="p-2 border-2 rounded-lg cursor-pointer bg-base-100 hover:bg-base-200"
 								on:click={async () => {
-									editItemId = item.id;
+									editItemId = undefined;
+									editExternalItemId = item.id;
 									await tick();
 									editDialog.showModal();
 								}}
 							>
-								<ExternalNewsItem {item} {operators} {regions} />
+								<ExternalNewsItem {item} operators={operatorIndex} regions={regionIndex} />
 							</button>
 						{/each}
 					</div>
@@ -200,18 +188,16 @@
 							$allExternalPage = e.detail.page;
 						}}
 					/>
-					{#if $operators}
-						<div class="input-group w-fit">
-							<span class="bg-base-200 label-text">Filtros</span>
-							<span class="label-text">Operador</span>
-							<select bind:value={$operatorFilter} class="input h-full input-bordered">
-								<option selected value>-------</option>
-								{#each Object.values($operators ?? {}) as operator}
-									<option value={operator.id}>{operator.name}</option>
-								{/each}
-							</select>
-						</div>
-					{/if}
+					<div class="input-group w-fit">
+						<span class="bg-base-200 label-text">Filtros</span>
+						<span class="label-text">Operador</span>
+						<select bind:value={$operatorFilter} class="input h-full input-bordered">
+							<option selected value>-------</option>
+							{#each operators as operator}
+								<option value={operator.id}>{operator.name}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
 				{#if allExternalLoaded}
 					<div class="flex flex-col gap-2">
@@ -219,12 +205,13 @@
 							<button
 								class="p-2 border-2 rounded-lg cursor-pointer bg-base-100 hover:bg-base-200"
 								on:click={async () => {
-									editItemId = item.id;
+									editItemId = undefined;
+									editExternalItemId = item.id;
 									await tick();
 									editDialog.showModal();
 								}}
 							>
-								<ExternalNewsItem {item} {operators} {regions} />
+								<ExternalNewsItem {item} operators={operatorIndex} regions={regionIndex} />
 							</button>
 						{/each}
 					</div>
@@ -243,18 +230,16 @@
 							$allInternalPage = e.detail.page;
 						}}
 					/>
-					{#if $operators}
-						<div class="input-group w-fit">
-							<span class="bg-base-200 label-text">Filtros</span>
-							<span class="label-text">Operador</span>
-							<select bind:value={$operatorFilter} class="input h-full input-bordered">
-								<option selected value>-------</option>
-								{#each Object.values($operators ?? {}) as operator}
-									<option value={operator.id}>{operator.name}</option>
-								{/each}
-							</select>
-						</div>
-					{/if}
+					<div class="input-group w-fit">
+						<span class="bg-base-200 label-text">Filtros</span>
+						<span class="label-text">Operador</span>
+						<select bind:value={$operatorFilter} class="input h-full input-bordered">
+							<option selected value>-------</option>
+							{#each operators as operator}
+								<option value={operator.id}>{operator.name}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
 				{#if allInternalLoaded}
 					<div class="flex flex-col gap-2">
@@ -262,12 +247,13 @@
 							<button
 								class="p-2 border-2 rounded-lg cursor-pointer bg-base-100 hover:bg-base-200"
 								on:click={async () => {
+									editExternalItemId = undefined;
 									editItemId = item.id;
 									await tick();
 									editDialog.showModal();
 								}}
 							>
-								<NewsItem {item} {operators} {regions} />
+								<NewsItem {item} operators={operatorIndex} regions={regionIndex} />
 							</button>
 						{/each}
 					</div>
@@ -281,20 +267,20 @@
 	</div>
 </div>
 
-{#if editItemId}
-	<dialog bind:this={editDialog} class="modal modal-bottom sm:modal-middle">
-		<div class="modal-box relative z-30 sm:max-w-5xl">
-			<div>
-				<form method="dialog">
-					<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
-						<Icon name="close" class="h-4 stroke-current" />
-					</button>
-				</form>
-				{#key editItemId}
+<dialog bind:this={editDialog} class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box relative z-30 sm:max-w-5xl">
+		<div>
+			<form method="dialog">
+				<button class="btn btn-sm btn-circle btn-error absolute right-2 top-2">
+					<Icon name="close" class="h-4 stroke-current" />
+				</button>
+			</form>
+			{#if editExternalItemId}
+				{#key editExternalItemId}
 					<ExternalNewsItemEditor
-						id={editItemId}
-						{operators}
-						{regions}
+						id={editExternalItemId}
+						operators={operatorIndex}
+						regions={regionIndex}
 						canEdit={$permissions?.news?.create || $permissions?.news?.modify}
 						on:save={() => {
 							editDialog.close();
@@ -306,10 +292,10 @@
 						}}
 					/>
 				{/key}
-			</div>
+			{/if}
 		</div>
-		<form method="dialog" class="modal-backdrop">
-			<button></button>
-		</form>
-	</dialog>
-{/if}
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button></button>
+	</form>
+</dialog>

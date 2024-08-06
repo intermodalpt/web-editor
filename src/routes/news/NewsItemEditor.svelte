@@ -17,23 +17,14 @@
 	export let regions;
 	export let canEdit;
 
-	const operatorOptions = derived(
-		operators,
-		($operators) =>
-			Object.values($operators ?? {}).map((operator) => ({
-				value: operator.id,
-				label: operator.name
-			})) ?? []
-	);
-
-	const regionOptions = derived(
-		regions,
-		($regions) =>
-			Object.values($regions ?? {}).map((region) => ({
-				value: region.id,
-				label: region.name
-			})) ?? []
-	);
+	const operatorOptions = Object.values(operators).map((operator) => ({
+		value: operator.id,
+		label: operator.name
+	}));
+	const regionOptions = Object.values(regions).map((region) => ({
+		value: region.id,
+		label: region.name
+	}));
 
 	// The dialog in the current component
 	let newExternalDialog;
@@ -347,7 +338,7 @@
 		<div>
 			<h4 class="label-text">Operadores:</h4>
 			<Select
-				items={$operatorOptions}
+				items={operatorOptions}
 				multiple={true}
 				disabled={!canEdit}
 				bind:value={selectedOperators}
@@ -356,7 +347,7 @@
 		<div>
 			<h4 class="label-text">Regiões:</h4>
 			<Select
-				items={$regionOptions}
+				items={regionOptions}
 				multiple={true}
 				disabled={!canEdit}
 				bind:value={selectedRegions}
@@ -425,7 +416,7 @@
 						on:sync-regions={(e) => {
 							selectedRegions = e.detail.regionIds.map((id) => {
 								return {
-									label: $regions[id]?.name,
+									label: regions[id]?.name,
 									value: id
 								};
 							});
@@ -434,7 +425,7 @@
 						on:sync-operators={(e) => {
 							selectedOperators = e.detail.operatorIds.map((id) => {
 								return {
-									label: $operators[id]?.name,
+									label: operators[id]?.name,
 									value: id
 								};
 							});
@@ -457,13 +448,13 @@
 							summary = e.detail.summary;
 							selectedRegions = e.detail.regionIds.map((id) => {
 								return {
-									label: $regions[id]?.name,
+									label: regions[id]?.name,
 									value: id
 								};
 							});
 							selectedOperators = e.detail.operatorIds.map((id) => {
 								return {
-									label: $operators[id]?.name,
+									label: operators[id]?.name,
 									value: id
 								};
 							});

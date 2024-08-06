@@ -15,23 +15,14 @@
 	export let canEdit;
 	export let overrideIsValidated = true;
 
-	const operatorOptions = derived(
-		operators,
-		($operators) =>
-			Object.values($operators ?? {}).map((operator) => ({
-				value: operator.id,
-				label: operator.name
-			})) ?? []
-	);
-
-	const regionOptions = derived(
-		regions,
-		($regions) =>
-			Object.values($regions ?? {}).map((region) => ({
-				value: region.id,
-				label: region.name
-			})) ?? []
-	);
+	const operatorOptions = Object.values(operators).map((operator) => ({
+		value: operator.id,
+		label: operator.name
+	}));
+	const regionOptions = Object.values(regions).map((region) => ({
+		value: region.id,
+		label: region.name
+	}));
 
 	let original = null;
 	let selectedRegions = [];
@@ -140,13 +131,13 @@
 
 	<h4 class="label-text">Operadores:</h4>
 	<Select
-		items={$operatorOptions}
+		items={operatorOptions}
 		multiple={true}
 		disabled={!canEdit}
 		bind:value={selectedOperators}
 	/>
 	<h4 class="label-text">Regiões:</h4>
-	<Select items={$regionOptions} multiple={true} disabled={!canEdit} bind:value={selectedRegions} />
+	<Select items={regionOptions} multiple={true} disabled={!canEdit} bind:value={selectedRegions} />
 
 	<h4 class="label-text">Imagens</h4>
 	<div class="flex gap-2 flex-wrap ml-2 min-h-32">
@@ -203,7 +194,7 @@
 		<button class="btn btn-error" class:hidden={!canEdit} on:click={handleDelete}>Apagar</button>
 		<div class="flex gap-2">
 			<a
-				class="btn btn-primary"
+				class="btn btn-secondary"
 				class:hidden={!canEdit || !original?.is_validated}
 				href="/news/import/{id}">Importar</a
 			>

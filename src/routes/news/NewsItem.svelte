@@ -14,16 +14,12 @@
 
 <div class="flex gap-2 flex-wrap justify-between">
 	<div class="flex gap-2 flex-wrap">
-		{#if $operators}
-			{#each item.operator_ids as operator_id}
-				<span class="badge badge-outline border-orange-500">{$operators[operator_id]?.name}</span>
-			{/each}
-		{/if}
-		{#if $regions}
-			{#each item.region_ids as region_id}
-				<span class="badge badge-outline border-green-500">{$regions[region_id]?.name}</span>
-			{/each}
-		{/if}
+		{#each item.operator_ids as operator_id}
+			<span class="badge badge-outline border-orange-500">{operators[operator_id]?.name}</span>
+		{/each}
+		{#each item.region_ids as region_id}
+			<span class="badge badge-outline border-green-500">{regions[region_id]?.name}</span>
+		{/each}
 	</div>
 </div>
 

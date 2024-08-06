@@ -151,11 +151,9 @@
 <div class="flex gap-1 ml-2">
 	<button class="btn btn-xs h-auto" on:click={handleSyncRegions}>«</button>
 	<div class="flex gap-2 flex-wrap">
-		{#if $regions}
-			{#each externalItem.region_ids ?? [] as region_id}
-				<span class="badge badge-outline border-green-500">{$regions[region_id]?.name}</span>
-			{/each}
-		{/if}
+		{#each externalItem.region_ids ?? [] as region_id}
+			<span class="badge badge-outline border-green-500">{regions[region_id]?.name}</span>
+		{/each}
 		{#if (externalItem.operator_ids ?? []).length === 0}
 			<span>Sem regiões referênciadas</span>
 		{/if}
@@ -165,11 +163,9 @@
 <div class="flex gap-1 ml-2">
 	<button class="btn btn-xs h-auto" on:click={handleSyncOperators}>«</button>
 	<div class="flex gap-2 flex-wrap">
-		{#if $operators}
-			{#each externalItem.operator_ids ?? [] as operator_id}
-				<span class="badge badge-outline border-orange-500">{$operators[operator_id]?.name}</span>
-			{/each}
-		{/if}
+		{#each externalItem.operator_ids ?? [] as operator_id}
+			<span class="badge badge-outline border-orange-500">{operators[operator_id]?.name}</span>
+		{/each}
 		{#if (externalItem.operator_ids ?? []).length === 0}
 			<span>Sem operadores referênciados</span>
 		{/if}
