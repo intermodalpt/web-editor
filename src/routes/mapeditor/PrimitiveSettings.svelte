@@ -1,0 +1,61 @@
+<script lang="ts">
+	import Outline from './Outline.svelte';
+
+	export let name = '';
+	export let primitive;
+
+	if (!primitive) {
+		primitive = {
+			size: 1,
+			color: '#FFFFFF',
+			opacity: 1
+		};
+	}
+
+	let primitiveHasOutline = primitive.outline != null;
+
+	function toggleOutline(value) {
+		if (value) {
+			primitive.outline = primitive.outline ?? {
+				color: '#FFFFFF',
+				opacity: 1,
+				size: 1
+			};
+		} else {
+			primitive.outline = null;
+		}
+	}
+
+	$: {
+		toggleOutline(primitiveHasOutline);
+	}
+</script>
+
+<span class="text-sm text-center w-full block border-2 bg-slate-100">{name}</span>
+<div class="flex items-center gap-2 pl-2 py-2 border-l-2 border-r-2 border-b-2 !border-slate-300">
+	<label>
+		Size:
+		<input type="number" class="input input-bordered input-xs w-16" bind:value={primitive.size} />
+	</label>
+	<input type="color" class="input input-xs" bind:value={primitive.color} />
+	<label>
+		O:
+		<input
+			type="number"
+			class="input input-bordered input-xs"
+			min="0"
+			max="1"
+			step="0.1"
+			bind:value={primitive.opacity}
+		/>
+	</label>
+</div>
+<div class="border-l-2 border-r-2 !border-slate-300 pl-2 py-2">
+	<label class="flex justify-between gap-2 pb-1">
+		<input type="checkbox" class="checkbox checkbox-xs" bind:checked={primitiveHasOutline} />
+		<span class="text-xs grow">Outline</span>
+	</label>
+	{#if primitive.outline}
+		<Outline outline={primitive.outline} />
+	{/if}
+</div>
