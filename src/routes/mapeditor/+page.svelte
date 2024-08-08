@@ -333,7 +333,6 @@
 								value={layer}
 								bind:group={addToLayer}
 								class="radio radio-sm"
-								on:change={redraw}
 							/>
 							<span class="font-bold">{layer.name ?? 'Sem nome'}</span>
 						</label>
@@ -368,17 +367,14 @@
 
 				{#if editedLayerId && editedLayerId == layer.id}
 					<LayerSettings bind:layer on:featuredelete={redraw} />
-					<div class="flex gap-1">
-						<button class="btn btn-error btn-xs" on:click={() => deleteLayer(layer)}
-							>Apagar
-						</button>
-					</div>
+                    <div class="flex justify-end">
 					<button
-						class="btn btn-primary btn-xs btn-outline"
-						on:click={() => {
-							editedLayerId = undefined;
-						}}>Guardar</button
-					>
+                    class="btn btn-primary btn-xs btn-outline"
+                    on:click={() => {
+                        editedLayerId = undefined;
+                    }}>Guardar</button
+                >
+                    </div>
 				{/if}
 			{/each}
 
