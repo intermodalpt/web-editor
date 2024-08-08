@@ -5,17 +5,17 @@
 	import { demoLayer } from './dummydata';
 
 	let map;
+	let mapLoaded = false;
 
 	let layerIdCounter = 1;
 	let featureIdCounter = 1;
 
-	let layers = [demoLayer];
+	let layers: Layer[] = [];
 	$: layerIndex = Object.fromEntries(layers.map((l) => [l.id, l]));
-	let editedLayerId: number | undefined = 1;
-	$: editedLayer = editedLayerId ? layerIndex[editedLayerId] : undefined;
-	// let addToLayer: number | undefined;
-	// $: addToLayer = addToLayerId ? layerIndex[addToLayerId] : addToLayerId;
-	let addToLayer;
+
+	let selectedLayer;
+	// The pane whose settings are being edited
+	let openSettingsLayerId;
 
 	$: features = Object.fromEntries(layers.flatMap((l) => l.features));
 	let editedFeatureId;
@@ -52,9 +52,11 @@
 		const newLayer = {
 			id: ++layerIdCounter,
 			features: [],
-			points: {},
-			line: {},
-			polys: {},
+			spec: {
+				points: {},
+				lines: {},
+				polys: {}
+			},
 			visible: true
 		};
 		layers.push(newLayer);
@@ -64,11 +66,7 @@
 
 	function deleteLayer(layer) {
 		layers = layers.filter((l) => l.id !== layer.id);
-		redraw();
-	}
-
-	function redraw() {
-		map.redraw();
+		map.deleteLayer(layer.id);
 	}
 
 	function resetEditData() {
@@ -143,11 +141,11 @@
 
 		console.log(poly);
 
-		map.setControlFeatures(points, line, [poly]);
+		map.drawControlFeatures(points, line, [poly]);
 	}
 
 	function finishEdition() {
-		if (!addToLayer) {
+		if (!selectedLayer) {
 			console.log('No selected layer. This is a bug');
 			return;
 		}
@@ -172,7 +170,7 @@
 			//         break;
 			//     case modes.line:
 			//         if (editedLineVertices.length > 1) {
-			//             editedLayer.features.push({
+			//             selectedLayer.features.push({
 			//                 type: 'LineString',
 			//                 coordinates: editedLineVertices
 			//             });
@@ -180,7 +178,7 @@
 			//         break;
 			//     case modes.route:
 			//         if (editedRouteVertices.length > 1) {
-			//             editedLayer.features.push({
+			//             selectedLayer.features.push({
 			//                 type: 'LineString',
 			//                 coordinates: editedRouteVertices
 			//             });
@@ -188,7 +186,7 @@
 			//         break;
 			//     case modes.poly:
 			//         if (editedPolyVertices.length > 2) {
-			//             editedLayer.features.push({
+			//             selectedLayer.features.push({
 			//                 type: 'Polygon',
 			//                 coordinates: [editedPolyVertices]
 			//             });
@@ -198,7 +196,7 @@
 		} else {
 			switch (mode) {
 				case modes.point:
-					addToLayer.features.push({
+					selectedLayer.features.push({
 						id: featureIdCounter++,
 						type: 'Feature',
 						geometry: {
@@ -209,7 +207,7 @@
 					break;
 				case modes.line:
 					if (editedLineVertices.length > 1) {
-						addToLayer.features.push({
+						selectedLayer.features.push({
 							id: featureIdCounter++,
 							type: 'Feature',
 							geometry: {
@@ -222,7 +220,7 @@
 					break;
 				case modes.route:
 					if (editedRouteVertices.length > 1) {
-						addToLayer.features.push({
+						selectedLayer.features.push({
 							id: featureIdCounter++,
 							type: 'Feature',
 							geometry: {
@@ -236,7 +234,7 @@
 				case modes.poly:
 					if (editedPolyVertices.length > 2) {
 						editedPolyVertices.push(editedPolyVertices[0]);
-						addToLayer.features.push({
+						selectedLayer.features.push({
 							id: featureIdCounter++,
 							type: 'Feature',
 							geometry: {
@@ -250,12 +248,13 @@
 			}
 		}
 
+		map.updateLayerFeatures(selectedLayer.id, selectedLayer.features);
+
 		isMovingControlPoint = false;
 		resetEditData();
-		redraw();
 		mode = modes.select;
 		layers = layers;
-		console.log('finishEdition', addToLayer);
+		console.log('finishEdition', selectedLayer);
 	}
 
 	function handleMapClick(e) {
@@ -283,16 +282,51 @@
 	}
 
 	function onMapLoad() {
-		map.addLayer(demoLayer);
+		console.log('onMapLoad');
+		mapLoaded = true;
+		// This is test data. Delete me later
+		loadData([demoLayer]);
 	}
 
 	function handleKeyboard(e) {
 		// If enter is pressed
 		if (e.key === 'Enter') {
-			console.log('Enter pressed');
 			finishEdition();
+		} else if (e.key === 'Escape') {
+			resetEditData();
+			mode = modes.select;
 		}
 	}
+
+	function loadData(newLayers: Layer[]) {
+		console.log('loadData');
+		layers = newLayers;
+		if (mapLoaded) {
+			layers.forEach((l) => map.addLayer(l));
+		}
+
+		if (layers.length > 0) {
+			selectedLayer = layers[0];
+		}
+	}
+
+	function redraw() {}
+
+	function handleSpecChange() {
+		console.log('handleSpecChange');
+	}
+
+	function handleVisibilityToggle(layer) {
+		map.setLayerVisibility(layer.id, layer.visible);
+	}
+
+	function handleDeleteFeature(e) {
+		const layer = e.detail.layer;
+		console.log('handleDeleteFeature', layer);
+		map.updateLayerFeatures(layer.id, layer.features);
+	}
+
+	onMount(() => {});
 </script>
 
 <svelte:window on:keydown={handleKeyboard} />
@@ -315,23 +349,23 @@
 		//
 	}}
 >
-	<div class="absolute right-0 z-10 flex flex-col justify-center h-full py-3 transition w-96">
-		<div class="bg-base-100 h-full rounded-xl shadow-lg flex flex-col">
+	<div class="absolute right-0 z-10 flex flex-col justify-start py-3 transition w-96">
+		<div class="max-h-full rounded-l-xl shadow-lg flex flex-col border-2 bg-base-200">
 			{#each layers as layer}
-				<div class="flex flex-col gap-2 p-2 bg-base-200 rounded-md">
+				<div class="flex flex-col gap-2 p-2 rounded-md">
 					<div class="flex gap-2 items-center">
 						<label class="flex items-center grow gap-2">
-                            <span
-                                class="px-2 rounded-md"
-                                class:bg-primary={editedLayerId == layer.id}
-                                class:text-primary-content={editedLayerId == layer.id}
-                                class:bg-base-300={editedLayerId != layer.id}>{layer.id}</span
-                            >
+							<span
+								class="px-2 rounded-md"
+								class:bg-primary={selectedLayer?.id == layer.id}
+								class:text-primary-content={selectedLayer?.id == layer.id}
+								class:bg-base-300={selectedLayer?.id != layer.id}>{layer.id}</span
+							>
 							<input
 								type="radio"
 								name="layers"
 								value={layer}
-								bind:group={addToLayer}
+								bind:group={selectedLayer}
 								class="radio radio-sm"
 							/>
 							<span class="font-bold">{layer.name ?? 'Sem nome'}</span>
@@ -349,7 +383,9 @@
 								type="checkbox"
 								class="checkbox checkbox-sm"
 								bind:checked={layer.visible}
-								on:change={redraw}
+								on:change={() => {
+									handleVisibilityToggle(layer);
+								}}
 							/>
 							<span>Visível</span>
 						</label>
@@ -357,7 +393,7 @@
 						<button
 							class="btn btn-neutral btn-outline btn-xs"
 							on:click={() => {
-								editedLayerId = layer.id;
+								openSettingsLayerId = layer.id;
 							}}>Edit</button
 						>
 						<button class="btn btn-neutral btn-outline btn-xs">⬆</button>
@@ -365,24 +401,25 @@
 					</div>
 				</div>
 
-				{#if editedLayerId && editedLayerId == layer.id}
-					<LayerSettings bind:layer on:featuredelete={redraw} />
-                    <div class="flex justify-end">
-					<button
-                    class="btn btn-primary btn-xs btn-outline"
-                    on:click={() => {
-                        editedLayerId = undefined;
-                    }}>Guardar</button
-                >
-                    </div>
+				{#if openSettingsLayerId && openSettingsLayerId == layer.id}
+					<div class="bg-white">
+						<LayerSettings bind:layer on:featuredelete={handleDeleteFeature} />
+						<div class="flex justify-end">
+							<button
+								class="btn btn-primary btn-sm btn-outline my-2"
+								on:click={() => {
+									openSettingsLayerId = undefined;
+								}}>Guardar</button
+							>
+						</div>
+						<hr />
+					</div>
 				{/if}
 			{/each}
-
-			<!-- {#each layers as layer}
-				<LayerSettings {layer} />
-			{/each} -->
 			<span class="grow"></span>
-			<button class="btn btn-primary btn-md" on:click={addEmptyLayer}>Nova camada</button>
+			<button class="btn btn-primary btn-md rounded-r-none" on:click={addEmptyLayer}
+				>Nova camada</button
+			>
 		</div>
 	</div>
 
@@ -428,6 +465,6 @@
 	</div>
 
 	<div class="absolute left-0 bottom-0 z-10 p-3 flex gap-2 bg-white rounded-br-md">
-		<textarea class="w-96 h-96">{JSON.stringify(addToLayer, null, 2)}</textarea>
+		<textarea class="w-96 h-96">{JSON.stringify(selectedLayer, null, 2)}</textarea>
 	</div>
 </Map>

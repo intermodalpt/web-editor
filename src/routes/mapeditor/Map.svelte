@@ -1,4 +1,8 @@
 <script lang="ts">
+	import maplibre from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { onDestroy, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import {
 		defaultMapBounds,
 		defaultMapCenter,
@@ -6,11 +10,7 @@
 		mapMinZoom,
 		tileStyle
 	} from '$lib/settings';
-	import { json } from '@sveltejs/kit';
-	import maplibre from 'maplibre-gl';
-	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { onDestroy, onMount } from 'svelte';
-	import { createEventDispatcher } from 'svelte';
+	import { completeLayerSpec } from './utils';
 
 	let map;
 	let mapElem;
@@ -18,33 +18,242 @@
 
 	const dispatch = createEventDispatcher();
 
-	let drawnLayers: DrawnLayer[] = [];
+	let dLayers: DrawnLayer[] = [];
 
-	let layers: Layer[] = [];
+	// ----- Rendered data handling -----
 
-	export function redraw() {
-		drawnLayers.forEach((pair) => {
-			pair.sublayers.forEach((layerId) => {
-				map.removeLayer(layerId);
-			});
-			map.removeSource(pair.source);
-		});
-
-		drawnLayers = [];
-		layers.forEach((layer) => drawLayer(layer));
+	export function addLayer(layer: Layer) {
+		const dLayer = {
+			id: layer.id,
+			features: structuredClone(layer.features),
+			spec: completeLayerSpec(layer.spec),
+			source: '',
+			sublayers: [],
+			visible: true
+		};
+		instantiateLayerSpec(dLayer);
+		dLayers.push(dLayer);
 	}
 
-	export function addLayer(layer) {
-		layers.push(layer);
-		redraw();
+	export function setLayerVisibility(layerId: number, visible: boolean) {
+		const dLayer = dLayers.find((l) => l.id === layerId);
+		if (!dLayer) {
+			console.error('Attempted to set the visibility of an unrecognized layer');
+			return;
+		}
+		if (dLayer.visible === visible) return;
+		dLayer.visible = visible;
+		if (visible) {
+			map.getSource(dLayer.source).setData({
+				type: 'FeatureCollection',
+				features: dLayer.features
+			});
+		} else {
+			map.getSource(dLayer.source).setData({
+				type: 'FeatureCollection',
+				features: []
+			});
+		}
 	}
 
 	export function deleteLayer(layerId) {
-		layers = layers.filter((l) => l.id !== id);
-		redraw();
+		const dLayer = dLayers.find((l) => l.id == layerId);
+		if (!dLayer) {
+			console.error('Attempted to delete an unrecognized layer');
+			return;
+		}
+		dropLayerSpecDerivatives(dLayer);
+		dLayers = dLayers.filter((l) => l.id !== layerId);
 	}
 
-	export function setControlFeatures(
+	export function updateLayerSpec(layerId: number, spec: LayerSpec) {
+		const dlayer = dLayers.find((l) => l.id === layerId);
+		if (!dlayer) {
+			console.error('Attempted to update the spec of an unrecognized layer');
+			return;
+		}
+		dlayer.spec = completeLayerSpec(spec);
+		dropLayerSpecDerivatives(dlayer);
+		instantiateLayerSpec(dlayer.spec);
+	}
+
+	export function updateLayerFeatures(layerId: number, features: GeoJsonFeature[]) {
+		const layer = dLayers.find((l) => l.id === layerId);
+		if (!layer) {
+			console.error('Attempted to update the features of an unrecognized layer');
+			return;
+		}
+		layer.features = structuredClone(features);
+		map.getSource(layer.source).setData({
+			type: 'FeatureCollection',
+			features: features
+		});
+	}
+
+	function instantiateLayerSpec(layer) {
+		const sourceId = '' + layer.id;
+		map.addSource(sourceId, {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: layer.features
+			}
+		});
+		layer.source = sourceId;
+
+		const spec = layer.spec;
+
+		if (spec.points) {
+			const layerId = `${layer.id}-points`;
+			layer.sublayers.push(layerId);
+			map.addLayer({
+				id: layerId,
+				type: 'circle',
+				source: '' + layer.id,
+				filter: ['==', '$type', 'Point'],
+				paint: {
+					'circle-radius': spec.points.size ?? 3,
+					'circle-color': spec.points.color ?? '#000000',
+					'circle-opacity': spec.points.opacity ?? 1,
+					'circle-stroke-color': spec.points.outline?.color ?? '#000000',
+					'circle-stroke-opacity': spec.points.outline?.opacity ?? 0,
+					'circle-stroke-width': spec.points.outline?.size ?? 1
+				}
+			});
+			addClickEvent(layerId);
+		}
+
+		if (spec.lines) {
+			let lineThickness = spec.lines.size ?? 2;
+			if (spec.lines.outline) {
+				const layerId = `${layer.id}-lines-outline`;
+				layer.sublayers.push(layerId);
+				map.addLayer({
+					id: layerId,
+					type: 'line',
+					source: '' + layer.id,
+					filter: ['==', '$type', 'LineString'],
+					layout: {
+						'line-cap': 'round',
+						'line-join': 'round'
+					},
+					paint: {
+						'line-width': lineThickness + (spec.lines.outline?.thickness ?? 1),
+						'line-color': spec.lines.outline?.color ?? '#333333',
+						'line-opacity': spec.lines.outline?.opacity ?? 1
+						// 'line-dasharray': spec.lines.dashArray ?? []
+					}
+				});
+				addClickEvent(layerId);
+			}
+
+			const layerId = `${layer.id}-lines`;
+			layer.sublayers.push(layerId);
+			map.addLayer({
+				id: layerId,
+				type: 'line',
+				source: '' + layer.id,
+				filter: ['==', '$type', 'LineString'],
+				layout: {
+					'line-cap': 'round',
+					'line-join': 'round'
+				},
+				paint: {
+					'line-width': lineThickness,
+					'line-color': spec.lines.color ?? '#ffffff',
+					'line-opacity': spec.lines?.opacity ?? 1
+					// 'line-dasharray': spec.lines.dashArray ?? []
+				}
+			});
+			addClickEvent(layerId);
+		}
+
+		if (spec.polys) {
+			const layerId = `${layer.id}-polys`;
+			layer.sublayers.push(layerId);
+			map.addLayer({
+				id: layerId,
+				type: 'fill',
+				source: '' + layer.id,
+				// Accept polygons or multipolygons
+				filter: ['==', '$type', 'Polygon'],
+				paint: {
+					'fill-color': spec.polys.color ?? '#000000',
+					'fill-opacity': spec.polys.opacity ?? 1,
+					'fill-outline-color': spec.polys.outline?.color ?? '#000000'
+					// 'fill-outline-opacity': spec.polys.outline?.opacity ?? 0,
+					// 'fill-outline-width': spec.polys.outline?.size ?? 1
+				}
+			});
+			addClickEvent(layerId);
+
+			if (spec.polys.outline) {
+				const layerId = `${layer.id}-polys-outline`;
+				layer.sublayers.push(layerId);
+				map.addLayer({
+					id: layerId,
+					type: 'line',
+					source: '' + layer.id,
+					filter: ['==', '$type', 'Polygon'],
+					layout: {
+						'line-cap': 'round',
+						'line-join': 'round'
+					},
+					paint: {
+						'line-width': spec.polys.outline.size ?? 1,
+						'line-color': spec.polys.outline.color ?? '#333333',
+						'line-opacity': spec.polys.outline.opacity ?? 1
+						// 'line-dasharray': spec.lines.dashArray ?? []
+					}
+				});
+				addClickEvent(layerId);
+			}
+		}
+	}
+
+	// Drops the layers and event handlers
+	function dropLayerSpecDerivatives(layer) {
+		layer.sublayers.forEach((layerId) => {
+			map.removeLayer(layerId);
+			map.off('click', layerId);
+			map.off('mouseenter', layerId);
+			map.off('mouseleave', layerId);
+		});
+		layer.sublayers = [];
+		if (layer.source) {
+			map.removeSource(layer.source);
+			layer.source = undefined;
+		}
+	}
+
+	// ----- Generic events -----
+
+	function handleMapClick(e) {
+		dispatch('mapclick', e);
+	}
+
+	function handleFeatureClick(e) {
+		e.preventDefault();
+		dispatch('featureclick', { feature: e.features[0] });
+	}
+
+	function addClickEvent(layerId) {
+		console.log('Adding click event to layer', layerId);
+		map.on('click', layerId, handleFeatureClick);
+
+		const canvas = map.getCanvas();
+		map.on('mouseenter', layerId, () => {
+			canvas.style.cursor = 'pointer';
+		});
+
+		map.on('mouseleave', layerId, () => {
+			canvas.style.cursor = '';
+		});
+	}
+
+	// ----- Edition handling -----
+
+	export function drawControlFeatures(
 		points: ControlPoint[],
 		line: [number, number][],
 		poly: [number, number][][]
@@ -81,15 +290,10 @@
 			});
 		}
 
-		console.log(poly);
-		console.log(JSON.stringify(features));
-
 		map.getSource('editing').setData({
 			type: 'FeatureCollection',
 			features: features
 		});
-		console.log('done at', new Date().getMilliseconds());
-		console.log('------------------------');
 	}
 
 	export function clearEditData() {
@@ -99,157 +303,7 @@
 		});
 	}
 
-	function handleMapClick(e) {
-		dispatch('mapclick', e);
-	}
-
-	function handleFeatureClick(e) {
-		e.preventDefault();
-		dispatch('featureclick', { feature: e.features[0] });
-	}
-
-	function addClickEvent(layer) {
-		map.on('click', layer, handleFeatureClick);
-
-		const canvas = map.getCanvas();
-		map.on('mouseenter', layer, () => {
-			canvas.style.cursor = 'pointer';
-		});
-
-		map.on('mouseleave', layer, () => {
-			canvas.style.cursor = '';
-		});
-	}
-
-	function drawLayer(layer) {
-		if (!layer.visible) return;
-
-		const sourceId = '' + layer.id;
-		map.addSource(sourceId, {
-			type: 'geojson',
-			data: {
-				type: 'FeatureCollection',
-				features: layer.features
-			}
-		});
-
-		const sublayers = [];
-
-		if (layer.points) {
-			const layerId = `${layer.id}-${layer.name ?? ''}-points`;
-			sublayers.push(layerId);
-			map.addLayer({
-				id: layerId,
-				type: 'circle',
-				source: '' + layer.id,
-				filter: ['==', '$type', 'Point'],
-				paint: {
-					'circle-radius': layer.points.size ?? 3,
-					'circle-color': layer.points.color ?? '#000000',
-					'circle-opacity': layer.points.opacity ?? 1,
-					'circle-stroke-color': layer.points.outline?.color ?? '#000000',
-					'circle-stroke-opacity': layer.points.outline?.opacity ?? 0,
-					'circle-stroke-width': layer.points.outline?.size ?? 1
-				}
-			});
-			addClickEvent(layerId);
-		}
-
-		if (layer.lines) {
-			let lineThickness = layer.lines.size ?? 2;
-			if (layer.lines.outline) {
-				const layerId = `${layer.id}-${layer.name ?? ''}-lines-outline`;
-				sublayers.push(layerId);
-				map.addLayer({
-					id: layerId,
-					type: 'line',
-					source: '' + layer.id,
-					filter: ['==', '$type', 'LineString'],
-					layout: {
-						'line-cap': 'round',
-						'line-join': 'round'
-					},
-					paint: {
-						'line-width': lineThickness + (layer.lines.outline?.thickness ?? 1),
-						'line-color': layer.lines.outline?.color ?? '#333333',
-						'line-opacity': layer.lines.outline?.opacity ?? 1
-						// 'line-dasharray': layer.lines.dashArray ?? []
-					}
-				});
-				addClickEvent(layerId);
-			}
-
-			const layerId = `${layer.id}-${layer.name ?? ''}-lines`;
-			sublayers.push(layerId);
-			map.addLayer({
-				id: layerId,
-				type: 'line',
-				source: '' + layer.id,
-				filter: ['==', '$type', 'LineString'],
-				layout: {
-					'line-cap': 'round',
-					'line-join': 'round'
-				},
-				paint: {
-					'line-width': lineThickness,
-					'line-color': layer.lines.color ?? '#ffffff',
-					'line-opacity': layer.lines?.opacity ?? 1
-					// 'line-dasharray': layer.lines.dashArray ?? []
-				}
-			});
-			addClickEvent(layerId);
-		}
-
-		if (layer.polys) {
-			const layerId = `${layer.id}-${layer.name ?? ''}-polys`;
-			sublayers.push(layerId);
-			map.addLayer({
-				id: layerId,
-				type: 'fill',
-				source: '' + layer.id,
-				// Accept polygons or multipolygons
-				filter: ['==', '$type', 'Polygon'],
-				paint: {
-					'fill-color': layer.polys.color ?? '#000000',
-					'fill-opacity': layer.polys.opacity ?? 1,
-					'fill-outline-color': layer.polys.outline?.color ?? '#000000'
-					// 'fill-outline-opacity': layer.polys.outline?.opacity ?? 0,
-					// 'fill-outline-width': layer.polys.outline?.size ?? 1
-				}
-			});
-			addClickEvent(layerId);
-
-			if (layer.polys.outline) {
-				const layerId = `${layer.id}-${layer.name ?? ''}-polys-outline`;
-				sublayers.push(layerId);
-				map.addLayer({
-					id: layerId,
-					type: 'line',
-					source: '' + layer.id,
-					filter: ['==', '$type', 'Polygon'],
-					layout: {
-						'line-cap': 'round',
-						'line-join': 'round'
-					},
-					paint: {
-						'line-width': layer.polys.outline.size ?? 1,
-						'line-color': layer.polys.outline.color ?? '#333333',
-						'line-opacity': layer.polys.outline.opacity ?? 1
-						// 'line-dasharray': layer.lines.dashArray ?? []
-					}
-				});
-				addClickEvent(layerId);
-			}
-		}
-
-		drawnLayers.push({
-			id: layer.id,
-			source: sourceId,
-			sublayers
-		});
-	}
-
-	function addSourcesAndLayers() {
+	function instantiateEditionLayers() {
 		map.addSource('editing', {
 			type: 'geojson',
 			data: {
@@ -301,7 +355,7 @@
 		});
 	}
 
-	function addEvents() {
+	function addEditionEvents() {
 		const canvas = map.getCanvas();
 		map.on('click', (e) => {
 			handleMapClick(e);
@@ -366,16 +420,15 @@
 			style: tileStyle,
 			minZoom: mapMinZoom,
 			zoom: defaultMapZoom,
-			maxZoom: 11,
+			maxZoom: 20,
 			maxBounds: defaultMapBounds,
 			center: defaultMapCenter
 		});
 
 		map.on('load', () => {
-			addSourcesAndLayers();
-			addEvents();
+			instantiateEditionLayers();
+			addEditionEvents();
 			mapLoaded = true;
-			redraw();
 			dispatch('mapload');
 		});
 	});

@@ -20,7 +20,7 @@
 		const feature = e.detail.feature;
 		layer.features = layer.features.filter((f) => f.id !== feature.id);
 		layer = layer;
-		dispatch('featuredelete', { feature });
+		dispatch('featuredelete', { layer, feature });
 	}
 </script>
 
@@ -47,7 +47,10 @@
 	>
 </div>
 
-<div class:hidden={tab != tabs.objects}>
+<div class="min-h-32 max-h-64 overflow-y-scroll" class:hidden={tab != tabs.objects}>
+	{#if layer.features.length == 0}
+		<p class="text-center text-sm text-slate-400 py-4">Sem objetos</p>
+	{/if}
 	{#each layer.features as feature}
 		<Feature {feature} on:delete={handleDeleteFeature} />
 	{/each}
