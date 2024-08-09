@@ -9,9 +9,10 @@
 			type="number"
 			class="input input-bordered input-xs w-16"
 			bind:value={outline.size}
+			on:change
 		/>
 	</label>
-	<input type="color" class="input input-xs" bind:value={outline.color} />
+	<input type="color" class="input input-xs" bind:value={outline.color} on:change />
 	<label>
 		O:
 		<input
@@ -21,6 +22,7 @@
 			max="1"
 			step="0.1"
 			bind:value={outline.opacity}
+			on:change
 		/>
 	</label>
 </div>

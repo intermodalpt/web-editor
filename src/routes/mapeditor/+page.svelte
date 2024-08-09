@@ -310,10 +310,11 @@
 		}
 	}
 
-	function redraw() {}
-
-	function handleSpecChange() {
+	function handleSpecChange(e) {
 		console.log('handleSpecChange');
+		const layer = e.detail.layer;
+        console.log(layer);
+        map.updateLayerSpec(layer.id, layer.spec);
 	}
 
 	function handleVisibilityToggle(layer) {
@@ -403,7 +404,7 @@
 
 				{#if openSettingsLayerId && openSettingsLayerId == layer.id}
 					<div class="bg-white">
-						<LayerSettings bind:layer on:featuredelete={handleDeleteFeature} />
+						<LayerSettings bind:layer on:change={handleSpecChange} on:featuredelete={handleDeleteFeature} />
 						<div class="flex justify-end">
 							<button
 								class="btn btn-primary btn-sm btn-outline my-2"

@@ -67,14 +67,14 @@
 	}
 
 	export function updateLayerSpec(layerId: number, spec: LayerSpec) {
-		const dlayer = dLayers.find((l) => l.id === layerId);
-		if (!dlayer) {
+		const dLayer = dLayers.find((l) => l.id === layerId);
+		if (!dLayer) {
 			console.error('Attempted to update the spec of an unrecognized layer');
 			return;
 		}
-		dlayer.spec = completeLayerSpec(spec);
-		dropLayerSpecDerivatives(dlayer);
-		instantiateLayerSpec(dlayer.spec);
+		dLayer.spec = completeLayerSpec(spec);
+		dropLayerSpecDerivatives(dLayer);
+		instantiateLayerSpec(dLayer);
 	}
 
 	export function updateLayerFeatures(layerId: number, features: GeoJsonFeature[]) {
@@ -124,7 +124,7 @@
 		}
 
 		if (spec.lines) {
-			let lineThickness = spec.lines.size ?? 2;
+			let lineSize = spec.lines.size ?? 2;
 			if (spec.lines.outline) {
 				const layerId = `${layer.id}-lines-outline`;
 				layer.sublayers.push(layerId);
@@ -138,7 +138,7 @@
 						'line-join': 'round'
 					},
 					paint: {
-						'line-width': lineThickness + (spec.lines.outline?.thickness ?? 1),
+						'line-width': lineSize + (spec.lines.outline?.size ?? 1),
 						'line-color': spec.lines.outline?.color ?? '#333333',
 						'line-opacity': spec.lines.outline?.opacity ?? 1
 						// 'line-dasharray': spec.lines.dashArray ?? []
@@ -159,7 +159,7 @@
 					'line-join': 'round'
 				},
 				paint: {
-					'line-width': lineThickness,
+					'line-width': lineSize,
 					'line-color': spec.lines.color ?? '#ffffff',
 					'line-opacity': spec.lines?.opacity ?? 1
 					// 'line-dasharray': spec.lines.dashArray ?? []
@@ -178,7 +178,7 @@
 				// Accept polygons or multipolygons
 				filter: ['==', '$type', 'Polygon'],
 				paint: {
-					'fill-color': spec.polys.color ?? '#000000',
+					'fill-color': spec.polys.color ?? '#FF0000',
 					'fill-opacity': spec.polys.opacity ?? 1,
 					'fill-outline-color': spec.polys.outline?.color ?? '#000000'
 					// 'fill-outline-opacity': spec.polys.outline?.opacity ?? 0,
@@ -238,7 +238,6 @@
 	}
 
 	function addClickEvent(layerId) {
-		console.log('Adding click event to layer', layerId);
 		map.on('click', layerId, handleFeatureClick);
 
 		const canvas = map.getCanvas();
@@ -258,7 +257,6 @@
 		line: [number, number][],
 		poly: [number, number][][]
 	) {
-		console.log('setControlPoints at', new Date().getMilliseconds());
 		let features = [];
 		features = points.map((point) => ({
 			type: 'Feature',
@@ -366,7 +364,6 @@
 		const controlPointOnMove = (e) => {
 			canvas.style.cursor = 'grabbing';
 			const coords = e.lngLat;
-			console.log('Dragging at', new Date().getMilliseconds());
 			dispatch('controlmove', { coords: [coords.lng, coords.lat] });
 		};
 

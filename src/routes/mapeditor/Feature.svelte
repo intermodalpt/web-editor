@@ -1,14 +1,13 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	export let feature;
 
-    const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher();
 
-
-    function deleteFeature() {
-        dispatch('delete', { feature });
-    }
+	function deleteFeature() {
+		dispatch('delete', { feature });
+	}
 </script>
 
 {#if feature.geometry.type === 'Point'}

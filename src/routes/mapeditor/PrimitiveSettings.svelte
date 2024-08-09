@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	import Outline from './Outline.svelte';
+
+	const dispatch = createEventDispatcher();
 
 	export let name = '';
 	export let primitive;
@@ -24,6 +27,7 @@
 		} else {
 			primitive.outline = null;
 		}
+		dispatch('change');
 	}
 
 	$: {
@@ -35,9 +39,14 @@
 <div class="flex items-center gap-2 pl-2 py-2 border-l-2 border-r-2 border-b-2 !border-slate-300">
 	<label>
 		Size:
-		<input type="number" class="input input-bordered input-xs w-16" bind:value={primitive.size} />
+		<input
+			type="number"
+			class="input input-bordered input-xs w-16"
+			bind:value={primitive.size}
+			on:change
+		/>
 	</label>
-	<input type="color" class="input input-xs" bind:value={primitive.color} />
+	<input type="color" class="input input-xs" bind:value={primitive.color} on:change/>
 	<label>
 		O:
 		<input
@@ -47,6 +56,7 @@
 			max="1"
 			step="0.1"
 			bind:value={primitive.opacity}
+			on:change
 		/>
 	</label>
 </div>
@@ -56,6 +66,6 @@
 		<span class="text-xs grow">Outline</span>
 	</label>
 	{#if primitive.outline}
-		<Outline outline={primitive.outline} />
+		<Outline outline={primitive.outline} on:change />
 	{/if}
 </div>
