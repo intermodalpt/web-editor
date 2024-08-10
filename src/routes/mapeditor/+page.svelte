@@ -1,25 +1,34 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import LayerSettings from './LayerSettings.svelte';
 	import Map from './Map.svelte';
-	import { demoLayer } from './dummydata';
+	import { demoLayer, demoMapContent } from './dummydata';
+	import { compileLayerFeatures } from './utils';
+	import MapContent from '$lib/content/MapContent.svelte';
+	import ContentBlock from '$lib/content/ContentBlock.svelte';
 
-	let map;
+	let map: Map;
 	let mapLoaded = false;
 
-	let layerIdCounter = 1;
-	let featureIdCounter = 1;
+	let mapContent: MapContent = {
+		layers: [],
+		features: [],
+		bounding: [],
+		camera: {
+			center: [0, 0],
+			zoom: 0,
+			bearing: 0,
+			pitch: 0
+		},
+		version: 1
+	};
 
-	let layers: Layer[] = [];
-	$: layerIndex = Object.fromEntries(layers.map((l) => [l.id, l]));
+	$: layers = mapContent.layers;
+	$: selectedLayer = state.selected.layer;
+	// $: layerIndex = Object.fromEntries(layers.map((l) => [l.id, l]));
+	// $: featureIndex = Object.fromEntries(layers.flatMap((l) => l.features.map((f) => [f.id, f])));
 
-	let selectedLayer;
-	// The pane whose settings are being edited
-	let openSettingsLayerId;
-
-	$: features = Object.fromEntries(layers.flatMap((l) => l.features));
-	let editedFeatureId;
-	$: editedFeature = editedFeatureId ? features[editedFeatureId] : undefined;
+	let openSettingsLayerId: string | undefined;
 
 	const modes = {
 		select: 0,
@@ -34,23 +43,35 @@
 
 	// ------ Edition state variables ------
 
-	let editionData = {
-		points: {},
-		lines: [],
-		poly: []
+	// TODO colapse the root level. These can be made into different variables
+	const state: EditionData = {
+		selected: {
+			layerId: null,
+			layer: null,
+			featureId: null,
+			feature: null,
+			controlPoint: {
+				id: null,
+				isMoving: false
+			},
+			segmentIdx: null
+		},
+		drawn: {
+			points: [],
+			line: [],
+			poly: []
+		},
+		counters: {
+			layer: 0,
+			feature: 0,
+			controlPoint: 0
+		}
 	};
-	let selectedControlPointId;
-	let isMovingControlPoint = false;
-
-	let editedPoint: [number, number] | undefined = undefined;
-	let editedLineVertices: [number, number][] = [];
-	// lon, lat, snap to route (from previous point)
-	let editedRouteVertices: [number, number, boolean][] = [];
-	let editedPolyVertices: [number, number][] = [];
 
 	function addEmptyLayer() {
+		const id = ++state.counters.layer + '';
 		const newLayer = {
-			id: ++layerIdCounter,
+			id,
 			features: [],
 			spec: {
 				points: {},
@@ -59,89 +80,135 @@
 			},
 			visible: true
 		};
+
 		layers.push(newLayer);
-		map.addLayer(newLayer);
+		map.addLayer(id, newLayer.spec);
 		layers = layers;
 	}
 
-	function deleteLayer(layer) {
-		layers = layers.filter((l) => l.id !== layer.id);
+	function deleteLayer(layer: Layer) {
+		mapContent.layers = mapContent.layers.filter((l) => l.id !== layer.id);
+		if (state.selected.feature) {
+			for (const feature of layer.features) {
+				if (state.selected.feature.id === feature.id) {
+					state.selected.feature = null;
+					unselectFeature();
+					break;
+				}
+			}
+		}
+		if (state.selected.layer.id === layer.id) {
+			state.selected.layer = layers[0];
+		}
+		// Delete layer features
 		map.deleteLayer(layer.id);
 	}
 
-	function resetEditData() {
-		editionData = {
-			points: {},
-			line: [],
-			poly: []
-		};
-		map.clearEditData();
+	function newControlPoint(coords: [number, number]): number {
+		const id = state.counters.controlPoint++;
+		state.drawn.points.push({ id, coords });
+		return id;
 	}
 
-	function updateEditionData() {
-		console.log('generateControlPoints');
-		let id = 1;
-		resetEditData();
+	function compileAndUpdateMapContent(content: MapContent) {
+		content.layers.forEach((layer) => {
+			map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
+		});
+	}
 
-		switch (mode) {
-			case modes.point:
-				if (editedPoint) {
-					editionData.points[id] = { id, coords: editedPoint };
-					id++;
-				}
+	function selectFeature(feature: Feature) {
+		console.log('selectFeature');
+		unselectFeature();
+
+		switch (feature.type) {
+			case 'point':
+				newControlPoint(feature.loc);
 				break;
-			case modes.line:
-				editedLineVertices.forEach(([lon, lat]) => {
-					editionData.points[id] = { id, coords: [lon, lat] };
-					editionData.line.push(id);
-					id++;
+			case 'line':
+				feature.line.forEach((coords) => {
+					state.drawn.line.push(newControlPoint(coords));
 				});
 				break;
-			case modes.route:
-				editedRouteVertices.forEach(([lon, lat, snap]) => {
-					editionData.points[id] = { id, coords: [lon, lat] };
-					editionData.line.push(id);
-					id++;
+			case 'route':
+				let segmentCnt = 0;
+
+				feature.edges.forEach((edge) => {
+					let isFirstPoint = true;
+					let lastControlPoint: ControlPointId | null = null;
+					if (edge.type == 'string') {
+						edge.line.forEach((coords) => {
+							if (isFirstPoint) {
+								if (!lastControlPoint) {
+									lastControlPoint = newControlPoint(coords);
+									state.drawn.line.push(lastControlPoint);
+								}
+							} else {
+								lastControlPoint = newControlPoint(coords);
+								state.drawn.line.push(lastControlPoint);
+							}
+							isFirstPoint = false;
+						});
+					} else if (edge.type == 'snapped') {
+						edge.through.forEach((coords) => {
+							if (isFirstPoint) {
+								if (!lastControlPoint) {
+									lastControlPoint = newControlPoint(coords);
+									state.drawn.line.push(lastControlPoint);
+								}
+							} else {
+								lastControlPoint = newControlPoint(coords);
+								state.drawn.line.push(lastControlPoint);
+							}
+							isFirstPoint = false;
+						});
+					}
+					segmentCnt++;
 				});
 				break;
-			case modes.poly:
-				editedPolyVertices.forEach(([lon, lat]) => {
-					editionData.points[id] = { id, coords: [lon, lat] };
-					editionData.line.push(id);
-					editionData.poly.push(id);
-					id++;
+			case 'poly':
+				feature.incl.forEach((coords) => {
+					let cpId = newControlPoint(coords);
+					state.drawn.line.push(cpId);
+					state.drawn.poly.push(cpId);
 				});
 				break;
 			default:
 				return;
 		}
-		updateDrawnControlPoints();
+		drawControlFeatures();
+	}
+
+	function unselectFeature() {
+		state.selected.feature = null;
+		state.selected.controlPoint.id = 0;
+		state.selected.controlPoint.isMoving = false;
+		state.selected.segmentIdx = null;
+		state.drawn = { points: [], line: [], poly: [] };
+		state.counters.controlPoint = 0;
+		map.clearEditData();
 	}
 
 	function updateSelectedControlPointPosition(newCoords) {
-		if (!selectedControlPointId) {
+		if (!state.selected.controlPoint.idx) {
 			console.error('Attempted to move without a selected control point');
 			return;
 		}
-		editionData.points[selectedControlPointId].coords = newCoords;
-		updateDrawnControlPoints();
+
+		state.drawn.points[state.selected.controlPoint.idx].coords = newCoords;
+		drawControlFeatures();
 	}
 
-	function updateDrawnControlPoints() {
-		console.log('updateDrawnControlPoints at', new Date().getMilliseconds());
-		const points = Object.values(editionData.points);
-		const line = editionData.line.map((id) => editionData.points[id].coords);
-		let poly = editionData.poly.map((id) => editionData.points[id].coords);
+	function drawControlFeatures() {
+		const line = state.drawn.line.map((idx) => state.drawn.points[idx].coords);
+		let poly = state.drawn.poly.map((idx) => state.drawn.points[idx].coords);
 
-		if (editionData.poly.length > 2) {
-			poly.push(editionData.points[editionData.poly[0]].coords);
+		if (state.drawn.poly.length > 2) {
+			poly.push(state.drawn.points[state.drawn.poly[0]].coords);
 		} else {
 			poly = [];
 		}
 
-		console.log(poly);
-
-		map.drawControlFeatures(points, line, [poly]);
+		map.drawControlFeatures(state.drawn.points, line, [poly]);
 	}
 
 	function finishEdition() {
@@ -150,13 +217,8 @@
 			return;
 		}
 
-		if (editedFeatureId) {
+		if (state.selected.feature) {
 			console.log('Updating');
-		} else {
-			console.log('Inserting');
-		}
-
-		if (editedFeatureId) {
 			// switch (mode) {
 			//     case modes.point:
 			//         if (editedFeatureId) {
@@ -194,87 +256,74 @@
 			//         break;
 			// }
 		} else {
+			console.log('Inserting');
 			switch (mode) {
 				case modes.point:
 					selectedLayer.features.push({
-						id: featureIdCounter++,
-						type: 'Feature',
-						geometry: {
-							type: 'Point',
-							coordinates: editedPoint
-						}
+						id: ++state.counters.feature + '',
+						type: 'point',
+						loc: state.drawn.points[0].coords
 					});
 					break;
 				case modes.line:
-					if (editedLineVertices.length > 1) {
+					if (state.drawn.line.length > 1) {
 						selectedLayer.features.push({
-							id: featureIdCounter++,
-							type: 'Feature',
-							geometry: {
-								id: featureIdCounter++,
-								type: 'LineString',
-								coordinates: editedLineVertices
-							}
+							id: ++state.counters.feature + '',
+							type: 'line',
+							line: state.drawn.line.map((id) => state.drawn.points[id].coords)
 						});
 					}
 					break;
 				case modes.route:
-					if (editedRouteVertices.length > 1) {
+					// TODO This needs a proper implementation
+					if (state.drawn.line.length > 1) {
 						selectedLayer.features.push({
-							id: featureIdCounter++,
-							type: 'Feature',
-							geometry: {
-								id: featureIdCounter++,
-								type: 'LineString',
-								coordinates: editedRouteVertices
-							}
+							id: ++state.counters.feature + '',
+							type: 'line',
+							line: state.drawn.line.map((id) => state.drawn.points[id].coords)
 						});
 					}
 					break;
 				case modes.poly:
-					if (editedPolyVertices.length > 2) {
-						editedPolyVertices.push(editedPolyVertices[0]);
+					if (state.drawn.poly.length > 2) {
+						state.drawn.poly.push(state.drawn.poly[0]);
 						selectedLayer.features.push({
-							id: featureIdCounter++,
-							type: 'Feature',
-							geometry: {
-								id: featureIdCounter++,
-								type: 'Polygon',
-								coordinates: [editedPolyVertices]
-							}
+							id: ++state.counters.feature + '',
+							type: 'poly',
+							incl: state.drawn.poly.map((id) => state.drawn.points[id].coords),
+							excl: []
 						});
 					}
 					break;
 			}
 		}
 
-		map.updateLayerFeatures(selectedLayer.id, selectedLayer.features);
+		map.updateLayerFeatures(selectedLayer.id, compileLayerFeatures(selectedLayer.features));
 
-		isMovingControlPoint = false;
-		resetEditData();
+		unselectFeature();
 		mode = modes.select;
 		layers = layers;
-		console.log('finishEdition', selectedLayer);
 	}
 
 	function handleMapClick(e) {
-		console.log('handleMapClick', e);
 		const lngLat = e.detail.lngLat;
 		switch (mode) {
 			case modes.point:
-				editedPoint = [lngLat.lng, lngLat.lat];
+				newControlPoint([lngLat.lng, lngLat.lat]);
 				break;
 			case modes.line:
-				editedLineVertices.push([lngLat.lng, lngLat.lat]);
+				state.drawn.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
 				break;
 			case modes.route:
-				editedRouteVertices.push([lngLat.lng, lngLat.lat, false]);
+				state.drawn.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
 				break;
 			case modes.poly:
-				editedPolyVertices.push([lngLat.lng, lngLat.lat]);
+				const cp = newControlPoint([lngLat.lng, lngLat.lat]);
+				state.drawn.line.push(cp);
+				state.drawn.poly.push(cp);
 				break;
 		}
-		updateEditionData();
+		drawControlFeatures();
 	}
 
 	function handleFeatureClick(e) {
@@ -282,10 +331,9 @@
 	}
 
 	function onMapLoad() {
-		console.log('onMapLoad');
 		mapLoaded = true;
 		// This is test data. Delete me later
-		loadData([demoLayer]);
+		loadData(demoMapContent);
 	}
 
 	function handleKeyboard(e) {
@@ -293,28 +341,34 @@
 		if (e.key === 'Enter') {
 			finishEdition();
 		} else if (e.key === 'Escape') {
-			resetEditData();
+			unselectFeature();
 			mode = modes.select;
 		}
 	}
 
-	function loadData(newLayers: Layer[]) {
-		console.log('loadData');
-		layers = newLayers;
-		if (mapLoaded) {
-			layers.forEach((l) => map.addLayer(l));
-		}
+	async function loadData(content: MapContent) {
+		unselectFeature();
+		state.selected.layer = null;
+		state.counters.layer = 0;
+		state.counters.feature = 0;
+		mapContent = content;
+		await tick();
 
-		if (layers.length > 0) {
-			selectedLayer = layers[0];
-		}
+		content.layers.forEach((layer) => {
+			layer.id = ++state.counters.layer + '';
+			layer.visible = true;
+			layer.features.forEach((feature) => {
+				feature.id = ++state.counters.feature;
+			});
+			map.addLayer(layer.id, layer.spec);
+		});
+		state.selected.layer = layers[0];
+		compileAndUpdateMapContent(content);
 	}
 
 	function handleSpecChange(e) {
-		console.log('handleSpecChange');
 		const layer = e.detail.layer;
-        console.log(layer);
-        map.updateLayerSpec(layer.id, layer.spec);
+		map.updateLayerSpec(layer.id, layer.spec);
 	}
 
 	function handleVisibilityToggle(layer) {
@@ -323,8 +377,7 @@
 
 	function handleDeleteFeature(e) {
 		const layer = e.detail.layer;
-		console.log('handleDeleteFeature', layer);
-		map.updateLayerFeatures(layer.id, layer.features);
+		map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
 	}
 
 	onMount(() => {});
@@ -338,12 +391,13 @@
 	on:mapclick={handleMapClick}
 	on:featureclick={handleFeatureClick}
 	on:controlselect={({ detail }) => {
-		console.log('controlselect', detail);
-		selectedControlPointId = detail.id;
+		state.selected.controlPoint = {
+			id: detail.id,
+			isMoving: false
+		};
 	}}
 	on:controlmove={({ detail }) => {
-		console.log('controlmove at', new Date().getMilliseconds());
-		isMovingControlPoint = true;
+		state.selected.controlPoint.isMoving = true;
 		updateSelectedControlPointPosition(detail.coords);
 	}}
 	on:controlendmove={({ detail }) => {
@@ -352,7 +406,7 @@
 >
 	<div class="absolute right-0 z-10 flex flex-col justify-start py-3 transition w-96">
 		<div class="max-h-full rounded-l-xl shadow-lg flex flex-col border-2 bg-base-200">
-			{#each layers as layer}
+			{#each mapContent.layers as layer}
 				<div class="flex flex-col gap-2 p-2 rounded-md">
 					<div class="flex gap-2 items-center">
 						<label class="flex items-center grow gap-2">
@@ -366,8 +420,8 @@
 								type="radio"
 								name="layers"
 								value={layer}
-								bind:group={selectedLayer}
 								class="radio radio-sm"
+								bind:group={state.selected.layer}
 							/>
 							<span class="font-bold">{layer.name ?? 'Sem nome'}</span>
 						</label>
@@ -390,7 +444,7 @@
 							/>
 							<span>Visível</span>
 						</label>
-						<span class="grow text-right">{layer.features?.length} objetos</span>
+						<span class="grow text-right">{layer.features.length} objetos</span>
 						<button
 							class="btn btn-neutral btn-outline btn-xs"
 							on:click={() => {
@@ -404,7 +458,11 @@
 
 				{#if openSettingsLayerId && openSettingsLayerId == layer.id}
 					<div class="bg-white">
-						<LayerSettings bind:layer on:change={handleSpecChange} on:featuredelete={handleDeleteFeature} />
+						<LayerSettings
+							bind:layer
+							on:change={handleSpecChange}
+							on:featuredelete={handleDeleteFeature}
+						/>
 						<div class="flex justify-end">
 							<button
 								class="btn btn-primary btn-sm btn-outline my-2"
@@ -425,47 +483,44 @@
 	</div>
 
 	<div class="absolute left-0 z-10 p-3 flex gap-2 bg-white rounded-br-md">
-		<span>{editedFeatureId ? 'A editar' : 'Inserir'}</span>
+		<span>{state.selected.featureId ? 'A editar' : 'Inserir'}</span>
 		<button
 			class="btn btn-xs"
 			class:btn-primary={mode === modes.point}
 			on:click={() => {
-				editedPoint = undefined;
+				unselectFeature();
 				mode = modes.point;
-				updateEditionData();
 			}}>Ponto</button
 		>
 		<button
 			class="btn btn-xs"
 			class:btn-primary={mode === modes.line}
 			on:click={() => {
-				editedLineVertices = [];
+				unselectFeature();
 				mode = modes.line;
-				updateEditionData();
 			}}>Linha</button
 		>
 		<button
 			class="btn btn-xs"
 			class:btn-primary={mode === modes.route}
 			on:click={() => {
-				editedRouteVertices = [];
+				unselectFeature();
 				mode = modes.route;
-				updateEditionData();
 			}}>Caminho</button
 		>
 		<button
 			class="btn btn-xs"
 			class:btn-primary={mode === modes.poly}
 			on:click={() => {
-				editedPolyVertices = [];
+				unselectFeature();
 				mode = modes.poly;
-				updateEditionData();
 			}}>Poligono</button
 		>
 		<button class="btn btn-xs">BBOX</button>
 	</div>
 
 	<div class="absolute left-0 bottom-0 z-10 p-3 flex gap-2 bg-white rounded-br-md">
-		<textarea class="w-96 h-96">{JSON.stringify(selectedLayer, null, 2)}</textarea>
+		<textarea class="w-96 h-96">{JSON.stringify(state.selected?.layer, null, 2)}</textarea>
+		<textarea class="w-96 h-96">{JSON.stringify(layers, null, 2)}</textarea>
 	</div>
 </Map>

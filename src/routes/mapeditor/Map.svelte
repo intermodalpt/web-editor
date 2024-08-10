@@ -22,11 +22,11 @@
 
 	// ----- Rendered data handling -----
 
-	export function addLayer(layer: Layer) {
+	export function addLayer(id: LayerId, spec: LayerSpec) {
 		const dLayer = {
-			id: layer.id,
-			features: structuredClone(layer.features),
-			spec: completeLayerSpec(layer.spec),
+			id,
+			features: [],
+			spec: completeLayerSpec(spec),
 			source: '',
 			sublayers: [],
 			visible: true
@@ -35,7 +35,7 @@
 		dLayers.push(dLayer);
 	}
 
-	export function setLayerVisibility(layerId: number, visible: boolean) {
+	export function setLayerVisibility(layerId: LayerId, visible: boolean) {
 		const dLayer = dLayers.find((l) => l.id === layerId);
 		if (!dLayer) {
 			console.error('Attempted to set the visibility of an unrecognized layer');
@@ -56,7 +56,7 @@
 		}
 	}
 
-	export function deleteLayer(layerId) {
+	export function deleteLayer(layerId: LayerId) {
 		const dLayer = dLayers.find((l) => l.id == layerId);
 		if (!dLayer) {
 			console.error('Attempted to delete an unrecognized layer');
@@ -66,7 +66,7 @@
 		dLayers = dLayers.filter((l) => l.id !== layerId);
 	}
 
-	export function updateLayerSpec(layerId: number, spec: LayerSpec) {
+	export function updateLayerSpec(layerId: LayerId, spec: LayerSpec) {
 		const dLayer = dLayers.find((l) => l.id === layerId);
 		if (!dLayer) {
 			console.error('Attempted to update the spec of an unrecognized layer');
@@ -77,7 +77,7 @@
 		instantiateLayerSpec(dLayer);
 	}
 
-	export function updateLayerFeatures(layerId: number, features: GeoJsonFeature[]) {
+	export function updateLayerFeatures(layerId: LayerId, features: GeoJsonFeature[]) {
 		const layer = dLayers.find((l) => l.id === layerId);
 		if (!layer) {
 			console.error('Attempted to update the features of an unrecognized layer');
