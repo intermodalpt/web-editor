@@ -254,20 +254,20 @@
 
 	export function drawControlFeatures(
 		points: ControlPoint[],
-		line: [number, number][],
+		lines: [number, number][][],
 		poly: [number, number][][]
 	) {
 		let features = [];
 		features = points.map((point) => ({
 			type: 'Feature',
-			id: point.id,
+			id: point.idx,
 			geometry: {
 				type: 'Point',
 				coordinates: point.coords
 			},
 			properties: {}
 		}));
-		if (line.length > 0) {
+		lines.forEach((line) => {
 			features.push({
 				type: 'Feature',
 				geometry: {
@@ -276,7 +276,7 @@
 				},
 				properties: {}
 			});
-		}
+		});
 		if (poly.length > 0) {
 			features.push({
 				type: 'Feature',

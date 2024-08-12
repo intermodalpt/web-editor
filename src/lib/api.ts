@@ -2,7 +2,7 @@ import { apiServer, currentSurveyVersion } from '$lib/settings';
 
 // Boilerplate reduction
 
-type SuccessCallback = (res: Response) => void | undefined;
+type SuccessCallback = (res: any) => void | undefined;
 type ErrorCallback = (res: Response) => void | undefined;
 type AfterCallback = (res: Response) => void | undefined;
 
@@ -507,6 +507,11 @@ export async function getUnpositionedStopPics(page: number, opts: ReqOpts) {
 
 // ----- Routes -----
 
+export async function getRoutes(opts: ReqOpts) {
+	const res = await f(`/v1/routes`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function createRoute(data, opts: ReqOpts) {
 	const res = await f(`/v1/routes`, {
 		method: 'POST',
@@ -844,5 +849,15 @@ export async function createIssue(issue, opts: ReqOpts) {
 
 export async function getRegionParishes(regionId: number, opts: ReqOpts) {
 	const res = await f(`/v1/regions/${regionId}/parishes`, { opts });
+	return await handleResponse(res, opts);
+}
+
+
+// ----- Router -----
+
+export async function getRouteThrough(stops: [number, number][], opts: ReqOpts) {
+	const routerUrl = 'https://router.intermodal.pt';
+	const lineString = stops.map(([lon, lat]) => `${lon},${lat}`).join(';');
+	const res = await fetch(`${routerUrl}/route/v1/driving/${lineString}?overview=full&alternatives=false&steps=false&geometries=polyline6`);
 	return await handleResponse(res, opts);
 }

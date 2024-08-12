@@ -1,3 +1,5 @@
+import polyline from '@mapbox/polyline';
+
 const DEFAULT_LINE_SIZE = 2;
 const DEFAULT_LINE_COLOR = '#ffffff';
 const DEFAULT_LINE_OPACITY = 1;
@@ -49,14 +51,14 @@ function completeOutline(outline: Outline): Outline {
 	};
 }
 
-export function compileLayerFeatures(features: Record<FeatureId, Feature>): GeoJsonFeature[] {
+export function compileLayerFeatures(features: Feature[]): GeoJsonFeature[] {
 	const geoJsonLayerFeatures: GeoJsonFeature[] = [];
-	Object.entries(features).forEach(([id, feature]) => {
+	features.forEach((feature) => {
 		switch (feature.type) {
 			case 'point':
 				geoJsonLayerFeatures.push({
 					type: 'Feature',
-					id,
+					id: feature.id,
 					geometry: {
 						type: 'Point',
 						coordinates: feature.loc
@@ -66,7 +68,7 @@ export function compileLayerFeatures(features: Record<FeatureId, Feature>): GeoJ
 			case 'line':
 				geoJsonLayerFeatures.push({
 					type: 'Feature',
-					id,
+					id: feature.id,
 					geometry: {
 						type: 'LineString',
 						coordinates: feature.line
@@ -81,15 +83,16 @@ export function compileLayerFeatures(features: Record<FeatureId, Feature>): GeoJ
 							routeSegments.push(coords);
 						});
 					} else if (edge.type == 'snapped') {
-						edge.through.forEach((coords) => {
-							// TODO use the polyline
-							routeSegments.push(coords);
-						});
+						if (edge.polyline) {
+							routeSegments.push(
+								polyline.decode(edge.polyline, 6).map((coords) => [coords[1], coords[0]])
+							);
+						}
 					}
 				});
 				geoJsonLayerFeatures.push({
 					type: 'Feature',
-					id,
+					id: feature.id,
 					geometry: {
 						type: 'LineString',
 						coordinates: routeSegments
@@ -99,14 +102,25 @@ export function compileLayerFeatures(features: Record<FeatureId, Feature>): GeoJ
 			case 'poly':
 				geoJsonLayerFeatures.push({
 					type: 'Feature',
-					id,
+					id: feature.id,
 					geometry: {
 						type: 'Polygon',
-						coordinates: [feature.incl, ...feature.excl]
+						coordinates: [closePoly(feature.incl), ...feature.excl.map(closePoly)]
 					}
 				});
 				break;
 		}
 	});
 	return geoJsonLayerFeatures;
+}
+
+function closePoly(poly: [number, number][]): [number, number][] {
+	if (poly.length < 3) return [];
+
+	const [flon, flat] = poly[0];
+	const [llon, llat] = poly[poly.length - 1];
+
+	if (flon === llon && flat === llat) return poly;
+
+	return [...poly, [flon, flat]];
 }

@@ -24,6 +24,15 @@
 		<span>{feature.line.length} pontos</span>
 		<button class="btn btn-error btn-xs" on:click={deleteFeature}>-</button>
 	</div>
+{:else if feature.type === 'route'}
+	<div class="flex justify-between items-center p-1 gap-1">
+		<span class="bg-base-200 rounded-lg px-1">{feature.id}</span>
+		<span class="grow">Rota</span>
+		<span>
+			{feature.edges.length} segmentos
+		</span>
+		<button class="btn btn-error btn-xs" on:click={deleteFeature}>-</button>
+	</div>
 {:else if feature.type === 'poly'}
 	<div class="flex justify-between items-center p-1 gap-1">
 		<span class="bg-base-200 rounded-lg px-1">{feature.id}</span>
@@ -34,7 +43,7 @@
 		<button class="btn btn-error btn-xs" on:click={deleteFeature}>-</button>
 	</div>
 {:else}
-	<div>
+	<div class="flex justify-between items-center p-1 gap-1">
 		<span class="bg-base-200 rounded-lg px-1 gap-1">{feature.id}</span>
 		<span class="grow">{feature.type}(?)</span>
 		<button class="btn btn-error btn-xs" on:click={deleteFeature}>-</button>

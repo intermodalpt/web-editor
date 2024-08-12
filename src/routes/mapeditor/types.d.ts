@@ -32,16 +32,19 @@ type PointFeature = {
 };
 
 type LineFeature = {
+	id?: FeatureId;
 	type: 'line';
 	line: [number, number][];
 };
 
 type RouteFeature = {
+	id?: FeatureId;
 	type: 'route';
 	edges: (RouteLineStringEdge | RouteSnappedEdge)[];
 };
 
 type PolyFeature = {
+	id?: FeatureId;
 	type: 'poly';
 	incl: [number, number][];
 	excl: [number, number][][];
@@ -54,7 +57,7 @@ type RouteLineStringEdge = {
 
 type RouteSnappedEdge = {
 	type: 'snapped';
-	through: [number, number][];
+	waypoints: [number, number][];
 	// Cached field
 	polyline?: string;
 };
@@ -121,6 +124,7 @@ type EditionData = {
 		layer?: Layer | null;
 		// Undefined means that no feature is selected OR that the feature is being drawn
 		feature?: Feature | null;
+		featureLayer?: Layer | null;
 		controlPoint: {
 			idx: ControlPointIdx | null;
 			isMoving: boolean;
@@ -132,12 +136,24 @@ type EditionData = {
 		points: ControlPoint[];
 		line: ControlPointIdx[];
 		poly: ControlPointIdx[];
+		edges: (LineStringEdgeEdit | SnappedEdgeEdit)[]
 	};
 	counters: {
 		layer: number;
 		feature: number;
 		controlPoint: number;
 	};
+};
+
+type LineStringEdgeEdit = {
+	type: 'string';
+	line: ControlPointIdx[];
+};
+
+type SnappedEdgeEdit = {
+	type: 'snapped';
+	waypoints: ControlPointIdx[];
+	polyline?: string;
 };
 
 // ----- Editor Map Data -----

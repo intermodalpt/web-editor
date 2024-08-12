@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import polyline from '@mapbox/polyline';
 	import LayerSettings from './LayerSettings.svelte';
 	import Map from './Map.svelte';
-	import { demoLayer, demoMapContent } from './dummydata';
+	import { demoMapContent } from './dummydata';
 	import { compileLayerFeatures } from './utils';
 	import MapContent from '$lib/content/MapContent.svelte';
-	import ContentBlock from '$lib/content/ContentBlock.svelte';
+	import { getRouteThrough } from '$lib/api';
+	import { toast } from '$lib/stores';
+	import { isDeepEqual } from '$lib/utils';
 
 	let map: Map;
 	let mapLoaded = false;
@@ -25,8 +28,6 @@
 
 	$: layers = mapContent.layers;
 	$: selectedLayer = state.selected.layer;
-	// $: layerIndex = Object.fromEntries(layers.map((l) => [l.id, l]));
-	// $: featureIndex = Object.fromEntries(layers.flatMap((l) => l.features.map((f) => [f.id, f])));
 
 	let openSettingsLayerId: string | undefined;
 
@@ -46,12 +47,10 @@
 	// TODO colapse the root level. These can be made into different variables
 	const state: EditionData = {
 		selected: {
-			layerId: null,
 			layer: null,
-			featureId: null,
 			feature: null,
 			controlPoint: {
-				id: null,
+				idx: null,
 				isMoving: false
 			},
 			segmentIdx: null
@@ -59,7 +58,8 @@
 		drawn: {
 			points: [],
 			line: [],
-			poly: []
+			poly: [],
+			edges: []
 		},
 		counters: {
 			layer: 0,
@@ -97,7 +97,7 @@
 				}
 			}
 		}
-		if (state.selected.layer.id === layer.id) {
+		if (state.selected?.layer?.id === layer.id) {
 			state.selected.layer = layers[0];
 		}
 		// Delete layer features
@@ -105,9 +105,10 @@
 	}
 
 	function newControlPoint(coords: [number, number]): number {
-		const id = state.counters.controlPoint++;
-		state.drawn.points.push({ id, coords });
-		return id;
+		console.log('newControlPoint', coords);
+		const idx = state.counters.controlPoint++;
+		state.drawn.points.push({ idx, coords });
+		return idx;
 	}
 
 	function compileAndUpdateMapContent(content: MapContent) {
@@ -116,8 +117,8 @@
 		});
 	}
 
-	function selectFeature(feature: Feature) {
-		console.log('selectFeature');
+	function selectFeature(featureId: FeatureId) {
+		const feature = layers.flatMap((l) => l.features).find((f) => f.id === featureId);
 		unselectFeature();
 
 		switch (feature.type) {
@@ -134,32 +135,47 @@
 
 				feature.edges.forEach((edge) => {
 					let isFirstPoint = true;
-					let lastControlPoint: ControlPointId | null = null;
+					let lastControlPoint: ControlPointIdx | null = null;
 					if (edge.type == 'string') {
+						const controlPoints: ControlPointIdx[] = [];
 						edge.line.forEach((coords) => {
 							if (isFirstPoint) {
 								if (!lastControlPoint) {
 									lastControlPoint = newControlPoint(coords);
+									controlPoints.push(lastControlPoint);
 									state.drawn.line.push(lastControlPoint);
 								}
 							} else {
 								lastControlPoint = newControlPoint(coords);
+								controlPoints.push(lastControlPoint);
 								state.drawn.line.push(lastControlPoint);
 							}
 							isFirstPoint = false;
 						});
+						state.drawn.edges.push({
+							type: 'string',
+							line: controlPoints
+						});
 					} else if (edge.type == 'snapped') {
-						edge.through.forEach((coords) => {
+						const controlPoints: ControlPointIdx[] = [];
+						edge.waypoints.forEach((coords) => {
 							if (isFirstPoint) {
 								if (!lastControlPoint) {
 									lastControlPoint = newControlPoint(coords);
+									controlPoints.push(lastControlPoint);
 									state.drawn.line.push(lastControlPoint);
 								}
 							} else {
 								lastControlPoint = newControlPoint(coords);
+								controlPoints.push(lastControlPoint);
 								state.drawn.line.push(lastControlPoint);
 							}
 							isFirstPoint = false;
+						});
+						state.drawn.edges.push({
+							type: 'snapped',
+							waypoints: controlPoints,
+							polyline: edge.polyline
 						});
 					}
 					segmentCnt++;
@@ -180,21 +196,30 @@
 
 	function unselectFeature() {
 		state.selected.feature = null;
-		state.selected.controlPoint.id = 0;
+		state.selected.controlPoint.idx = null;
 		state.selected.controlPoint.isMoving = false;
 		state.selected.segmentIdx = null;
-		state.drawn = { points: [], line: [], poly: [] };
+		state.drawn = { points: [], line: [], poly: [], edges: [] };
 		state.counters.controlPoint = 0;
 		map.clearEditData();
 	}
 
 	function updateSelectedControlPointPosition(newCoords) {
-		if (!state.selected.controlPoint.idx) {
+		if (state.selected.controlPoint.idx === null) {
 			console.error('Attempted to move without a selected control point');
 			return;
 		}
 
 		state.drawn.points[state.selected.controlPoint.idx].coords = newCoords;
+
+		// Any edge that has this point as a waypoint should be updated
+		state.drawn.edges.forEach((edge) => {
+			if (edge.type == 'snapped') {
+				if (edge.waypoints.includes(state.selected.controlPoint.idx)) {
+					updateEdgePolyline(edge);
+				}
+			}
+		});
 		drawControlFeatures();
 	}
 
@@ -208,7 +233,18 @@
 			poly = [];
 		}
 
-		map.drawControlFeatures(state.drawn.points, line, [poly]);
+		const lines = [line];
+		state.drawn.edges.forEach((edge) => {
+			if (edge.type == 'string') {
+				lines.push(edge.line.map((id) => state.drawn.points[id].coords));
+			} else if (edge.type == 'snapped') {
+				if (edge.polyline) {
+					lines.push(polyline.decode(edge.polyline, 6).map((coords) => [coords[1], coords[0]]));
+				}
+			}
+		});
+
+		map.drawControlFeatures(state.drawn.points, lines, [poly]);
 	}
 
 	function finishEdition() {
@@ -275,8 +311,44 @@
 					}
 					break;
 				case modes.route:
-					// TODO This needs a proper implementation
-					if (state.drawn.line.length > 1) {
+                    console.log(state.drawn.edges);
+					state.drawn.edges.map((edge) => {
+						if (edge.type == 'string') {
+							selectedLayer.features.push({
+								id: ++state.counters.feature + '',
+								type: 'route',
+								edges: [
+									{
+										type: 'string',
+										line: edge.line.map((id) => state.drawn.points[id].coords)
+									}
+								]
+							});
+						} else if (edge.type == 'snapped') {
+							selectedLayer.features.push({
+								id: ++state.counters.feature + '',
+								type: 'route',
+								edges: [
+									{
+										type: 'snapped',
+										waypoints: edge.waypoints.map((id) => state.drawn.points[id].coords),
+										polyline: edge.polyline
+									}
+								]
+							});
+						}
+					});
+					if (state.drawn.edges.length != 0) {
+						selectedLayer.features.push({
+							id: ++state.counters.feature + '',
+							type: 'route',
+							edges: [
+								{
+									type: 'string',
+									line: state.drawn.line.map((id) => state.drawn.points[id].coords)
+								}
+							]
+						});
 						selectedLayer.features.push({
 							id: ++state.counters.feature + '',
 							type: 'line',
@@ -315,7 +387,19 @@
 				state.drawn.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
 				break;
 			case modes.route:
-				state.drawn.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
+				const lastEdge = state.drawn.edges[state.drawn.edges.length - 1];
+				if (lastEdge?.type == 'string') {
+					lastEdge.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
+				} else if (lastEdge?.type == 'snapped') {
+					lastEdge.waypoints.push(newControlPoint([lngLat.lng, lngLat.lat]));
+					updateEdgePolyline(lastEdge);
+				} else {
+					state.drawn.edges.push({
+						type: 'snapped',
+						waypoints: [newControlPoint([lngLat.lng, lngLat.lat])]
+					});
+				}
+
 				break;
 			case modes.poly:
 				const cp = newControlPoint([lngLat.lng, lngLat.lat]);
@@ -326,8 +410,29 @@
 		drawControlFeatures();
 	}
 
+	function updateEdgePolyline(edge: SnappedEdgeEdit) {
+		const throughPoints = structuredClone(
+			edge.waypoints.map((idx) => state.drawn.points[idx].coords)
+		);
+
+		getRouteThrough(throughPoints, {
+			onSuccess: (data) => {
+				const current = edge.waypoints.map((idx) => state.drawn.points[idx]?.coords);
+				// If this result is still valid
+				if (isDeepEqual(throughPoints, current)) {
+					edge.polyline = data.routes[0].geometry;
+					drawControlFeatures();
+				}
+			},
+			onError: (err) => {
+				toast('Problema a calcular a rota', 'error');
+			},
+			toJson: true
+		});
+	}
+
 	function handleFeatureClick(e) {
-		console.log(e);
+		selectFeature(e.detail.feature.id);
 	}
 
 	function onMapLoad() {
@@ -379,8 +484,6 @@
 		const layer = e.detail.layer;
 		map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
 	}
-
-	onMount(() => {});
 </script>
 
 <svelte:window on:keydown={handleKeyboard} />
@@ -390,9 +493,9 @@
 	on:mapload={onMapLoad}
 	on:mapclick={handleMapClick}
 	on:featureclick={handleFeatureClick}
-	on:controlselect={({ detail }) => {
+	on:controlselect={(e) => {
 		state.selected.controlPoint = {
-			id: detail.id,
+			idx: e.detail.id,
 			isMoving: false
 		};
 	}}
