@@ -138,6 +138,7 @@ type EditorSelection = {
 type EditorDrawings = {
 	points: ControlPoint[];
 	midpoints: MidPoint[];
+	boundary: ControlPoint[];
 	line: ControlPointIdx[];
 	poly: ControlPointIdx[];
 	edges: (LineStringEdgeEdit | SnappedEdgeEdit)[]
@@ -146,6 +147,7 @@ type EditorCounter = {
 	layer: number;
 	feature: number;
 	controlPoint: number;
+	boundary: number;
 };
 
 type LineStringEdgeEdit = {

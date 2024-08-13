@@ -3,6 +3,7 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onDestroy, onMount } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
+	import * as turf from '@turf/turf';
 	import {
 		defaultMapBounds,
 		defaultMapCenter,
@@ -259,9 +260,10 @@
 		poly: [number, number][][]
 	) {
 		let features = [];
+		let pointIdx = 0;
 		features = points.map((point) => ({
 			type: 'Feature',
-			id: point.idx,
+			id: pointIdx++,
 			geometry: {
 				type: 'Point',
 				coordinates: point.coords
@@ -308,6 +310,30 @@
 		map.getSource('editing').setData({
 			type: 'FeatureCollection',
 			features: features
+		});
+	}
+
+	export function drawBoundaryFeatures(boundary: ControlPoint[]) {
+		let pointIdx = 0;
+		const boundaryFeatures = boundary.map((point) => ({
+			id: pointIdx++,
+			type: 'Feature',
+			geometry: {
+				type: 'Point',
+				coordinates: point.coords
+			}
+		}));
+
+		// Calculate the convex polygon of the boundary
+		if (boundary.length > 2) {
+			const boundaryCoords = boundary.map((point) => point.coords);
+			const convexHull = turf.convex(turf.multiPoint(boundaryCoords));
+			boundaryFeatures.push(convexHull);
+		}
+
+		map.getSource('boundary').setData({
+			type: 'FeatureCollection',
+			features: boundaryFeatures
 		});
 	}
 
@@ -384,38 +410,54 @@
 				'circle-stroke-width': 1.5
 			}
 		});
+
+		map.addSource('boundary', {
+			type: 'geojson',
+			data: {
+				type: 'FeatureCollection',
+				features: []
+			}
+		});
+
+		map.addLayer({
+			id: 'boundary-points',
+			type: 'circle',
+			source: 'boundary',
+			filter: ['==', '$type', 'Point'],
+			paint: {
+				'circle-radius': 10,
+				'circle-color': '#0000ff',
+				'circle-opacity': 0.5,
+				'circle-stroke-color': '#0000ff',
+				'circle-stroke-opacity': 0.7,
+				'circle-stroke-width': 2
+			}
+		});
+
+		map.addLayer({
+			id: 'boundary-outline',
+			type: 'line',
+			source: 'boundary',
+			filter: ['==', '$type', 'Polygon'],
+			layout: {
+				'line-cap': 'round',
+				'line-join': 'round'
+			},
+			paint: {
+				'line-width': 2,
+				'line-color': '#0000ff',
+				'line-opacity': 0.7
+			}
+		});
 	}
 
 	function addEditionEvents() {
 		const canvas = map.getCanvas();
-		map.on('click', (e) => {
-			handleMapClick(e);
-		});
-
-		// ----- Control point dragging
-
-		const controlPointOnMove = (e) => {
-			canvas.style.cursor = 'grabbing';
-			const coords = e.lngLat;
-			dispatch('controlmove', { coords: [coords.lng, coords.lat] });
-		};
-
-		const controlPointOnUp = (e) => {
-			const coords = e.lngLat;
-
-			canvas.style.cursor = '';
-
-			dispatch('controlselectend', { coords });
-			// Unbind mouse/touch events
-			map.off('mousemove', controlPointOnMove);
-			map.off('touchmove', controlPointOnMove);
-		};
 
 		map.on('mouseenter', 'control-points', () => {
 			// map.setPaintProperty('point', 'circle-color', '#3bb2d0');
 			canvas.style.cursor = 'move';
 		});
-
 		map.on('mouseleave', 'control-points', () => {
 			// map.setPaintProperty('point', 'circle-color', '#3887be');
 			canvas.style.cursor = '';
@@ -423,60 +465,93 @@
 		map.on('mouseenter', 'control-midpoints', () => {
 			canvas.style.cursor = 'move';
 		});
-
 		map.on('mouseleave', 'control-midpoints', () => {
 			canvas.style.cursor = '';
 		});
 
-		map.on('mousedown', 'control-points', (e) => {
-			// Prevent the default map drag behavior.
-			e.preventDefault();
-
-			canvas.style.cursor = 'grab';
-
-			dispatch('controlselect', { id: e.features[0].id });
-			map.on('mousemove', controlPointOnMove);
-			map.once('mouseup', controlPointOnUp);
+		map.on('click', (e) => {
+			handleMapClick(e);
 		});
+		// ----- Control point dragging
 
-		map.on('touchstart', 'control-points', (e) => {
-			if (e.points.length !== 1) return;
-
+		function onControlPointDown(e) {
 			// Prevent the default map drag behavior.
 			e.preventDefault();
-
-			dispatch('controlselect', { id: e.features[0].id });
-			map.on('touchmove', controlPointOnMove);
-			map.once('touchend', controlPointOnUp);
-		});
-
-		map.on('mousedown', 'control-midpoints', (e) => {
-			// Prevent the default map drag behavior.
-			e.preventDefault();
-
 			canvas.style.cursor = 'grab';
+			const idx = e.features[0].id;
+			dispatch('controlselect', { idx });
 
+			const onMove = (e) => {
+				canvas.style.cursor = 'grabbing';
+				const coords = e.lngLat;
+				dispatch('controlmove', { coords: [coords.lng, coords.lat] });
+			};
+			const onUp = (e) => {
+				const coords = e.lngLat;
+				canvas.style.cursor = '';
+				dispatch('controlselectend', { coords });
+				map.off('mousemove', onMove);
+				map.off('touchmove', onMove);
+			};
+
+			map.on('mousemove', onMove);
+			map.once('mouseup', onUp);
+		}
+		map.on('mousedown', 'control-points', onControlPointDown);
+		map.on('touchstart', 'control-points', onControlPointDown);
+
+		function onControlMidpointDown(e) {
+			// Prevent the default map drag behavior.
+			e.preventDefault();
+			canvas.style.cursor = 'grab';
 			dispatch('midpointselect', {
 				cp1: e.features[0].properties.cp1,
 				cp2: e.features[0].properties.cp2
 			});
-			map.on('mousemove', controlPointOnMove);
-			map.once('mouseup', controlPointOnUp);
-		});
 
-		map.on('touchstart', 'control-midpoints', (e) => {
-			if (e.points.length !== 1) return;
+			const onMove = (e) => {
+				canvas.style.cursor = 'grabbing';
+				const coords = e.lngLat;
+				dispatch('controlmove', { coords: [coords.lng, coords.lat] });
+			};
 
-			// Prevent the default map drag behavior.
+			const onUp = (e) => {
+				const coords = e.lngLat;
+				canvas.style.cursor = '';
+				dispatch('controlselectend', { coords });
+				map.off('mousemove', onMove);
+				map.off('touchmove', onMove);
+			};
+
+			map.on('mousemove', onMove);
+			map.once('mouseup', onUp);
+		}
+		map.on('mousedown', 'control-midpoints', onControlMidpointDown);
+		map.on('touchstart', 'control-midpoints', onControlMidpointDown);
+
+		function onBoundaryDown(e) {
 			e.preventDefault();
+			canvas.style.cursor = 'grab';
+			const idx = e.features[0].id;
 
-			dispatch('midpointselect', {
-				cp1: e.features[0].properties.cp1,
-				cp2: e.features[0].properties.cp2
-			});
-			map.on('touchmove', controlPointOnMove);
-			map.once('touchend', controlPointOnUp);
-		});
+			const onMove = (e) => {
+				canvas.style.cursor = 'grabbing';
+				const coords = e.lngLat;
+				dispatch('boundarymove', { idx, coords: [coords.lng, coords.lat] });
+			};
+			const onUp = (e) => {
+				const coords = e.lngLat;
+				canvas.style.cursor = '';
+				dispatch('boundaryselectend', { coords });
+				map.off('mousemove', onMove);
+				map.off('touchmove', onMove);
+			};
+
+			map.on('mousemove', onMove);
+			map.once('mouseup', onUp);
+		}
+		map.on('mousedown', 'boundary-points', onBoundaryDown);
+		map.on('touchstart', 'boundary-points', onBoundaryDown);
 	}
 
 	onMount(async () => {

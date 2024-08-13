@@ -53,6 +53,7 @@
 	let drawn: EditorDrawings = {
 		points: [],
 		midpoints: [],
+		boundary: [],
 		line: [],
 		poly: [],
 		edges: []
@@ -60,7 +61,8 @@
 	const counters: EditorCounter = {
 		layer: 0,
 		feature: 0,
-		controlPoint: 0
+		controlPoint: 0,
+		boundary: 0
 	};
 
 	function addEmptyLayer() {
@@ -102,6 +104,12 @@
 	function newControlPoint(coords: [number, number]): number {
 		const idx = counters.controlPoint++;
 		drawn.points.push({ idx, coords });
+		return idx;
+	}
+
+	function newBoundaryControlPoint(coords: [number, number]): number {
+		const idx = counters.boundary++;
+		drawn.boundary.push({ idx, coords });
 		return idx;
 	}
 
@@ -198,28 +206,51 @@
 		selected.controlPoint.idx = null;
 		selected.controlPoint.isMoving = false;
 		selected.segmentIdx = null;
-		drawn = { points: [], midpoints: [], line: [], poly: [], edges: [] };
+		drawn.points = [];
+		drawn.midpoints = [];
+		drawn.line = [];
+		drawn.poly = [];
+		drawn.edges = [];
 		counters.controlPoint = 0;
 		map.clearEditData();
 	}
 
-	function updateSelectedControlPointPosition(newCoords) {
-		if (selected.controlPoint.idx === null) {
+	function updateControlPointPosition(e) {
+		let idx;
+		if (e.detail.idx != undefined) {
+			idx = e.detail.idx;
+		} else {
+			idx = selected.controlPoint.idx;
+		}
+
+		const newCoords = e.detail.coords;
+
+		if (!idx === null) {
 			console.error('Attempted to move without a selected control point');
 			return;
 		}
 
-		drawn.points[selected.controlPoint.idx].coords = newCoords;
+		drawn.points[idx].coords = newCoords;
 
 		// Any edge that has this point as a waypoint should be updated
 		drawn.edges.forEach((edge) => {
 			if (edge.type == 'snapped') {
-				if (edge.waypoints.includes(selected.controlPoint.idx)) {
+				if (edge.waypoints.includes(idx)) {
 					updateEdgePolyline(edge);
 				}
 			}
 		});
 		drawControlFeatures();
+	}
+
+	function updateBoundaryPointPosition(e) {
+		let idx = e.detail.idx;
+		const newCoords = e.detail.coords;
+
+		console.log(e);
+
+		drawn.boundary[idx].coords = newCoords;
+		drawBoundaryFeatures();
 	}
 
 	function drawControlFeatures() {
@@ -255,8 +286,12 @@
 		map.drawControlFeatures(drawn.points, midpoints, lines, [poly]);
 	}
 
+	function drawBoundaryFeatures() {
+		map.drawBoundaryFeatures(drawn.boundary);
+	}
+
 	function finishEdition() {
-		if (!selected.layer) {
+		if (!selected.layer && mode != modes.bbox) {
 			console.log('No selected layer. This is a bug');
 			return;
 		}
@@ -414,6 +449,9 @@
 
 			drawn.line.push(cp);
 			drawn.poly.push(cp);
+		} else if (mode == modes.bbox) {
+			newBoundaryControlPoint([lngLat.lng, lngLat.lat]);
+			drawBoundaryFeatures();
 		}
 
 		drawControlFeatures();
@@ -448,7 +486,7 @@
 
 	function handleControlSelect(e) {
 		selected.controlPoint = {
-			idx: e.detail.id,
+			idx: e.detail.idx,
 			isMoving: false
 		};
 	}
@@ -462,10 +500,7 @@
 		const mp = turf.midpoint(drawn.points[cp1].coords, drawn.points[cp2].coords).geometry
 			.coordinates;
 		const cp = newControlPoint(mp);
-		selected.controlPoint = {
-			idx: cp,
-			isMoving: false
-		};
+		selected.controlPoint = { idx: cp, isMoving: true };
 
 		const lineIndex = drawn.line.findIndex((idx) => idx === cp1);
 		if (lineIndex !== -1) {
@@ -566,11 +601,12 @@
 	on:mapload={onMapLoad}
 	on:mapclick={handleMapClick}
 	on:featureclick={handleFeatureClick}
-	on:midpointselect={handleMidpointSelect}
 	on:controlselect={handleControlSelect}
-	on:controlmove={({ detail }) => {
-		selected.controlPoint.isMoving = true;
-		updateSelectedControlPointPosition(detail.coords);
+	on:midpointselect={handleMidpointSelect}
+	on:controlmove={updateControlPointPosition}
+	on:boundarymove={updateBoundaryPointPosition}
+	on:controlselectend={() => {
+		selected.controlPoint.idx = null;
 	}}
 	on:controlendmove={() => {
 		selected.controlPoint.isMoving = false;
@@ -654,10 +690,13 @@
 		</div>
 	</div>
 
-	<div class="absolute left-0 z-10 p-3 flex gap-2 bg-white rounded-br-md">
-		<span>{selected.feature ? 'A editar' : 'Inserir'}</span>
+	<div class="absolute left-0 z-10 p-3 bg-white rounded-br-md">
+		<span class="text-lg font-bold">{selected.feature ? 'Alteração' : 'Criação'}</span>
+	</div>
+	<div class="absolute left-0 bottom-0 z-10 p-3 flex flex-col gap-2 bg-white rounded-br-md">
+		<span>Inserir</span>
 		<button
-			class="btn btn-xs"
+			class="btn"
 			class:btn-primary={mode === modes.point}
 			on:click={() => {
 				unselectFeature();
@@ -665,7 +704,7 @@
 			}}>Ponto</button
 		>
 		<button
-			class="btn btn-xs"
+			class="btn"
 			class:btn-primary={mode === modes.line}
 			on:click={() => {
 				unselectFeature();
@@ -673,7 +712,7 @@
 			}}>Linha</button
 		>
 		<button
-			class="btn btn-xs"
+			class="btn"
 			class:btn-primary={mode === modes.route}
 			on:click={() => {
 				unselectFeature();
@@ -681,19 +720,21 @@
 			}}>Caminho</button
 		>
 		<button
-			class="btn btn-xs"
+			class="btn"
 			class:btn-primary={mode === modes.poly}
 			on:click={() => {
 				unselectFeature();
 				mode = modes.poly;
 			}}>Poligono</button
 		>
-		<button class="btn btn-xs">BBOX</button>
-	</div>
-
-	<div class="absolute left-0 bottom-0 z-10 p-3 flex gap-2 bg-white rounded-br-md">
-		<textarea class="w-96 h-96">{JSON.stringify(selected?.layer?.features, null, 2)}</textarea>
-		<textarea class="w-96 h-96">{JSON.stringify(drawn, null, 2)}</textarea>
-		<!-- <textarea class="w-96 h-96">{JSON.stringify(layers, null, 2)}</textarea> -->
+		<button
+			class="btn"
+			class:btn-primary={mode === modes.bbox}
+			on:click={() => {
+				unselectFeature();
+				drawBoundaryFeatures();
+				mode = modes.bbox;
+			}}>Bounding</button
+		>
 	</div>
 </Map>
