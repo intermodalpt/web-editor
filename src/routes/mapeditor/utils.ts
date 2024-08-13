@@ -84,9 +84,12 @@ export function compileLayerFeatures(features: Feature[]): GeoJsonFeature[] {
 						});
 					} else if (edge.type == 'snapped') {
 						if (edge.polyline) {
-							routeSegments.push(
-								polyline.decode(edge.polyline, 6).map((coords) => [coords[1], coords[0]])
-							);
+							polyline
+								.decode(edge.polyline, 6)
+								.map((coords) => [coords[1], coords[0]])
+								.forEach((coords) => {
+									routeSegments.push(coords);
+								});
 						}
 					}
 				});

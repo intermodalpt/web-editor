@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { tick } from 'svelte';
 	import polyline from '@mapbox/polyline';
 	import LayerSettings from './LayerSettings.svelte';
 	import Map from './Map.svelte';
@@ -105,7 +105,6 @@
 	}
 
 	function newControlPoint(coords: [number, number]): number {
-		console.log('newControlPoint', coords);
 		const idx = state.counters.controlPoint++;
 		state.drawn.points.push({ idx, coords });
 		return idx;
@@ -120,6 +119,7 @@
 	function selectFeature(featureId: FeatureId) {
 		const feature = layers.flatMap((l) => l.features).find((f) => f.id === featureId);
 		unselectFeature();
+		state.selected.feature = feature;
 
 		switch (feature.type) {
 			case 'point':
@@ -136,8 +136,9 @@
 				feature.edges.forEach((edge) => {
 					let isFirstPoint = true;
 					let lastControlPoint: ControlPointIdx | null = null;
+					const controlPoints: ControlPointIdx[] = [];
+
 					if (edge.type == 'string') {
-						const controlPoints: ControlPointIdx[] = [];
 						edge.line.forEach((coords) => {
 							if (isFirstPoint) {
 								if (!lastControlPoint) {
@@ -157,21 +158,16 @@
 							line: controlPoints
 						});
 					} else if (edge.type == 'snapped') {
-						const controlPoints: ControlPointIdx[] = [];
+						let firstWaypoint = true;
 						edge.waypoints.forEach((coords) => {
-							if (isFirstPoint) {
-								if (!lastControlPoint) {
-									lastControlPoint = newControlPoint(coords);
-									controlPoints.push(lastControlPoint);
-									state.drawn.line.push(lastControlPoint);
-								}
-							} else {
+							if (!(firstWaypoint && lastControlPoint)) {
 								lastControlPoint = newControlPoint(coords);
-								controlPoints.push(lastControlPoint);
-								state.drawn.line.push(lastControlPoint);
 							}
+							controlPoints.push(lastControlPoint);
+							firstWaypoint = false;
 							isFirstPoint = false;
 						});
+
 						state.drawn.edges.push({
 							type: 'snapped',
 							waypoints: controlPoints,
@@ -254,49 +250,40 @@
 		}
 
 		if (state.selected.feature) {
-			console.log('Updating');
-			// switch (mode) {
-			//     case modes.point:
-			//         if (editedFeatureId) {
-			//             editedFeature.geo
-			//         } else {
-			//             addToLayer.features.push({
-			//                 type: 'Point',
-			//                 coordinates: editedPoint
-			//             });
-			//         }
-			//         break;
-			//     case modes.line:
-			//         if (editedLineVertices.length > 1) {
-			//             selectedLayer.features.push({
-			//                 type: 'LineString',
-			//                 coordinates: editedLineVertices
-			//             });
-			//         }
-			//         break;
-			//     case modes.route:
-			//         if (editedRouteVertices.length > 1) {
-			//             selectedLayer.features.push({
-			//                 type: 'LineString',
-			//                 coordinates: editedRouteVertices
-			//             });
-			//         }
-			//         break;
-			//     case modes.poly:
-			//         if (editedPolyVertices.length > 2) {
-			//             selectedLayer.features.push({
-			//                 type: 'Polygon',
-			//                 coordinates: [editedPolyVertices]
-			//             });
-			//         }
-			//         break;
-			// }
+			switch (state.selected.feature.type) {
+				case 'point':
+					state.selected.feature.loc = state.drawn.points[0].coords;
+					break;
+				case 'line':
+					state.selected.feature.line = state.drawn.line.map((id) => state.drawn.points[id].coords);
+					break;
+				case 'route':
+					state.selected.feature.edges = state.drawn.edges.map((edge) => {
+						if (edge.type == 'string') {
+							return {
+								type: 'string',
+								line: edge.line.map((id) => state.drawn.points[id].coords)
+							};
+						} else if (edge.type == 'snapped') {
+							return {
+								type: 'snapped',
+								waypoints: edge.waypoints.map((id) => state.drawn.points[id].coords),
+								polyline: edge.polyline
+							};
+						}
+					});
+					break;
+				case 'poly':
+					state.selected.feature.incl = state.drawn.poly.map((id) => state.drawn.points[id].coords);
+					break;
+				default:
+					console.error('Bug: Unknown feature type');
+			}
 		} else {
-			console.log('Inserting');
 			switch (mode) {
 				case modes.point:
 					selectedLayer.features.push({
-						id: ++state.counters.feature + '',
+						id: ++state.counters.feature,
 						type: 'point',
 						loc: state.drawn.points[0].coords
 					});
@@ -304,63 +291,53 @@
 				case modes.line:
 					if (state.drawn.line.length > 1) {
 						selectedLayer.features.push({
-							id: ++state.counters.feature + '',
+							id: ++state.counters.feature,
 							type: 'line',
 							line: state.drawn.line.map((id) => state.drawn.points[id].coords)
 						});
 					}
 					break;
 				case modes.route:
-                    console.log(state.drawn.edges);
 					state.drawn.edges.map((edge) => {
 						if (edge.type == 'string') {
-							selectedLayer.features.push({
-								id: ++state.counters.feature + '',
-								type: 'route',
-								edges: [
-									{
-										type: 'string',
-										line: edge.line.map((id) => state.drawn.points[id].coords)
-									}
-								]
-							});
+							if (edge.line.length > 1) {
+								selectedLayer.features.push({
+									id: ++state.counters.feature,
+									type: 'route',
+									edges: [
+										{
+											type: 'string',
+											line: edge.line.map((id) => state.drawn.points[id].coords)
+										}
+									]
+								});
+							} else {
+								toast('Rota sem comprimento', 'warning');
+							}
 						} else if (edge.type == 'snapped') {
-							selectedLayer.features.push({
-								id: ++state.counters.feature + '',
-								type: 'route',
-								edges: [
-									{
-										type: 'snapped',
-										waypoints: edge.waypoints.map((id) => state.drawn.points[id].coords),
-										polyline: edge.polyline
-									}
-								]
-							});
+							if (edge.waypoints.length > 1) {
+								selectedLayer.features.push({
+									id: ++state.counters.feature,
+									type: 'route',
+									edges: [
+										{
+											type: 'snapped',
+											waypoints: edge.waypoints.map((id) => state.drawn.points[id].coords),
+											polyline: edge.polyline
+										}
+									]
+								});
+							} else {
+								toast('Rota sem comprimento', 'warning');
+							}
 						}
 					});
-					if (state.drawn.edges.length != 0) {
-						selectedLayer.features.push({
-							id: ++state.counters.feature + '',
-							type: 'route',
-							edges: [
-								{
-									type: 'string',
-									line: state.drawn.line.map((id) => state.drawn.points[id].coords)
-								}
-							]
-						});
-						selectedLayer.features.push({
-							id: ++state.counters.feature + '',
-							type: 'line',
-							line: state.drawn.line.map((id) => state.drawn.points[id].coords)
-						});
-					}
 					break;
 				case modes.poly:
 					if (state.drawn.poly.length > 2) {
 						state.drawn.poly.push(state.drawn.poly[0]);
 						selectedLayer.features.push({
-							id: ++state.counters.feature + '',
+							id: ++state.counters.feature,
 							type: 'poly',
 							incl: state.drawn.poly.map((id) => state.drawn.points[id].coords),
 							excl: []
@@ -411,6 +388,10 @@
 	}
 
 	function updateEdgePolyline(edge: SnappedEdgeEdit) {
+		if (edge.waypoints.length < 2) {
+			console.error('Bug: Edge with less than 2 waypoints');
+			return;
+		}
 		const throughPoints = structuredClone(
 			edge.waypoints.map((idx) => state.drawn.points[idx].coords)
 		);

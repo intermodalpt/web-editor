@@ -21,7 +21,7 @@ type Layer = {
 	z?: number;
 };
 
-type FeatureId = string;
+type FeatureId = number;
 type Feature = PointFeature | LineFeature | RouteFeature | PolyFeature;
 
 type PointFeature = {
