@@ -118,31 +118,29 @@ type ControlPoint = {
 	hasHandle: boolean;
 };
 
-type EditionData = {
-	selected: {
-		// Undefined means that no layer is selected
-		layer?: Layer | null;
-		// Undefined means that no feature is selected OR that the feature is being drawn
-		feature?: Feature | null;
-		featureLayer?: Layer | null;
-		controlPoint: {
-			idx: ControlPointIdx | null;
-			isMoving: boolean;
-		};
-		// For types that have distinct segments (Route ATM)
-		segmentIdx?: number | null;
+type EditorSelection = {
+	// Undefined means that no layer is selected
+	layer?: Layer | null;
+	// Undefined means that no feature is selected OR that the feature is being drawn
+	feature?: Feature | null;
+	featureLayer?: Layer | null;
+	controlPoint: {
+		idx: ControlPointIdx | null;
+		isMoving: boolean;
 	};
-	drawn: {
-		points: ControlPoint[];
-		line: ControlPointIdx[];
-		poly: ControlPointIdx[];
-		edges: (LineStringEdgeEdit | SnappedEdgeEdit)[]
-	};
-	counters: {
-		layer: number;
-		feature: number;
-		controlPoint: number;
-	};
+	// For types that have distinct segments (Route ATM)
+	segmentIdx?: number | null;
+};
+type EditorDrawings = {
+	points: ControlPoint[];
+	line: ControlPointIdx[];
+	poly: ControlPointIdx[];
+	edges: (LineStringEdgeEdit | SnappedEdgeEdit)[]
+};
+type EditorCounter = {
+	layer: number;
+	feature: number;
+	controlPoint: number;
 };
 
 type LineStringEdgeEdit = {
