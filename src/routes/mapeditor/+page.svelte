@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import polyline from '@mapbox/polyline';
+	import * as turf from '@turf/turf';
 	import LayerSettings from './LayerSettings.svelte';
 	import Map from './Map.svelte';
 	import { demoMapContent } from './dummydata';
@@ -51,6 +52,7 @@
 	};
 	let drawn: EditorDrawings = {
 		points: [],
+		midpoints: [],
 		line: [],
 		poly: [],
 		edges: []
@@ -114,71 +116,79 @@
 		unselectFeature();
 		selected.feature = feature;
 
-		switch (feature.type) {
-			case 'point':
-				newControlPoint(feature.loc);
-				break;
-			case 'line':
-				feature.line.forEach((coords) => {
-					drawn.line.push(newControlPoint(coords));
-				});
-				break;
-			case 'route':
-				let segmentCnt = 0;
+		if (feature.type == 'point') {
+			newControlPoint(feature.loc);
+		} else if (feature.type == 'line') {
+			let isFirst = true;
+			feature.line.forEach((coords) => {
+				const cp = newControlPoint(coords);
+				if (!isFirst) {
+					const last = drawn.line[drawn.line.length - 1];
+					drawn.midpoints.push({ cp1: last, cp2: cp });
+				}
+				drawn.line.push(cp);
+				isFirst = false;
+			});
+		} else if (feature.type == 'route') {
+			let segmentCnt = 0;
 
-				feature.edges.forEach((edge) => {
-					let isFirstPoint = true;
-					let lastControlPoint: ControlPointIdx | null = null;
-					const controlPoints: ControlPointIdx[] = [];
+			feature.edges.forEach((edge) => {
+				let isFirstPoint = true;
+				let lastControlPoint: ControlPointIdx | null = null;
+				const controlPoints: ControlPointIdx[] = [];
 
-					if (edge.type == 'string') {
-						edge.line.forEach((coords) => {
-							if (isFirstPoint) {
-								if (!lastControlPoint) {
-									lastControlPoint = newControlPoint(coords);
-									controlPoints.push(lastControlPoint);
-									drawn.line.push(lastControlPoint);
-								}
-							} else {
+				if (edge.type == 'string') {
+					edge.line.forEach((coords) => {
+						if (isFirstPoint) {
+							if (!lastControlPoint) {
 								lastControlPoint = newControlPoint(coords);
 								controlPoints.push(lastControlPoint);
 								drawn.line.push(lastControlPoint);
 							}
-							isFirstPoint = false;
-						});
-						drawn.edges.push({
-							type: 'string',
-							line: controlPoints
-						});
-					} else if (edge.type == 'snapped') {
-						let firstWaypoint = true;
-						edge.waypoints.forEach((coords) => {
-							if (!(firstWaypoint && lastControlPoint)) {
-								lastControlPoint = newControlPoint(coords);
-							}
+						} else {
+							lastControlPoint = newControlPoint(coords);
+							drawn.midpoints.push({ cp1: lastControlPoint - 1, cp2: lastControlPoint });
 							controlPoints.push(lastControlPoint);
-							firstWaypoint = false;
-							isFirstPoint = false;
-						});
+							drawn.line.push(lastControlPoint);
+						}
+						isFirstPoint = false;
+					});
+					drawn.edges.push({
+						type: 'string',
+						line: controlPoints
+					});
+				} else if (edge.type == 'snapped') {
+					let firstWaypoint = true;
+					edge.waypoints.forEach((coords) => {
+						if (!(firstWaypoint && lastControlPoint)) {
+							lastControlPoint = newControlPoint(coords);
+							drawn.midpoints.push({ cp1: lastControlPoint - 1, cp2: lastControlPoint });
+						}
+						controlPoints.push(lastControlPoint);
+						firstWaypoint = false;
+						isFirstPoint = false;
+					});
 
-						drawn.edges.push({
-							type: 'snapped',
-							waypoints: controlPoints,
-							polyline: edge.polyline
-						});
-					}
-					segmentCnt++;
-				});
-				break;
-			case 'poly':
-				feature.incl.forEach((coords) => {
-					let cpId = newControlPoint(coords);
-					drawn.line.push(cpId);
-					drawn.poly.push(cpId);
-				});
-				break;
-			default:
-				return;
+					drawn.edges.push({
+						type: 'snapped',
+						waypoints: controlPoints,
+						polyline: edge.polyline
+					});
+				}
+				segmentCnt++;
+			});
+		} else if (feature.type == 'poly') {
+			feature.incl.forEach((coords) => {
+				let cp = newControlPoint(coords);
+				if (drawn.poly.length > 0) {
+					const last = drawn.poly[drawn.poly.length - 1];
+					drawn.midpoints.push({ cp1: last, cp2: cp });
+				}
+				drawn.line.push(cp);
+				drawn.poly.push(cp);
+			});
+		} else {
+			return;
 		}
 		drawControlFeatures();
 	}
@@ -188,7 +198,7 @@
 		selected.controlPoint.idx = null;
 		selected.controlPoint.isMoving = false;
 		selected.segmentIdx = null;
-		drawn = { points: [], line: [], poly: [], edges: [] };
+		drawn = { points: [], midpoints: [], line: [], poly: [], edges: [] };
 		counters.controlPoint = 0;
 		map.clearEditData();
 	}
@@ -216,6 +226,15 @@
 		const line = drawn.line.map((idx) => drawn.points[idx].coords);
 		let poly = drawn.poly.map((idx) => drawn.points[idx].coords);
 
+		const midpoints = drawn.midpoints.map((mp) => {
+			return {
+				cp1: mp.cp1,
+				cp2: mp.cp2,
+				coords: turf.midpoint(drawn.points[mp.cp1].coords, drawn.points[mp.cp2].coords).geometry
+					.coordinates
+			};
+		});
+
 		if (drawn.poly.length > 2) {
 			poly.push(drawn.points[drawn.poly[0]].coords);
 		} else {
@@ -233,7 +252,7 @@
 			}
 		});
 
-		map.drawControlFeatures(drawn.points, lines, [poly]);
+		map.drawControlFeatures(drawn.points, midpoints, lines, [poly]);
 	}
 
 	function finishEdition() {
@@ -243,6 +262,7 @@
 		}
 
 		if (selected.feature) {
+			// Updating
 			switch (selected.feature.type) {
 				case 'point':
 					selected.feature.loc = drawn.points[0].coords;
@@ -273,12 +293,15 @@
 					console.error('Bug: Unknown feature type');
 			}
 		} else {
+			// Inserting
 			switch (mode) {
 				case modes.point:
-					selected.layer.features.push({
-						id: ++counters.feature,
-						type: 'point',
-						loc: drawn.points[0].coords
+					drawn.points.forEach((point) => {
+						selected.layer.features.push({
+							id: ++counters.feature,
+							type: 'point',
+							loc: point.coords
+						});
 					});
 					break;
 				case modes.line:
@@ -349,34 +372,50 @@
 
 	function handleMapClick(e) {
 		const lngLat = e.detail.lngLat;
-		switch (mode) {
-			case modes.point:
-				newControlPoint([lngLat.lng, lngLat.lat]);
-				break;
-			case modes.line:
-				drawn.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
-				break;
-			case modes.route:
-				const lastEdge = drawn.edges[drawn.edges.length - 1];
-				if (lastEdge?.type == 'string') {
-					lastEdge.line.push(newControlPoint([lngLat.lng, lngLat.lat]));
-				} else if (lastEdge?.type == 'snapped') {
-					lastEdge.waypoints.push(newControlPoint([lngLat.lng, lngLat.lat]));
-					updateEdgePolyline(lastEdge);
-				} else {
-					drawn.edges.push({
-						type: 'snapped',
-						waypoints: [newControlPoint([lngLat.lng, lngLat.lat])]
-					});
-				}
 
-				break;
-			case modes.poly:
-				const cp = newControlPoint([lngLat.lng, lngLat.lat]);
-				drawn.line.push(cp);
-				drawn.poly.push(cp);
-				break;
+		if (mode == modes.point) {
+			newControlPoint([lngLat.lng, lngLat.lat]);
+		} else if (mode == modes.line) {
+			const cp = newControlPoint([lngLat.lng, lngLat.lat]);
+			if (drawn.line.length > 0) {
+				const last = drawn.line[drawn.line.length - 1];
+				drawn.midpoints.push({ cp1: last, cp2: cp });
+			}
+			drawn.line.push(cp);
+		} else if (mode == modes.route) {
+			const lastEdge = drawn.edges[drawn.edges.length - 1];
+			const cp = newControlPoint([lngLat.lng, lngLat.lat]);
+			if (lastEdge?.type == 'string') {
+				if (lastEdge.line.length > 0) {
+					const last = lastEdge.line[lastEdge.line.length - 1];
+					drawn.midpoints.push({ cp1: last, cp2: cp });
+				}
+				lastEdge.line.push(cp);
+			} else if (lastEdge?.type == 'snapped') {
+				if (lastEdge.waypoints.length > 0) {
+					const last = lastEdge.waypoints[lastEdge.waypoints.length - 1];
+					drawn.midpoints.push({ cp1: last, cp2: cp });
+				}
+				lastEdge.waypoints.push(cp);
+				updateEdgePolyline(lastEdge);
+			} else {
+				drawn.edges.push({
+					type: 'snapped',
+					waypoints: [cp]
+				});
+			}
+		} else if (mode == modes.poly) {
+			const cp = newControlPoint([lngLat.lng, lngLat.lat]);
+
+			if (drawn.points.length > 1) {
+				const last = drawn.poly[drawn.poly.length - 1];
+				drawn.midpoints.push({ cp1: last, cp2: cp });
+			}
+
+			drawn.line.push(cp);
+			drawn.poly.push(cp);
 		}
+
 		drawControlFeatures();
 	}
 
@@ -405,6 +444,67 @@
 
 	function handleFeatureClick(e) {
 		selectFeature(e.detail.feature.id);
+	}
+
+	function handleControlSelect(e) {
+		selected.controlPoint = {
+			idx: e.detail.id,
+			isMoving: false
+		};
+	}
+
+	function handleMidpointSelect(e) {
+		// Parents
+		const cp1 = e.detail.cp1;
+		const cp2 = e.detail.cp2;
+
+		// Midpoint
+		const mp = turf.midpoint(drawn.points[cp1].coords, drawn.points[cp2].coords).geometry
+			.coordinates;
+		const cp = newControlPoint(mp);
+		selected.controlPoint = {
+			idx: cp,
+			isMoving: false
+		};
+
+		const lineIndex = drawn.line.findIndex((idx) => idx === cp1);
+		if (lineIndex !== -1) {
+			drawn.line.splice(lineIndex + 1, 0, cp);
+
+			drawn.midpoints.push({ cp1: cp1, cp2: cp });
+			drawn.midpoints.push({ cp1: cp, cp2: cp2 });
+		}
+
+		const polyIndex = drawn.poly.findIndex((idx) => idx === cp1);
+		if (polyIndex !== -1) {
+			drawn.poly.splice(polyIndex + 1, 0, cp);
+			if (polyIndex != lineIndex) {
+				console.error('Bug: Midpoint in a poly but not in a line');
+				return;
+			}
+		}
+
+		for (const edge of drawn.edges) {
+			if (edge.type == 'string') {
+				const edgeIndex = edge.line.findIndex((idx) => idx === cp1);
+				if (edgeIndex !== -1) {
+					edge.line.splice(edgeIndex + 1, 0, cp);
+					drawn.midpoints.push({ cp1: cp1, cp2: cp });
+					drawn.midpoints.push({ cp1: cp, cp2: cp2 });
+				}
+			} else if (edge.type == 'snapped') {
+				const edgeIndex = edge.waypoints.findIndex((idx) => idx === cp1);
+				if (edgeIndex !== -1) {
+					edge.waypoints.splice(edgeIndex + 1, 0, cp);
+					updateEdgePolyline(edge);
+					drawn.midpoints.push({ cp1: cp1, cp2: cp });
+					drawn.midpoints.push({ cp1: cp, cp2: cp2 });
+				}
+			}
+		}
+
+		// Delete the midpoint
+		drawn.midpoints = drawn.midpoints.filter((mp) => !(mp.cp1 == cp1 && mp.cp2 == cp2));
 	}
 
 	function onMapLoad() {
@@ -437,6 +537,7 @@
 			layer.features.forEach((feature) => {
 				feature.id = ++counters.feature;
 			});
+			layer = layer;
 			map.addLayer(layer.id, layer.spec);
 		});
 		selected.layer = mapContent.layers[0];
@@ -465,12 +566,8 @@
 	on:mapload={onMapLoad}
 	on:mapclick={handleMapClick}
 	on:featureclick={handleFeatureClick}
-	on:controlselect={(e) => {
-		selected.controlPoint = {
-			idx: e.detail.id,
-			isMoving: false
-		};
-	}}
+	on:midpointselect={handleMidpointSelect}
+	on:controlselect={handleControlSelect}
 	on:controlmove={({ detail }) => {
 		selected.controlPoint.isMoving = true;
 		updateSelectedControlPointPosition(detail.coords);

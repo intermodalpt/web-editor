@@ -254,6 +254,7 @@
 
 	export function drawControlFeatures(
 		points: ControlPoint[],
+		midpoints: any[],
 		lines: [number, number][][],
 		poly: [number, number][][]
 	) {
@@ -265,8 +266,24 @@
 				type: 'Point',
 				coordinates: point.coords
 			},
-			properties: {}
+			properties: {
+				isControl: true
+			}
 		}));
+		midpoints.forEach((point) =>
+			features.push({
+				type: 'Feature',
+				geometry: {
+					type: 'Point',
+					coordinates: point.coords
+				},
+				properties: {
+					cp1: point.cp1,
+					cp2: point.cp2,
+					isMidpoint: true
+				}
+			})
+		);
 		lines.forEach((line) => {
 			features.push({
 				type: 'Feature',
@@ -341,7 +358,7 @@
 			id: 'control-points',
 			type: 'circle',
 			source: 'editing',
-			filter: ['==', '$type', 'Point'],
+			filter: ['all', ['==', '$type', 'Point'], ['has', 'isControl']],
 			paint: {
 				'circle-radius': 10,
 				'circle-color': '#ff0000',
@@ -349,6 +366,22 @@
 				'circle-stroke-color': '#0000ff',
 				'circle-stroke-opacity': 0.5,
 				'circle-stroke-width': 2
+			}
+		});
+
+		map.addLayer({
+			id: 'control-midpoints',
+			type: 'circle',
+			source: 'editing',
+			// The property isMidpoint is true
+			filter: ['all', ['==', '$type', 'Point'], ['has', 'isMidpoint']],
+			paint: {
+				'circle-radius': 6,
+				'circle-color': '#ff0000',
+				'circle-opacity': 0.3,
+				'circle-stroke-color': '#0000ff',
+				'circle-stroke-opacity': 0.3,
+				'circle-stroke-width': 1.5
 			}
 		});
 	}
@@ -387,6 +420,13 @@
 			// map.setPaintProperty('point', 'circle-color', '#3887be');
 			canvas.style.cursor = '';
 		});
+		map.on('mouseenter', 'control-midpoints', () => {
+			canvas.style.cursor = 'move';
+		});
+
+		map.on('mouseleave', 'control-midpoints', () => {
+			canvas.style.cursor = '';
+		});
 
 		map.on('mousedown', 'control-points', (e) => {
 			// Prevent the default map drag behavior.
@@ -406,6 +446,34 @@
 			e.preventDefault();
 
 			dispatch('controlselect', { id: e.features[0].id });
+			map.on('touchmove', controlPointOnMove);
+			map.once('touchend', controlPointOnUp);
+		});
+
+		map.on('mousedown', 'control-midpoints', (e) => {
+			// Prevent the default map drag behavior.
+			e.preventDefault();
+
+			canvas.style.cursor = 'grab';
+
+			dispatch('midpointselect', {
+				cp1: e.features[0].properties.cp1,
+				cp2: e.features[0].properties.cp2
+			});
+			map.on('mousemove', controlPointOnMove);
+			map.once('mouseup', controlPointOnUp);
+		});
+
+		map.on('touchstart', 'control-midpoints', (e) => {
+			if (e.points.length !== 1) return;
+
+			// Prevent the default map drag behavior.
+			e.preventDefault();
+
+			dispatch('midpointselect', {
+				cp1: e.features[0].properties.cp1,
+				cp2: e.features[0].properties.cp2
+			});
 			map.on('touchmove', controlPointOnMove);
 			map.once('touchend', controlPointOnUp);
 		});

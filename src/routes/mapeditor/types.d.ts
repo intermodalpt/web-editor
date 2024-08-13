@@ -117,6 +117,10 @@ type ControlPoint = {
 	coords: [number, number];
 	hasHandle: boolean;
 };
+type MidPoint = {
+	cp1: ControlPointIdx;
+	cp2: ControlPointIdx;
+};
 
 type EditorSelection = {
 	// Undefined means that no layer is selected
@@ -133,6 +137,7 @@ type EditorSelection = {
 };
 type EditorDrawings = {
 	points: ControlPoint[];
+	midpoints: MidPoint[];
 	line: ControlPointIdx[];
 	poly: ControlPointIdx[];
 	edges: (LineStringEdgeEdit | SnappedEdgeEdit)[]
