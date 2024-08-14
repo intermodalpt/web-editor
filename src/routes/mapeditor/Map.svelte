@@ -67,6 +67,13 @@
 		dLayers = dLayers.filter((l) => l.id !== layerId);
 	}
 
+	export function deleteAllLayers() {
+		dLayers.forEach((layer) => {
+			dropLayerSpecDerivatives(layer);
+		});
+		dLayers = [];
+	}
+
 	export function updateLayerSpec(layerId: LayerId, spec: LayerSpec) {
 		const dLayer = dLayers.find((l) => l.id === layerId);
 		if (!dLayer) {
@@ -542,7 +549,7 @@
 			const onUp = (e) => {
 				const coords = e.lngLat;
 				canvas.style.cursor = '';
-				dispatch('boundaryselectend', { coords });
+				dispatch('boundaryselectend', { idx, coords });
 				map.off('mousemove', onMove);
 				map.off('touchmove', onMove);
 			};
@@ -552,6 +559,21 @@
 		}
 		map.on('mousedown', 'boundary-points', onBoundaryDown);
 		map.on('touchstart', 'boundary-points', onBoundaryDown);
+	}
+
+	// ----- Map user interaction -----
+	export function fitToPoints(points: [number, number][]) {
+		if (points.length < 2) {
+			console.error('Attempted to fit map to less than 2 points');
+			return;
+		}
+		const bounds = points.reduce(
+			(bounds, point) => {
+				return bounds.extend(point);
+			},
+			new maplibre.LngLatBounds(points[0], points[0])
+		);
+		map.fitBounds(bounds, { padding: 20 });
 	}
 
 	onMount(async () => {

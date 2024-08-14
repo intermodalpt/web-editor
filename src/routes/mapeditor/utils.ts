@@ -16,28 +16,28 @@ const DEFAULT_OUTLINE_SIZE = 0;
 export function completeLayerSpec(spec: LayerSpec): LayerSpec {
 	return {
 		points: {
-			size: spec.points.size ?? DEFAULT_POINT_SIZE,
-			color: spec.points.color ?? DEFAULT_POINT_COLOR,
-			opacity: spec.points.opacity ?? DEFAULT_POINT_OPACITY,
+			size: spec?.points?.size ?? DEFAULT_POINT_SIZE,
+			color: spec?.points?.color ?? DEFAULT_POINT_COLOR,
+			opacity: spec?.points?.opacity ?? DEFAULT_POINT_OPACITY,
 			outline: spec.points.outline,
 			pulse: completeOutline(spec.points.outline)
 		},
 		lines: {
-			size: spec.lines.size ?? DEFAULT_LINE_SIZE,
-			color: spec.lines.color ?? DEFAULT_LINE_COLOR,
-			opacity: spec.lines.opacity ?? DEFAULT_LINE_OPACITY,
+			size: spec?.lines?.size ?? DEFAULT_LINE_SIZE,
+			color: spec?.lines?.color ?? DEFAULT_LINE_COLOR,
+			opacity: spec?.lines?.opacity ?? DEFAULT_LINE_OPACITY,
 			outline: completeOutline(spec.lines.outline)
 		},
 		polys: {
-			color: spec.polys.color ?? DEFAULT_POLY_COLOR,
-			opacity: spec.polys.opacity ?? DEFAULT_POLY_OPACITY,
+			color: spec?.polys?.color ?? DEFAULT_POLY_COLOR,
+			opacity: spec?.polys?.opacity ?? DEFAULT_POLY_OPACITY,
 			outline: completeOutline(spec.polys.outline)
 		},
 		effects: spec.effects ?? []
 	};
 }
 
-function completeOutline(outline: Outline): Outline {
+function completeOutline(outline: Outline): Outline | null {
 	if (!outline) return outline;
 
 	if (!outline.color || !outline.size || !outline.opacity) {
@@ -126,4 +126,100 @@ function closePoly(poly: [number, number][]): [number, number][] {
 	if (flon === llon && flat === llat) return poly;
 
 	return [...poly, [flon, flat]];
+}
+
+export function parseMapContent(string: string): MapContent | undefined {
+	let content;
+	try {
+		content = JSON.parse(string);
+	} catch (e) {
+		return;
+	}
+
+	if (content?.version != 1) return;
+	if (!content.layers) return;
+	if (!Array.isArray(content.layers)) return;
+	if (content.layers.some((layer) => !isLayerValid(layer))) return;
+	return content;
+}
+
+function isLayerValid(layer: Layer): boolean {
+	if (!layer.features) return false;
+	if (!Array.isArray(layer.features)) return false;
+	if (layer.features.some((feature) => !isFeatureValid(feature))) return false;
+	return true;
+}
+
+function isFeatureValid(feature: Feature): boolean {
+	switch (feature.type) {
+		case 'point':
+			return isPointFeatureValid(feature);
+		case 'line':
+			return isLineFeatureValid(feature);
+		case 'route':
+			return isRouteFeatureValid(feature);
+		case 'poly':
+			return isPolyFeatureValid(feature);
+		default:
+			return false;
+	}
+}
+
+function isPointFeatureValid(feature: PointFeature): boolean {
+	if (!Array.isArray(feature.loc)) return false;
+	if (feature.loc.length != 2) return false;
+	return true;
+}
+
+function isLineFeatureValid(feature: LineFeature): boolean {
+	if (!Array.isArray(feature.line)) return false;
+	if (feature.line.length < 2) return false;
+	if (feature.line.some((coords) => !Array.isArray(coords))) return false;
+	if (feature.line.some((coords) => coords.length != 2)) return false;
+	return true;
+}
+
+function isRouteFeatureValid(feature: RouteFeature): boolean {
+	if (!Array.isArray(feature.edges)) return false;
+	if (feature.edges.some((edge) => !isRouteEdgeValid(edge))) return false;
+	return true;
+}
+
+function isRouteEdgeValid(edge: RouteLineStringEdge | RouteSnappedEdge): boolean {
+	switch (edge.type) {
+		case 'string':
+			return isRouteLineStringEdgeValid(edge);
+		case 'snapped':
+			return isRouteSnappedEdgeValid(edge);
+		default:
+			return false;
+	}
+}
+
+function isRouteLineStringEdgeValid(edge: RouteLineStringEdge): boolean {
+	if (!Array.isArray(edge.line)) return false;
+	if (edge.line.length < 2) return false;
+	if (edge.line.some((coords) => !Array.isArray(coords))) return false;
+	if (edge.line.some((coords) => coords.length != 2)) return false;
+	return true;
+}
+
+function isRouteSnappedEdgeValid(edge: RouteSnappedEdge): boolean {
+	if (!Array.isArray(edge.waypoints)) return false;
+	if (edge.waypoints.length < 2) return false;
+	if (edge.waypoints.some((coords) => !Array.isArray(coords))) return false;
+	if (edge.waypoints.some((coords) => coords.length != 2)) return false;
+	return true;
+}
+
+function isPolyFeatureValid(feature: PolyFeature): boolean {
+	if (!Array.isArray(feature.incl)) return false;
+	if (feature.incl.length < 3) return false;
+	if (feature.incl.some((coords) => !Array.isArray(coords))) return false;
+	if (feature.incl.some((coords) => coords.length != 2)) return false;
+	if (!Array.isArray(feature.excl)) return false;
+	if (feature.excl.some((poly) => !Array.isArray(poly))) return false;
+	if (feature.excl.some((poly) => poly.some((coords) => !Array.isArray(coords)))) return false;
+	if (feature.excl.some((poly) => poly.some((coords) => coords.length != 2))) return false;
+	return true;
 }

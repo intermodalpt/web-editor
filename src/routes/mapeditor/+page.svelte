@@ -2,14 +2,15 @@
 	import { tick } from 'svelte';
 	import polyline from '@mapbox/polyline';
 	import * as turf from '@turf/turf';
-	import LayerSettings from './LayerSettings.svelte';
-	import Map from './Map.svelte';
-	import { demoMapContent } from './dummydata';
-	import { compileLayerFeatures } from './utils';
 	import MapContent from '$lib/content/MapContent.svelte';
 	import { getRouteThrough } from '$lib/api';
 	import { toast } from '$lib/stores';
 	import { isDeepEqual } from '$lib/utils';
+	import Icon from '$lib/components/Icon.svelte';
+	import { compileLayerFeatures, parseMapContent } from './utils';
+	import Map from './Map.svelte';
+	import LayerSettings from './LayerSettings.svelte';
+	import { demoMapContent } from './dummydata';
 
 	let map: Map;
 	let mapLoaded = false;
@@ -65,6 +66,10 @@
 		boundary: 0
 	};
 
+	let importDialog;
+	let importData = '';
+	$: contentPendingImport = parseMapContent(importData);
+
 	function addEmptyLayer() {
 		const id = ++counters.layer + '';
 		const newLayer = {
@@ -111,12 +116,6 @@
 		const idx = counters.boundary++;
 		drawn.boundary.push({ idx, coords });
 		return idx;
-	}
-
-	function compileAndUpdateMapContent(content: MapContent) {
-		content.layers.forEach((layer) => {
-			map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
-		});
 	}
 
 	function selectFeature(featureId: FeatureId) {
@@ -246,8 +245,6 @@
 	function updateBoundaryPointPosition(e) {
 		let idx = e.detail.idx;
 		const newCoords = e.detail.coords;
-
-		console.log(e);
 
 		drawn.boundary[idx].coords = newCoords;
 		drawBoundaryFeatures();
@@ -451,10 +448,24 @@
 			drawn.poly.push(cp);
 		} else if (mode == modes.bbox) {
 			newBoundaryControlPoint([lngLat.lng, lngLat.lat]);
+			optimizeBoundary();
 			drawBoundaryFeatures();
 		}
 
 		drawControlFeatures();
+	}
+
+	function optimizeBoundary() {
+		if (drawn.boundary.length > 3) {
+			const coords = drawn.boundary.map((point) => point.coords);
+			const convexHull = turf.convex(turf.multiPoint(coords));
+
+			drawn.boundary = [];
+			counters.boundary = 0;
+			convexHull.geometry.coordinates[0].forEach((coords) => {
+				newBoundaryControlPoint(coords);
+			});
+		}
 	}
 
 	function updateEdgePolyline(edge: SnappedEdgeEdit) {
@@ -558,13 +569,14 @@
 		}
 	}
 
-	async function loadData(content: MapContent) {
+	function loadData(content: MapContent) {
 		unselectFeature();
 		selected.layer = null;
 		counters.layer = 0;
 		counters.feature = 0;
+		map.deleteAllLayers();
+
 		mapContent = content;
-		await tick();
 
 		content.layers.forEach((layer) => {
 			layer.id = ++counters.layer + '';
@@ -574,9 +586,9 @@
 			});
 			layer = layer;
 			map.addLayer(layer.id, layer.spec);
+			map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
 		});
 		selected.layer = mapContent.layers[0];
-		compileAndUpdateMapContent(content);
 	}
 
 	function handleSpecChange(e) {
@@ -591,6 +603,26 @@
 	function handleDeleteFeature(e) {
 		const layer = e.detail.layer;
 		map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
+	}
+
+	function preview() {
+		map.fitToPoints(drawn.boundary.map((point) => point.coords));
+	}
+
+	function handleImport() {
+		importDialog.showModal();
+	}
+
+	function handleImport2() {
+		const data = JSON.parse(importData);
+		loadData(data);
+		importDialog.close();
+	}
+
+	function handleExport() {
+		const data = JSON.stringify(mapContent);
+		navigator.clipboard.writeText(data);
+		toast('Conteúdo copiado', 'info');
 	}
 </script>
 
@@ -610,6 +642,10 @@
 	}}
 	on:controlendmove={() => {
 		selected.controlPoint.isMoving = false;
+	}}
+	on:boundaryselectend={() => {
+		optimizeBoundary();
+		drawBoundaryFeatures();
 	}}
 >
 	<div class="absolute right-0 z-10 flex flex-col justify-start py-3 transition w-96">
@@ -693,10 +729,12 @@
 	<div class="absolute left-0 z-10 p-3 bg-white rounded-br-md">
 		<span class="text-lg font-bold">{selected.feature ? 'Alteração' : 'Criação'}</span>
 	</div>
-	<div class="absolute left-0 bottom-0 z-10 p-3 flex flex-col gap-2 bg-white rounded-br-md">
-		<span>Inserir</span>
+	<div
+		class="absolute left-0 bottom-0 z-10 p-3 flex flex-col gap-2 bg-white rounded-tr-lg shadow-lg"
+	>
 		<button
-			class="btn"
+			class="btn btn-outline"
+			class:btn-outline={mode !== modes.point}
 			class:btn-primary={mode === modes.point}
 			on:click={() => {
 				unselectFeature();
@@ -704,7 +742,8 @@
 			}}>Ponto</button
 		>
 		<button
-			class="btn"
+			class="btn btn-outline"
+			class:btn-outline={mode !== modes.line}
 			class:btn-primary={mode === modes.line}
 			on:click={() => {
 				unselectFeature();
@@ -712,7 +751,8 @@
 			}}>Linha</button
 		>
 		<button
-			class="btn"
+			class="btn btn-outline"
+			class:btn-outline={mode !== modes.route}
 			class:btn-primary={mode === modes.route}
 			on:click={() => {
 				unselectFeature();
@@ -721,6 +761,7 @@
 		>
 		<button
 			class="btn"
+			class:btn-outline={mode !== modes.poly}
 			class:btn-primary={mode === modes.poly}
 			on:click={() => {
 				unselectFeature();
@@ -728,13 +769,55 @@
 			}}>Poligono</button
 		>
 		<button
-			class="btn"
+			class="btn btn-outline"
+			class:btn-outline={mode !== modes.bbox}
 			class:btn-primary={mode === modes.bbox}
 			on:click={() => {
 				unselectFeature();
 				drawBoundaryFeatures();
 				mode = modes.bbox;
-			}}>Bounding</button
+			}}>Janela</button
+		>
+	</div>
+	<div class="absolute right-2 bottom-10 z-10 flex gap-2 items-end">
+		<button
+			class="btn btn-xs !btn-primary"
+			class:btn-primary={mode === modes.point}
+			on:click={handleImport}>Importar</button
+		>
+		<button
+			class="btn btn-xs !btn-primary"
+			class:btn-primary={mode === modes.point}
+			on:click={handleExport}>Exportar</button
+		>
+		<button
+			class="btn btn-sm !btn-primary"
+			class:btn-primary={mode === modes.point}
+			on:click={preview}>Ajustar</button
 		>
 	</div>
 </Map>
+
+<dialog bind:this={importDialog} class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box relative">
+		<form method="dialog">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<Icon name="close" class="h-4 stroke-current" />
+			</button>
+		</form>
+		<h3 class="font-bold text-lg">Valor</h3>
+		<textarea
+			class="w-full h-32 textarea textarea-bordered"
+			class:textarea-error={!contentPendingImport}
+			bind:value={importData}
+		></textarea>
+		<div class="flex justify-end">
+			<button class="btn btn-primary" disabled={!contentPendingImport} on:click={handleImport2}
+				>Importar</button
+			>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>

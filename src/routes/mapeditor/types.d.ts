@@ -1,14 +1,14 @@
 // ----- Stored data -----
 type MapContent = {
 	layers: Layer[];
-	camera: {
+	camera?: {
 		center: [number, number];
-		zoom: number;
-		bearing: number;
+		zoom?: number;
+		bearing?: number;
 		pitch: number;
 	};
-	bounding: [number, number][];
-	version: number;
+	bounding?: [number, number][];
+	version: 1;
 };
 
 type LayerId = string;
