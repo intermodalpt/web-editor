@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import Outline from './Outline.svelte';
+	import Outline from './EditorOutline.svelte';
 
 	const dispatch = createEventDispatcher();
 
+	export let name = '';
 	export let primitive;
 
 	if (!primitive) {
@@ -20,7 +21,8 @@
 		if (value) {
 			primitive.outline = primitive.outline ?? {
 				color: '#FFFFFF',
-				opacity: 1
+				opacity: 1,
+				size: 1
 			};
 		} else {
 			primitive.outline = null;
@@ -33,10 +35,18 @@
 	}
 </script>
 
-<span class="text-sm text-center w-full block border-2 bg-slate-100">Polys</span>
+<span class="text-sm text-center w-full block border-2 bg-slate-100">{name}</span>
 <div class="flex items-center gap-2 pl-2 py-2 border-l-2 border-r-2 border-b-2 !border-slate-300">
-	<input type="color" class="input input-xs" bind:value={primitive.color} on:change />
-	<span>{primitive.color}</span>
+	<label>
+		Size:
+		<input
+			type="number"
+			class="input input-bordered input-xs w-16"
+			bind:value={primitive.size}
+			on:change
+		/>
+	</label>
+	<input type="color" class="input input-xs" bind:value={primitive.color} on:change/>
 	<label>
 		O:
 		<input

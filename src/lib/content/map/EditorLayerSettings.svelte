@@ -1,9 +1,9 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import Feature from './Feature.svelte';
-	import Outline from './Outline.svelte';
-	import PrimitiveSettings from './PrimitiveSettings.svelte';
-	import PolySettings from './PolySettings.svelte';
+	import Feature from './EditorFeature.svelte';
+	import Outline from './EditorOutline.svelte';
+	import PrimitiveSettings from './EditorPrimitiveSettings.svelte';
+	import PolySettings from './EditorPolySettings.svelte';
 
 	const dispatch = createEventDispatcher();
 
