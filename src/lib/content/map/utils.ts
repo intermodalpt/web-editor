@@ -1,17 +1,75 @@
 import polyline from '@mapbox/polyline';
 
-const DEFAULT_LINE_SIZE = 2;
-const DEFAULT_LINE_COLOR = '#ffffff';
+const DEFAULT_POINT_COLOR = '#1e66f5';
+const DEFAULT_POINT_SIZE = 10;
+const DEFAULT_POINT_OPACITY = 0.3;
+const DEFAULT_LINE_SIZE = 4;
+const DEFAULT_LINE_COLOR = '#1e66f5';
 const DEFAULT_LINE_OPACITY = 1;
-const DEFAULT_POINT_COLOR = '#000000';
-const DEFAULT_POINT_SIZE = 3;
-const DEFAULT_POINT_OPACITY = 1;
-const DEFAULT_POLY_COLOR = '#000000';
-const DEFAULT_POLY_OPACITY = 1;
+const DEFAULT_POLY_COLOR = '#1e66f5';
+const DEFAULT_POLY_OPACITY = 0.3;
 
-const DEFAULT_OUTLINE_OPACITY = 0;
-const DEFAULT_OUTLINE_COLOR = '#000000';
-const DEFAULT_OUTLINE_SIZE = 0;
+const DEFAULT_OUTLINE_OPACITY = 0.5;
+const DEFAULT_OUTLINE_COLOR = '#1e66f5';
+const DEFAULT_OUTLINE_SIZE = 3;
+
+export function defaultMapContent(): MapContent {
+	return {
+		layers: [
+			{
+				id: 0,
+				name: 'Base',
+				features: [],
+				spec: defaultLayerSpec(),
+				visible: true
+			}
+		],
+		features: [],
+		bounding: [],
+		camera: {
+			center: [0, 0],
+			zoom: 0,
+			bearing: 0,
+			pitch: 0
+		},
+		version: 1
+	}
+}
+
+export function defaultLayerSpec(): LayerSpec {
+	return {
+		points: {
+			size: DEFAULT_POINT_SIZE,
+			color: DEFAULT_POINT_COLOR,
+			opacity: DEFAULT_POINT_OPACITY,
+			outline: {
+				color: DEFAULT_OUTLINE_COLOR,
+				opacity: DEFAULT_OUTLINE_OPACITY,
+				size: DEFAULT_OUTLINE_SIZE
+			}
+		},
+		lines: {
+			size: DEFAULT_LINE_SIZE,
+			color: DEFAULT_LINE_COLOR,
+			opacity: 1.0,
+			outline: {
+				color: '#333333',
+				opacity: 1.0,
+				size: DEFAULT_OUTLINE_SIZE
+			}
+		},
+		polys: {
+			color: DEFAULT_POLY_COLOR,
+			opacity: DEFAULT_POLY_OPACITY,
+			outline: {
+				color: DEFAULT_OUTLINE_COLOR,
+				opacity: DEFAULT_OUTLINE_OPACITY,
+				size: DEFAULT_OUTLINE_SIZE
+			}
+		},
+		effects: []
+	};
+}
 
 export function completeLayerSpec(spec: LayerSpec): LayerSpec {
 	return {
@@ -136,11 +194,16 @@ export function parseMapContent(string: string): MapContent | undefined {
 		return;
 	}
 
-	if (content?.version != 1) return;
-	if (!content.layers) return;
-	if (!Array.isArray(content.layers)) return;
-	if (content.layers.some((layer) => !isLayerValid(layer))) return;
+	if (!isMapContentValid(content)) return;
 	return content;
+}
+
+export function isMapContentValid(content: MapContent): boolean {
+	if (content?.version != 1) return false;
+	if (!content?.layers) return false;
+	if (!Array.isArray(content.layers)) return false;
+	if (content.layers.some((layer) => !isLayerValid(layer))) return false;
+	return true;
 }
 
 function isLayerValid(layer: Layer): boolean {

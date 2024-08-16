@@ -587,6 +587,9 @@
 			center: defaultMapCenter
 		});
 
+		map.addControl(new maplibre.FullscreenControl(), 'top-left');
+		map.addControl(new maplibre.FullscreenControl(), 'top-left');
+
 		map.on('load', () => {
 			instantiateEditionLayers();
 			addEditionEvents();

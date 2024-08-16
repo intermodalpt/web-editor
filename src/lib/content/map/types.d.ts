@@ -82,7 +82,7 @@ type PointRendering = {
 	color: string;
 	opacity: number;
 	outline?: Outline;
-	pulse: {
+	pulse?: {
 		expansion: number;
 		speed: number;
 	};

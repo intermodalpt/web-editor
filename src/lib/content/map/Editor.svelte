@@ -7,7 +7,13 @@
 	import { toast } from '$lib/stores';
 	import { isDeepEqual } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
-	import { compileLayerFeatures, parseMapContent } from './utils';
+	import {
+		compileLayerFeatures,
+		defaultLayerSpec,
+		defaultMapContent,
+		isMapContentValid,
+		parseMapContent
+	} from './utils';
 	import Map from './EditorMap.svelte';
 	import LayerSettings from './EditorLayerSettings.svelte';
 
@@ -16,18 +22,8 @@
 	let map: Map;
 	let mapLoaded = false;
 
-	export let content: MapContent = {
-		layers: [],
-		features: [],
-		bounding: [],
-		camera: {
-			center: [0, 0],
-			zoom: 0,
-			bearing: 0,
-			pitch: 0
-		},
-		version: 1
-	};
+	let content: MapContent = defaultMapContent();
+	export let canEdit = false;
 
 	let openSettingsLayerId: string | undefined;
 
@@ -71,22 +67,26 @@
 	let importData = '';
 	$: contentPendingImport = parseMapContent(importData);
 
+	export function getContent() {
+		return structuredClone(content);
+	}
+
 	function addEmptyLayer() {
 		const id = ++counters.layer + '';
 		const newLayer = {
 			id,
 			features: [],
-			spec: {
-				points: {},
-				lines: {},
-				polys: {}
-			},
+			spec: defaultLayerSpec(),
 			visible: true
 		};
 
 		content.layers.push(newLayer);
 		map.addLayer(id, newLayer.spec);
 		content = content;
+
+		if (!selected.layer) {
+			selected.layer = content.layers[0];
+		}
 	}
 
 	function deleteLayer(layer: Layer) {
@@ -168,13 +168,15 @@
 				} else if (edge.type == 'snapped') {
 					let firstWaypoint = true;
 					edge.waypoints.forEach((coords) => {
-						if (!(firstWaypoint && lastControlPoint)) {
-							lastControlPoint = newControlPoint(coords);
-							drawn.midpoints.push({ cp1: lastControlPoint - 1, cp2: lastControlPoint });
+						if (!firstWaypoint) {
+							const next = newControlPoint(coords);
+							drawn.midpoints.push({ cp1: lastControlPoint, cp2: next });
+							lastControlPoint = next;
+						} else {
+							controlPoints.push(newControlPoint(coords));
+							firstWaypoint = false;
+							isFirstPoint = false;
 						}
-						controlPoints.push(lastControlPoint);
-						firstWaypoint = false;
-						isFirstPoint = false;
 					});
 
 					drawn.edges.push({
@@ -248,7 +250,7 @@
 		const newCoords = e.detail.coords;
 
 		drawn.boundary[idx].coords = newCoords;
-		drawBoundaryFeatures();
+		triggerBoundaryChange();
 	}
 
 	function drawControlFeatures() {
@@ -284,13 +286,9 @@
 		map.drawControlFeatures(drawn.points, midpoints, lines, [poly]);
 	}
 
-	function drawBoundaryFeatures() {
-		map.drawBoundaryFeatures(drawn.boundary);
-	}
-
 	function finishEdition() {
 		if (!selected.layer && mode != modes.bbox) {
-			console.log('No selected layer. This is a bug');
+			toast('Nenhuma camada selecionada', 'error');
 			return;
 		}
 
@@ -401,6 +399,7 @@
 		unselectFeature();
 		mode = modes.select;
 		content.layers = content.layers;
+		dispatch('change');
 	}
 
 	function handleMapClick(e) {
@@ -449,11 +448,16 @@
 			drawn.poly.push(cp);
 		} else if (mode == modes.bbox) {
 			newBoundaryControlPoint([lngLat.lng, lngLat.lat]);
-			optimizeBoundary();
-			drawBoundaryFeatures();
+			triggerBoundaryChange();
 		}
 
 		drawControlFeatures();
+	}
+
+	function triggerBoundaryChange() {
+		optimizeBoundary();
+		map.drawBoundaryFeatures(drawn.boundary);
+		dispatch('change');
 	}
 
 	function optimizeBoundary() {
@@ -493,7 +497,9 @@
 	}
 
 	function handleFeatureClick(e) {
-		selectFeature(e.detail.feature.id);
+		if (canEdit) {
+			selectFeature(e.detail.feature.id);
+		}
 	}
 
 	function handleControlSelect(e) {
@@ -556,6 +562,9 @@
 
 	function onMapLoad() {
 		mapLoaded = true;
+
+		loadData(content);
+
 		dispatch('load');
 	}
 
@@ -600,6 +609,24 @@
 		map.setLayerVisibility(layer.id, layer.visible);
 	}
 
+	function layerUp(i) {
+		if (i > 0) {
+			const layer = content.layers[i];
+			content.layers[i] = content.layers[i - 1];
+			content.layers[i - 1] = layer;
+			content = content;
+		}
+	}
+
+	function layerDown(i) {
+		if (i < content.layers.length - 1) {
+			const layer = content.layers[i];
+			content.layers[i] = content.layers[i + 1];
+			content.layers[i + 1] = layer;
+			content = content;
+		}
+	}
+
 	function handleDeleteFeature(e) {
 		const layer = e.detail.layer;
 		map.updateLayerFeatures(layer.id, compileLayerFeatures(layer.features));
@@ -636,21 +663,21 @@
 	on:controlselect={handleControlSelect}
 	on:midpointselect={handleMidpointSelect}
 	on:controlmove={updateControlPointPosition}
-	on:boundarymove={updateBoundaryPointPosition}
 	on:controlselectend={() => {
 		selected.controlPoint.idx = null;
 	}}
 	on:controlendmove={() => {
 		selected.controlPoint.isMoving = false;
 	}}
-	on:boundaryselectend={() => {
-		optimizeBoundary();
-		drawBoundaryFeatures();
-	}}
+	on:boundarymove={updateBoundaryPointPosition}
+	on:boundaryselectend={triggerBoundaryChange}
 >
 	<div class="absolute right-0 z-10 flex flex-col justify-start py-3 transition w-96">
-		<div class="max-h-full rounded-l-xl shadow-lg flex flex-col border-2 bg-base-200">
-			{#each content.layers as layer}
+		<div
+			class="max-h-full rounded-l-xl shadow-lg flex flex-col border-2 bg-base-200"
+			class:hidden={!canEdit}
+		>
+			{#each content.layers as layer, i}
 				<div class="flex flex-col gap-2 p-2 rounded-md">
 					<div class="flex gap-2 items-center">
 						<label class="flex items-center grow gap-2">
@@ -695,8 +722,16 @@
 								openSettingsLayerId = layer.id;
 							}}>Edit</button
 						>
-						<button class="btn btn-neutral btn-outline btn-xs">⬆</button>
-						<button class="btn btn-neutral btn-outline btn-xs">⬇</button>
+						<button
+							class="btn btn-neutral btn-outline btn-xs"
+							class:hidden={i == 0}
+							on:click={() => layerUp(i)}>⬆</button
+						>
+						<button
+							class="btn btn-neutral btn-outline btn-xs"
+							class:hidden={i == content.layers.length - 1}
+							on:click={() => layerDown(i)}>⬇</button
+						>
 					</div>
 				</div>
 
@@ -727,10 +762,13 @@
 	</div>
 
 	<div class="absolute left-0 z-10 p-3 bg-white rounded-br-md">
-		<span class="text-lg font-bold">{selected.feature ? 'Alteração' : 'Criação'}</span>
+		<span class="text-lg font-bold"
+			>{canEdit ? (selected.feature ? 'Alteração' : 'Criação') : 'Visualização'}</span
+		>
 	</div>
 	<div
-		class="absolute left-0 bottom-0 z-10 p-3 flex flex-col gap-2 bg-white rounded-tr-lg shadow-lg"
+		class="absolute left-0 bottom-0 z-10 p-1 flex flex-col gap-2 bg-white rounded-tr-lg shadow-lg"
+		class:hidden={!canEdit}
 	>
 		<button
 			class="btn btn-outline"
@@ -774,7 +812,6 @@
 			class:btn-primary={mode === modes.bbox}
 			on:click={() => {
 				unselectFeature();
-				drawBoundaryFeatures();
 				mode = modes.bbox;
 			}}>Janela</button
 		>
@@ -783,11 +820,13 @@
 		<button
 			class="btn btn-xs !btn-primary"
 			class:btn-primary={mode === modes.point}
+			class:hidden={!canEdit}
 			on:click={handleImport}>Importar</button
 		>
 		<button
 			class="btn btn-xs !btn-primary"
 			class:btn-primary={mode === modes.point}
+			class:hidden={!canEdit}
 			on:click={handleExport}>Exportar</button
 		>
 		<button
