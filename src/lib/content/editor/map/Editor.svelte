@@ -2,7 +2,6 @@
 	import { createEventDispatcher } from 'svelte';
 	import polyline from '@mapbox/polyline';
 	import * as turf from '@turf/turf';
-	import MapContent from '$lib/content/MapContent.svelte';
 	import { getRouteThrough } from '$lib/api';
 	import { toast } from '$lib/stores';
 	import { isDeepEqual } from '$lib/utils';
@@ -321,6 +320,7 @@
 					selected.feature.incl = drawn.poly.map((id) => drawn.points[id].coords);
 					break;
 				default:
+					toast('Tipo de objeto desconhecido', 'error');
 					console.error('Bug: Unknown feature type');
 			}
 		} else {
@@ -389,6 +389,13 @@
 							incl: drawn.poly.map((id) => drawn.points[id].coords),
 							excl: []
 						});
+					}
+					break;
+				case modes.bbox:
+					if (drawn.boundary.length >= 3) {
+						content.bounding = drawn.boundary.map((point) => point.coords);
+					} else {
+						toast('Pontos insuficientes para definir uma janela', 'error');
 					}
 					break;
 			}
@@ -633,7 +640,46 @@
 	}
 
 	function preview() {
-		map.fitToPoints(drawn.boundary.map((point) => point.coords));
+		if (drawn.boundary.length < 3) {
+			toast('Janela não definida', 'error');
+			return;
+		}
+		map.fitToPoints(content.bounding);
+	}
+
+	function fitBbox() {
+		let points: [number, number][] = [];
+		content.layers.forEach((layer) => {
+			layer.features.forEach((feature) => {
+				if (feature.type == 'point') {
+					points.push(feature.loc);
+				} else if (feature.type == 'line') {
+					points = points.concat(feature.line);
+				} else if (feature.type == 'route') {
+					feature.edges.forEach((edge) => {
+						if (edge.type == 'string') {
+							points = points.concat(edge.line);
+						} else if (edge.type == 'snapped') {
+							points = points.concat(edge.waypoints);
+						}
+					});
+				} else if (feature.type == 'poly') {
+					points = points.concat(feature.incl);
+				}
+			});
+		});
+		// Set content.bounding to the convex polygon of all points
+		content.bounding = turf.convex(turf.multiPoint(points)).geometry.coordinates[0];
+		// Exclude the last one (as is repeated)
+		content.bounding.pop();
+
+		// Set drawn.boundary to the same points
+		content.bounding.forEach((coords) => {
+			newBoundaryControlPoint(coords);
+		});
+		triggerBoundaryChange();
+		content.bounding = content.bounding;
+		console.log('content.bounding', content.bounding);
 	}
 
 	function handleImport() {
@@ -762,59 +808,67 @@
 	</div>
 
 	<div class="absolute left-0 z-10 p-3 bg-white rounded-br-md">
-		<span class="text-lg font-bold"
+		<span class="text-md font-bold"
 			>{canEdit ? (selected.feature ? 'Alteração' : 'Criação') : 'Visualização'}</span
 		>
 	</div>
 	<div
-		class="absolute left-0 bottom-0 z-10 p-1 flex flex-col gap-2 bg-white rounded-tr-lg shadow-lg"
+		class="absolute left-0 bottom-0 z-10 flex justify-end items-end flex-row-reverse"
 		class:hidden={!canEdit}
 	>
-		<button
-			class="btn btn-outline"
-			class:btn-outline={mode !== modes.point}
-			class:btn-primary={mode === modes.point}
-			on:click={() => {
-				unselectFeature();
-				mode = modes.point;
-			}}>Ponto</button
+		<div
+			class="flex flex-col gap-2 bg-white rounded-tr-lg shadow-md p-1 border-l-2 border-base-300"
+			class:hidden={mode != modes.bbox}
 		>
-		<button
-			class="btn btn-outline"
-			class:btn-outline={mode !== modes.line}
-			class:btn-primary={mode === modes.line}
-			on:click={() => {
-				unselectFeature();
-				mode = modes.line;
-			}}>Linha</button
-		>
-		<button
-			class="btn btn-outline"
-			class:btn-outline={mode !== modes.route}
-			class:btn-primary={mode === modes.route}
-			on:click={() => {
-				unselectFeature();
-				mode = modes.route;
-			}}>Caminho</button
-		>
-		<button
-			class="btn"
-			class:btn-outline={mode !== modes.poly}
-			class:btn-primary={mode === modes.poly}
-			on:click={() => {
-				unselectFeature();
-				mode = modes.poly;
-			}}>Poligono</button
-		>
-		<button
-			class="btn btn-outline"
-			class:btn-outline={mode !== modes.bbox}
-			class:btn-primary={mode === modes.bbox}
-			on:click={() => {
-				unselectFeature();
-				mode = modes.bbox;
-			}}>Janela</button
-		>
+			<button class="btn btn-outline btn-sm" on:click={fitBbox}>Auto-ajustar</button>
+		</div>
+		<div class="flex flex-col gap-2 bg-white rounded-tr-lg shadow-lg p-1">
+			<button
+				class="btn btn-outline btn-sm"
+				class:btn-outline={mode !== modes.point}
+				class:btn-primary={mode === modes.point}
+				on:click={() => {
+					unselectFeature();
+					mode = modes.point;
+				}}>Ponto</button
+			>
+			<button
+				class="btn btn-outline btn-sm"
+				class:btn-outline={mode !== modes.line}
+				class:btn-primary={mode === modes.line}
+				on:click={() => {
+					unselectFeature();
+					mode = modes.line;
+				}}>Linha</button
+			>
+			<button
+				class="btn btn-outline btn-sm"
+				class:btn-outline={mode !== modes.route}
+				class:btn-primary={mode === modes.route}
+				on:click={() => {
+					unselectFeature();
+					mode = modes.route;
+				}}>Caminho</button
+			>
+			<button
+				class="btn btn-sm"
+				class:btn-outline={mode !== modes.poly}
+				class:btn-primary={mode === modes.poly}
+				on:click={() => {
+					unselectFeature();
+					mode = modes.poly;
+				}}>Poligono</button
+			>
+			<button
+				class="btn btn-outline btn-sm"
+				class:btn-outline={mode !== modes.bbox}
+				class:btn-primary={mode === modes.bbox}
+				on:click={() => {
+					unselectFeature();
+					mode = modes.bbox;
+				}}>Janela</button
+			>
+		</div>
 	</div>
 	<div class="absolute right-2 bottom-2 z-10 flex gap-2 items-end">
 		<button

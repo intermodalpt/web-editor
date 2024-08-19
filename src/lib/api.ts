@@ -714,6 +714,25 @@ export async function importExternalNewsImage(extImageId: number, opts: ReqOpts)
 }
 
 // ----- Images
+export async function uploadRichImg(data, opts: ReqOpts) {
+	const res = await f(`/v1/content/images`, {
+		method: 'POST',
+		body: data,
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
+export async function patchRichImg(id: string, data, opts: ReqOpts) {
+	const res = await f(`/v1/content/images/${id}`, {
+		method: 'PATCH',
+		isJson: true,
+		body: data,
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
 export async function getStopPicMap(opts: ReqOpts) {
 	const res = await f(`/v1/stop_pics/map`, { opts });
 	return await handleResponse(res, opts);

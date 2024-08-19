@@ -1,3 +1,5 @@
+import { defaultMapContent, isMapContentValid } from "./map/utils";
+
 export function defaultContentBlock(type) {
 	if (type === 'md') {
 		return { md: '' };
@@ -8,17 +10,15 @@ export function defaultContentBlock(type) {
 				url: '',
 				description: '',
 				transcript: null,
-				attribution: null
+				attribution: null,
+				license: null,
+				lat: null,
+				lon: null
 			}
 		};
 	} else if (type === 'map') {
 		return {
-			map: {
-				geojson: [],
-				lat: 38.75,
-				lon: -9.136,
-				zoom: 9
-			}
+			map: defaultMapContent()
 		};
 	} else if (type === 'ref') {
 		return {
@@ -36,13 +36,9 @@ export function isValidContentBlock(block) {
 	} else if ('img' in block) {
 		return block.img.id && block.img.url;
 	} else if ('map' in block) {
-		return isValidGeoJson(block.map.geojson) &&
-			block.map.lat <= 90.0 &&
-			block.map.lat > -90.0 &&
-			block.map.lon <= 180 &&
-			block.map.lon > -180 &&
-			block.map.zoom < 22 &&
-			block.map.zoom > 1;
+		return (
+			isMapContentValid(block.map)
+		);
 	} else if ('ref' in block) {
 		return nonBlankString(block.ref.name) || nonBlankString(block.ref.url);
 	} else {

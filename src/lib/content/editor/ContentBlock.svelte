@@ -5,7 +5,7 @@
 	import ImgContent from './ImgContent.svelte';
 	import MapContent from './MapContent.svelte';
 	import ContentRef from './ContentRef.svelte';
-	import { isValidContentBlock } from './utils.js';
+	import { isValidContentBlock } from './utils';
 
 	const dispatch = createEventDispatcher();
 
@@ -59,6 +59,11 @@
 						id: img.id,
 						url: img.url_medium,
 						transcript: img.transcript,
+						description: img.description,
+						attribution: img.attribution,
+						license: img.license,
+						lat: img.lat,
+						lon: img.lon,
 						linked: false,
 						used: true
 					};

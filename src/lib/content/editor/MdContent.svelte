@@ -12,7 +12,7 @@
 	let tab = tabs.hybrid;
 </script>
 
-<div role="tablist" class="tabs tabs-boxed mb-1">
+<div role="tablist" class="tabs tabs-boxed mb-1 pr-32">
 	<button
 		role="tab"
 		class="tab"
