@@ -1,11 +1,14 @@
 import { error } from '@sveltejs/kit';
-import { getNewsItems, getOperators, getRegions } from '$lib/api';
+import { getExternalNewsItem, getOperators, getRegions } from '$lib/api.js';
 
-export async function load({ fetch }) {
-	const [items, operators, regions] = await Promise.all([
-		getNewsItems(0, {
+
+
+export async function load({ params, fetch }) {
+	const itemId = parseInt(params.id);
+	const [item, operators, regions] = await Promise.all([
+		getExternalNewsItem(itemId, {
 			onError: (res) => {
-				error(res.status, 'Erro a carregar as notícias');
+				error(res.status, 'Erro a carregar notícia');
 			},
 			toJson: true,
 			fetch
@@ -26,5 +29,7 @@ export async function load({ fetch }) {
 		})
 	]);
 
-	return { items, operators, regions };
+	return { item, operators, regions };
 }
+
+

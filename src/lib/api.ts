@@ -637,6 +637,15 @@ export async function pairRouteWithUnmatchedPattern(
 }
 
 // ----- News -----
+export async function getNewsItems(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/news?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorNewsItems(operatorId: number, page: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/news?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
 
 export async function createNewsItem(data: number, opts: ReqOpts) {
 	const res = await f(`/v1/news`, {
@@ -673,12 +682,31 @@ export async function deleteNewsItem(id: number, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
-export async function uploadNewsImg(data, opts: ReqOpts) {
-	const res = await f(`/v1/news/images`, {
-		method: 'POST',
-		body: data,
-		opts
-	});
+export async function getExternalNewsItems(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/news/external?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorExternalNewsItems(
+	operatorId: number,
+	page: number,
+	opts: ReqOpts
+) {
+	const res = await f(`/v1/operators/${operatorId}/external_news?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getPendingExternalNewsItems(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/news/external/pending?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorPendingExternalNewsItems(
+	operatorId: number,
+	page: number,
+	opts: ReqOpts
+) {
+	const res = await f(`/v1/operators/${operatorId}/external_news/pending?p=${page}`, { opts });
 	return await handleResponse(res, opts);
 }
 

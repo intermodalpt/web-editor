@@ -3,7 +3,7 @@
 	import { toast } from '$lib/stores';
 	import { apiServer } from '$lib/settings';
 	import Icon from '$lib/components/Icon.svelte';
-	import ExternalNewsItemImporter from './ExternalNewsItemImporter.svelte';
+	import ExternalNewsItemImporter from '../editor/ExternalNewsItemImporter.svelte';
 
 	const dispatch = createEventDispatcher();
 
