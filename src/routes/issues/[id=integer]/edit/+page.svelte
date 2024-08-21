@@ -2,6 +2,7 @@
 	import Editor from '$lib/issues/Editor.svelte';
 
 	export let data;
+	const issue = data.issue;
 	const operators = data.operators;
 	const stops = data.stops;
 	const routes = data.routes;
@@ -12,6 +13,6 @@
 </script>
 
 <div class="card-body">
-	<h2 class="card-title">Novo problema</h2>
-	<Editor operators={operatorIndex} stops={stopIndex} routes={routeIndex} />
+	<h2 class="card-title">Editar problema</h2>
+	<Editor {issue} operators={operatorIndex} stops={stopIndex} routes={routeIndex} />
 </div>

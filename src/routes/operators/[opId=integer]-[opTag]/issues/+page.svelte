@@ -1,63 +1,56 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
+	import IssueViewer from '$lib/issues/Viewer.svelte';
 	import { permissions } from '$lib/stores';
 	import Menu from '../Menu.svelte';
+	import IssueBadge from './IssueBadge.svelte';
 
 	export let data;
 
 	const operator = data.operator;
 	const issues = data.issues;
+
+	let dialog;
+	let shownIssue;
 </script>
 
 <Menu {operator} page="issues" />
 
 <div class="card-body">
-	<p>Não existem problemas registados neste operador.</p>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-	{#each issues as issue}
-		<div class="card card-compact">
-			<div class="card-body">
-				<div class="flex gap-1">
-					<span>Afecto a</span>
-					<div class="flex">
-						{#each issue.operator as issueOperator}
-							<span class="badge badge-secondary">{issueOperator.name}</span>
-						{/each}
-					</div>
-				</div>
-				<h2 class="card-title">
-					<a href="/operators/{operator.id}-{operator.tag}/issues/{issue.id}">{issue.title}</a>
-				</h2>
-				<div class="flex gap-2">
-					<span>Linhas</span>
-					{#each issue.routes as routes}
-						<div class="flex">
-							<span
-								class="rounded-l-full px-1 font-bold"
-								style="color: {routes.badge_text}; background-color: {routes.badge_bg}"
-							>
-								{routes.code}
-							</span>
-							<span class="badge rounded-r-full badge-outline">{routes.name}</span>
-						</div>
-					{/each}
-				</div>
-				<div class="flex gap-2">
-					<span>Stops</span>
-					{#each issue.stops as stop}
-						<span class="badge badge-outline">{stop.id} - {stop.name}</span>
-					{/each}
-				</div>
-			</div>
+	{#if issues.length === 0}
+		<p>Não há problemas registrados para este operador.</p>
+	{:else}
+		<div class="grid grid-cols-1 xl:grid-cols-2 gap-2" class:hidden={issues.length === 0}>
+			{#each issues as issue}
+				<IssueBadge
+					{issue}
+					{operator}
+					on:click={() => {
+						shownIssue = issue;
+						dialog.showModal();
+					}}
+				/>
+			{/each}
 		</div>
-	{/each}
-</div>
-
-<div class="card-body">
+	{/if}
 	<div class="flex justify-end">
-		<a class="btn" class:hidden={!$permissions?.misc?.modifyIssues} href="/issues/new">
-			Adicionar problema
+		<a class="btn btn-primary" class:hidden={!$permissions?.misc?.modifyIssues} href="/issues/new">
+			Novo
 		</a>
 	</div>
 </div>
+
+<dialog bind:this={dialog} class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box max-w-[55em]">
+		{#if shownIssue}
+			<IssueViewer issue={shownIssue}>
+				<a class="btn btn-primary btn-sm" href="/issues/{shownIssue.id}" slot="actions">
+					<Icon name="arrows-outwards" class="p-1 h-full fill-white" />Abrir</a
+				>
+			</IssueViewer>
+		{/if}
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>
