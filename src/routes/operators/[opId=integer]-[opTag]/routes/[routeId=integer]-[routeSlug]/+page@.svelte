@@ -1,27 +1,27 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import * as turf from '@turf/turf';
-	import { liveQuery } from 'dexie';
 	import { toast, permissions } from '$lib/stores';
-	import { apiServer, tileStyle } from '$lib/settings';
+	import { tileStyle } from '$lib/settings';
 	import { regionMapParams } from '$lib/utils';
-	import { fetchCalendars, getCalendars, loadMissing, selectedRegion } from '$lib/db';
+	import { selectedRegion } from '$lib/db';
 	import DraggableList from '$lib/stops/DraggableList.svelte';
 	import { annotateSubroute, subrouteTitle } from '../aux.js';
 	import RouteForm from '../form/RouteForm.svelte';
 	import DepartureEditor from './DepartureEditor.svelte';
 	import GtfsValidator from './GtfsValidator.svelte';
-	import { changeSubrouteStops } from '$lib/api';
+	import { changeSubrouteStops, getRouteStops, getRouteSchedule } from '$lib/api';
 
-	/** @type {import('./$types').PageData} */
 	export let data;
 
+	const operator = data.operator;
 	const routeId = data.route.id;
 	const operatorId = data.route.operator;
 	const routeTypes = data.routeTypes;
+	const calendars = data.calendars;
 
 	// Stores and reactive variables
 	// PS: We might not need stores as these are now coming from load()
@@ -38,22 +38,12 @@
 		};
 	});
 
-	const calendars = liveQuery(() => getCalendars());
-	const operatorCalendars = derived(calendars, ($calendars) => {
-		if (!$calendars) return;
-		return Object.fromEntries(
-			Object.values($calendars)
-				.filter((calendar) => calendar.operator_id === operatorId)
-				.map((calendar) => [calendar.id, calendar])
-		);
-	});
-
 	const routeStops = writable();
 	const routeSchedules = writable();
 
 	let mapLoaded = false;
 	let stopsLoaded = true;
-	let calendarsLoaded = false;
+	let calendarsLoaded = true;
 	let routeStopsLoaded = false;
 	let routeSchedulesLoaded = false;
 	let centeredOnRoute = false;
@@ -127,46 +117,32 @@
 
 	async function loadExtraData() {
 		Promise.all([
-			// Ensure that calendars are available in indexedDB
-			fetchCalendars().then(() => {
-				calendarsLoaded = true;
-			}),
 			// Get the subroute stops
-			fetch(`${apiServer}/v1/routes/${routeId}/stops`)
-				.then((r) => r.json())
-				.then((data) => {
+			getRouteStops(routeId, {
+				onSuccess: (data) => {
 					const stops = Object.fromEntries(
 						data.map((subroute) => [subroute.subroute, subroute.stops])
 					);
-					$routeStops = stops;
 					routeStopsLoaded = true;
-					return stops;
-				}),
-			// Get the subroute schedules
-			fetch(`${apiServer}/v1/routes/${routeId}/schedule`)
-				.then((r) => r.json())
-				.then((data) => {
-					$routeSchedules = data;
+					$routeStops = stops;
+				},
+				onError: () => {
+					toast('Failed to load route stops', 'error');
+				},
+				toJson: true
+			}),
+			getRouteSchedule(routeId, {
+				onSuccess: (data) => {
 					routeSchedulesLoaded = true;
-					return routeSchedules;
-				})
-		])
-			.catch((e) => {
-				toast('Failed to load data', 'error');
-				console.log(e);
+					$routeSchedules = data;
+				},
+				onError: () => {
+					toast('Failed to load route schedules', 'error');
+				},
+				toJson: true
 			})
-			.then(async () => {
-				console.log('data loaded');
-				await loadMissing();
-			});
+		]);
 	}
-
-	loadRequiredData()
-		.then(loadExtraData)
-		.then(async () => {
-			console.log('data loaded');
-			await loadMissing();
-		});
 
 	stops.subscribe(() => {
 		console.log('stops changed');
@@ -600,7 +576,7 @@
 			(bounds, coord) => {
 				return bounds.extend(coord);
 			},
-			new LngLatBounds(coords[0], coords[0])
+			new maplibre.LngLatBounds(coords[0], coords[0])
 		);
 
 		map.fitBounds(bounds, { padding: 50 });
@@ -631,7 +607,7 @@
 
 	onMount(() => {
 		const mapParams = regionMapParams($selectedRegion);
-		map = new Maplibre({
+		map = new maplibre.Map({
 			container: mapElem,
 			style: tileStyle,
 			center: mapParams.center,
@@ -659,6 +635,8 @@
 				centerMap();
 			}
 		});
+
+		loadExtraData();
 	});
 
 	onDestroy(() => map?.remove());
@@ -697,6 +675,9 @@
 	>
 		<div class="rounded-xl shadow-lg flex flex-col gap-1 p-2 bg-base-100">
 			<div class="flex flex-row w-full gap-2 items-center">
+				<a class="btn btn-sm btn-neutral" href="/operators/{operator.id}-{operator.tag}"
+					>{operator.name}</a
+				>
 				<div
 					class="h-8 min-w-12 px-1 rounded-xl flex items-center justify-center font-bold"
 					style:background-color={$route?.badge_bg}
@@ -765,26 +746,23 @@
 		</div>
 		{#if tab == tabs.meta && $stops}
 			<div class="flex gap-4 rounded-xl shadow-lg p-2 bg-base-100 self-center overflow-y-auto">
-				<RouteForm
-					route={$stagedRoute}
-					stops={$stops}
-					routeStops={$routeStops}
-					{routeTypes}
-				/>
+				<RouteForm route={$stagedRoute} stops={$stops} routeStops={$routeStops} {routeTypes} />
 			</div>
 		{:else if tab == tabs.departures && $selectedSubroute}
 			<div
 				class="flex flex-col gap-4 rounded-xl shadow-lg p-2 bg-base-100 self-center overflow-y-auto"
 			>
-				<DepartureEditor
-					{selectedSubroute}
-					{routeSchedules}
-					{operatorCalendars}
-				/>
+				<DepartureEditor {selectedSubroute} {routeSchedules} {operatorCalendars} />
 			</div>
 		{:else if tab == tabs.validation}
 			<div class="flex flex-col rounded-xl shadow-lg p-2 bg-base-100 overflow-y-auto">
-				<GtfsValidator {route} {stops} {routeStops} {operatorId} canEdit={$permissions?.routes?.authenticate} />
+				<GtfsValidator
+					{route}
+					{stops}
+					{routeStops}
+					{operatorId}
+					canEdit={$permissions?.routes?.authenticate}
+				/>
 			</div>
 		{/if}
 	</div>

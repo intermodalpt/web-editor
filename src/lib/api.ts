@@ -39,7 +39,7 @@ async function handleResponse(
 			await ensureAwaited(onSuccess(toJson ? ret : res));
 		}
 	} else {
-		console.error(res);
+		console.error(`${res.status} - ${res.statusText} (${res.url})`);
 		if (onError) {
 			await ensureAwaited(onError(res));
 		}
@@ -228,6 +228,11 @@ export async function uploadLogo(operatorId: number, logoData, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getOperatorRouteTypes(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/routes/types`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function createOperatorRouteType(operatorId: number, data, opts: ReqOpts) {
 	const res = await f(`/v1/operators/${operatorId}/routes/types`, {
 		method: 'POST',
@@ -291,6 +296,11 @@ export async function deleteCalendar(operatorId: number, calendarId: number, opt
 
 export async function getOperatorStops(operatorId: number, opts: ReqOpts) {
 	const res = await f(`/v1/operators/${operatorId}/stops`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getOperatorFullStops(operatorId: number, opts: ReqOpts) {
+	const res = await f(`/v1/operators/${operatorId}/stops/full`, { opts });
 	return await handleResponse(res, opts);
 }
 
@@ -507,6 +517,16 @@ export async function getUnpositionedStopPics(page: number, opts: ReqOpts) {
 
 // ----- Routes -----
 
+export async function getRoute(routeId: number, opts: ReqOpts) {
+	const res = await f(`/v1/routes/${routeId}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getRouteFull(routeId: number, opts: ReqOpts) {
+	const res = await f(`/v1/routes/${routeId}/full`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getRoutes(opts: ReqOpts) {
 	const res = await f(`/v1/routes`, { opts });
 	return await handleResponse(res, opts);
@@ -562,6 +582,11 @@ export async function deleteSubroute(subrouteId: number, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getRouteStops(routeId: number, opts: ReqOpts) {
+	const res = await f(`/v1/routes/${routeId}/stops`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function changeSubrouteStops(
 	subrouteId: number,
 	{ from, to }: { from: [number]; to: [number] },
@@ -591,6 +616,11 @@ export async function deleteDeparture(subrouteId: number, departureId: number, o
 		method: 'DELETE',
 		opts
 	});
+	return await handleResponse(res, opts);
+}
+
+export async function getRouteSchedule(routeId: number, opts: ReqOpts) {
+	const res = await f(`/v1/routes/${routeId}/schedule`, { opts });
 	return await handleResponse(res, opts);
 }
 
@@ -894,17 +924,23 @@ export async function createIssue(issue, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getIssue(issueId: number, opts: ReqOpts) {
+	const res = await f(`/v1/issues/${issueId}`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getRegionParishes(regionId: number, opts: ReqOpts) {
 	const res = await f(`/v1/regions/${regionId}/parishes`, { opts });
 	return await handleResponse(res, opts);
 }
-
 
 // ----- Router -----
 
 export async function getRouteThrough(stops: [number, number][], opts: ReqOpts) {
 	const routerUrl = 'https://router.intermodal.pt';
 	const lineString = stops.map(([lon, lat]) => `${lon},${lat}`).join(';');
-	const res = await fetch(`${routerUrl}/route/v1/driving/${lineString}?overview=full&alternatives=false&steps=false&geometries=polyline6`);
+	const res = await fetch(
+		`${routerUrl}/route/v1/driving/${lineString}?overview=full&alternatives=false&steps=false&geometries=polyline6`
+	);
 	return await handleResponse(res, opts);
 }

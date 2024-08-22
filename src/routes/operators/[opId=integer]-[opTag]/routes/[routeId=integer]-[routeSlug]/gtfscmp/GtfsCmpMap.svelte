@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl?client';
+	import maplibre from 'maplibre-gl';
 	import { tileStyle } from '$lib/settings';
 
 	export let stops;
@@ -47,11 +47,17 @@
 	function zoomToFeatures(features) {
 		if (features.length === 0) return;
 
-		let bounds = features.reduce((bounds, feature) => {
-			return feature.geometry.coordinates.reduce((bounds, coord) => {
-				return bounds.extend(coord);
-			}, bounds);
-		}, new LngLatBounds(features[0].geometry.coordinates[0], features[0].geometry.coordinates[0]));
+		let bounds = features.reduce(
+			(bounds, feature) => {
+				return feature.geometry.coordinates.reduce((bounds, coord) => {
+					return bounds.extend(coord);
+				}, bounds);
+			},
+			new maplibre.LngLatBounds(
+				features[0].geometry.coordinates[0],
+				features[0].geometry.coordinates[0]
+			)
+		);
 		map.fitBounds(bounds, { padding: 20 });
 	}
 
@@ -225,7 +231,7 @@
 	}
 
 	onMount(() => {
-		map = new Maplibre({
+		map = new maplibre.Map({
 			container: mapEl,
 			style: tileStyle,
 			center: [-9.0, 38.65]

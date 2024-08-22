@@ -1,7 +1,6 @@
 <script>
 	import RouteForm from '../form/RouteForm.svelte';
 	import { permissions } from '$lib/stores';
-	import { canCreateRoutes } from '$lib/permissions';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
@@ -42,7 +41,7 @@
 		<h2 class="card-title">Nova rota em {operator.name}</h2>
 		<RouteForm
 			bind:route
-			canEdit={canCreateRoutes($permissions)}
+			canEdit={$permissions?.routes?.create}
 			{routeTypes}
 			on:route-created={handleRouteCreated}
 		/>

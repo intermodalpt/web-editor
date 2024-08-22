@@ -105,21 +105,21 @@
 	{#if calendars.length == 0}
 		<p>Sem calendários introduzidos neste operador.</p>
 	{/if}
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4" class:hidden={calendars.length === 0}>
 		{#each calendars as calendar}
 			<CalendarBadge {calendar} on:click={viewCalendar} />
 		{/each}
 	</div>
-
 	<div class="flex justify-end">
 		<button
 			class="btn btn-primary"
+			class:hidden={!$permissions?.operators?.modifyCalendars}
 			on:click={() => {
 				resetFields();
 				dialog.showModal();
 			}}
 		>
-			Criar
+			Novo
 		</button>
 	</div>
 </div>

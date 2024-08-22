@@ -12,7 +12,7 @@ export async function load({ params, fetch }) {
 	const operatorId = parseInt(params.opId);
 
 	const [regions, operator, routes, issues, calendars] = await Promise.all([
-        // TODO create an operator regions endpoint
+		// TODO create an operator regions endpoint
 		getRegions({
 			onError: (res: Response) => {
 				error(res.status, 'Erro a carregar as regiões');
@@ -50,11 +50,5 @@ export async function load({ params, fetch }) {
 		})
 	]);
 
-	return {
-		regions,
-		operator,
-		routes,
-		issues,
-		calendars
-	};
+	return { regions, operator, routes, issues, calendars };
 }

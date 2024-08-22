@@ -253,7 +253,7 @@
 				if (rt.id < 0) {
 					await createOperatorRouteType(id, body, {
 						onSuccess: (id) => {
-							toast(`Tipo de rota ${rt.id} (${rt.name}) criado com sucesso`, 'success');
+							toast(`Tipo de rota ${rt.id} (${rt.name}) criado`, 'success');
 							rt.id = id;
 							originalRouteTypes.push(deepCopy(rt));
 						},
@@ -298,7 +298,7 @@
 				patchOperator(id, data, {
 					onSuccess: () => {
 						copyCurrentToOriginal();
-						toast(`Operador ${tag} alterado com sucesso`, 'success');
+						toast(`Operador ${tag} alterado`, 'success');
 					},
 					onError: (error) => {
 						dataRes
@@ -319,7 +319,7 @@
 				onSuccess: async (res) => {
 					id = await res.json().then((data) => data.id);
 					copyCurrentToOriginal();
-					toast(`Operador ${originalTag} alterado com sucesso`, 'success');
+					toast(`Operador ${originalTag} alterado`, 'success');
 					await Promise.all([updateRegions(), handleUploadLogo(), updateRouteTypes()]);
 				},
 				onError: (res) => {

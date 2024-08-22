@@ -73,7 +73,7 @@
 
 			await createRoute(data, {
 				onSuccess: async (res) => {
-					toast('Linha criada com sucesso', 'success');
+					toast('Linha criada', 'success');
 					const id = (await res.json()).id;
 					route.id = id;
 					route._original.id = id;
@@ -107,7 +107,7 @@
 			};
 			await updateRoute(route.id, data, {
 				onSuccess: (res) => {
-					toast('Linha alterada com sucesso', 'success');
+					toast('Linha alterada', 'success');
 				},
 				onError: (res) => {
 					toast(`Erro a atualizar`, 'error');
@@ -143,7 +143,7 @@
 						subroute._original.via = subroute.via = data.via;
 						subroute._original.circular = subroute.circular = data.circular;
 						subroute._updateModified();
-						toast('Variante criada com sucesso', 'success');
+						toast('Variante criada', 'success');
 					},
 					onError: (res) => {
 						toast(`Erro a criar variante`, 'error');
@@ -212,7 +212,7 @@
 
 		await createRoute(data, {
 			onSuccess: (res) => {
-				toast('Linha criada com sucesso', 'success');
+				toast('Linha criada', 'success');
 				const json = res.json();
 				newId = json.id;
 			},
@@ -230,7 +230,7 @@
 
 		await deleteRoute(route.id, {
 			onSuccess: (res) => {
-				toast('Linha apagada com sucesso', 'success');
+				toast('Linha apagada', 'success');
 			},
 			onError: (res) => {
 				toast(`Erro a apagar linha`, 'error');

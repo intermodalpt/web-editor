@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import { derived, writable } from 'svelte/store';
-	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl?client';
+	import { Map as Maplibre, NavigationControl, LngLatBounds } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Select from 'svelte-select';
 	import polyline from '@mapbox/polyline';
