@@ -137,6 +137,11 @@ export async function getRegions(opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
+export async function getSimpleRegions(opts: ReqOpts): Promise<SimpleRegion[]> {
+	const res = await f(`/v1/regions/simple`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getRegion(regionId: number, opts: ReqOpts) {
 	const res = await f(`/v1/regions/${regionId}`, { opts });
 	return await handleResponse(res, opts);
@@ -233,7 +238,7 @@ export async function getOperatorRouteTypes(operatorId: number, opts: ReqOpts) {
 	return await handleResponse(res, opts);
 }
 
-export async function createOperatorRouteType(operatorId: number, data, opts: ReqOpts) {
+export async function createOperatorRouteType(operatorId: number, data, opts: ReqOpts): Promise<RouteType> {
 	const res = await f(`/v1/operators/${operatorId}/routes/types`, {
 		method: 'POST',
 		isJson: true,

@@ -1,53 +1,66 @@
-<script>
-	import { createEventDispatcher } from 'svelte';
-	import { derived } from 'svelte/store';
+<script lang="ts">
 	import { onMount } from 'svelte';
-	import { liveQuery } from 'dexie';
-	import { getOperator, getRegions, wipeOperators } from '$lib/db';
+	import { error } from '@sveltejs/kit';
+	import Select from 'svelte-select';
 	import { permissions, toast } from '$lib/stores';
 	import { isValidUri } from '$lib/utils';
-	import { patchOperator, uploadLogo } from '$lib/api';
+	import {
+		attachOperatorToRegion,
+		createOperator,
+		createOperatorRouteType,
+		deleteOperatorRouteType,
+		dettachOperatorFromRegion,
+		getOperator,
+		getOperatorRouteTypes,
+		patchOperator,
+		patchOperatorRouteType,
+		uploadLogo
+	} from '$lib/api';
 	import { isDeepEqual, deepCopy } from '$lib/utils';
 	import RouteTypeForm from './RouteTypeForm.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
-	const regions = liveQuery(() => getRegions());
-	const sortedRegions = derived(regions, ($regions) => {
-		if (!$regions) {
-			return [];
-		}
-		return Object.values($regions).sort((a, b) => a.name.localeCompare(b.name));
-	});
+	export let id: number | null = null;
+	export let regions: SimpleRegion[] = [];
+	const regionIndex: Record<string, SimpleRegion> = Object.fromEntries(
+		regions.map((r) => [r.id, r])
+	);
+	let routeTypes: RouteType[] = [];
 
-	const dispatch = createEventDispatcher();
+	const regionOptions = regions
+		.sort((a, b) => a.name.localeCompare(b.name))
+		.map((region) => ({
+			value: region.id,
+			label: region.name
+		}));
 
-	export let id = null;
+	const canEdit =
+		(id && $permissions?.operators?.create) || (!id && $permissions?.operators?.modifyBase);
 
-	const canEdit = (id && $permissions?.operators?.create) || (!id && $permissions?.operators?.edit);
+	let originalName: string = '',
+		originalTag: string = '',
+		originalDescription: string = '',
+		originalIsComplete: boolean = false,
+		originalWebsiteUrl: string = '',
+		originalLibraryUrl: string = '',
+		originalForumUrl: string = '',
+		originalContactUris: string = '',
+		originalRegions: number[] = [],
+		originalRouteTypes = {};
 
-	export let routeTypes = [];
+	let currentLogoUrl: string | null = null;
 
-	let originalName,
-		originalTag,
-		originalDescription,
-		originalIsComplete,
-		originalWebsiteUrl,
-		originalLibraryUrl,
-		originalForumUrl,
-		originalContactUris,
-		originalRegions = [],
-		originalRouteTypes = deepCopy(routeTypes);
+	let name: string = '',
+		tag: string = '',
+		description: string = '',
+		isComplete: boolean = false,
+		websiteUrl: string = '',
+		libraryUrl: string = '',
+		forumUrl: string = '',
+		contactUris: string = '',
+		operatorRegions: { value: number; label: string }[] = [];
 
-	let name,
-		tag,
-		description,
-		isComplete,
-		websiteUrl,
-		libraryUrl,
-		forumUrl,
-		contactUris,
-		operatorRegions;
-
-	let logoFiles;
+	let logoFiles: FileList;
 
 	let tmpRouteTypeId = -1;
 	const emptyRouteType = {
@@ -61,23 +74,25 @@
 	};
 
 	let operatorRegionsLoaded = id != undefined;
+	let isSaving = false;
 
 	$: dataChanged =
-		originalName != name ||
-		originalTag != tag ||
-		originalDescription != description ||
-		originalWebsiteUrl != websiteUrl ||
-		originalLibraryUrl != libraryUrl ||
-		originalForumUrl != forumUrl ||
-		originalContactUris != contactUris ||
-		!isDeepEqual(originalRegions || [], operatorRegions || []) ||
-		logoFiles ||
-		!isDeepEqual(originalRouteTypes, routeTypes);
+		originalName != name.trim() ||
+		originalTag != tag.trim() ||
+		originalDescription != description.trim() ||
+		originalWebsiteUrl != websiteUrl.trim() ||
+		originalLibraryUrl != libraryUrl.trim() ||
+		originalForumUrl != forumUrl.trim() ||
+		originalContactUris != contactUris.trim();
 
 	$: regionsChanged =
-		operatorRegionsLoaded && !isDeepEqual(originalRegions || {}, operatorRegions || {});
+		operatorRegionsLoaded &&
+		!isDeepEqual(
+			originalRegions,
+			Object.values(operatorRegions ?? []).map((r) => r.value)
+		);
 
-	$: routeTypesChanged = !isDeepEqual(originalRouteTypes, routeTypes);
+	$: routeTypesChanged = haveRouteTypesChanged(originalRouteTypes, routeTypes);
 
 	$: changed = dataChanged || regionsChanged || logoFiles || routeTypesChanged;
 
@@ -112,6 +127,32 @@
 		invalidOperatorRegions ||
 		invalidRouteTypes;
 
+	function haveRouteTypesChanged(original: Record<string, RouteType>, current: RouteType[]) {
+		for (const rt of current) {
+			if (rt._deleted) {
+				return true;
+			}
+			if (rt.id < 0) {
+				return true;
+			}
+
+			const ort = original[rt.id];
+
+			if (
+				ort.name != rt.name ||
+				ort.zapping_cost != rt.zapping_cost ||
+				ort.board_cost != rt.board_cost ||
+				ort.multi_trip != rt.multi_trip ||
+				ort.badge_text_color != rt.badge_text_color ||
+				ort.badge_bg_color != rt.badge_bg_color
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	function addRouteType() {
 		const newRouteType = deepCopy(emptyRouteType);
 		newRouteType.id = tmpRouteTypeId--;
@@ -131,6 +172,8 @@
 	}
 
 	async function saveOperator() {
+		let isSaving = true;
+
 		let data = {
 			name: name,
 			tag: tag,
@@ -146,97 +189,123 @@
 					.filter((uri) => uri) || []
 		};
 
-		const newRegions = operatorRegions.filter((region) => !originalRegions.includes(region));
-		const removedRegions = originalRegions.filter((region) => !operatorRegions.includes(region));
+		const newRegions = operatorRegions
+			?.filter((region) => !originalRegions.includes(region.value))
+			.map((region) => region.value);
+		const removedRegions = originalRegions.filter(
+			(region) => !operatorRegions?.some((r) => r.value == region)
+		);
 
-		let updateRegions = async () => {
+		let updateRegions = async (id: number) => {
+			let allSuccesses = true;
+			let errorMessage = null;
+
 			for (let region of newRegions) {
+				if (!allSuccesses) {
+					break;
+				}
+
 				await attachOperatorToRegion(id, region, {
-					onSuccess: () => {
+					/*onSuccess: () => {
 						toast(`Região ${region} adicionada ao operador ${originalTag}`, 'success');
-					},
+					},*/
 					onError: async (res) => {
-						res
-							.text()
-							.then((error) => {
-								alert(`Erro a adicionar região ao operador:\n${error}`);
-							})
-							.catch(() => {
-								alert('Erro a adicionar região ao operador');
-							});
+						allSuccesses = false;
+						await res.text().then((error) => (errorMessage = error));
 					}
 				});
 			}
+
 			for (let region of removedRegions) {
+				if (!allSuccesses) {
+					break;
+				}
+
 				await dettachOperatorFromRegion(id, region, {
-					onSuccess: () => {
+					/*onSuccess: () => {
 						toast(`Região ${region} removida do operador`, 'success');
-					},
+					},*/
 					onError: async (res) => {
-						res
-							.text()
-							.then((error) => {
-								alert(`Erro a remover região do operador:\n${error}`);
-							})
-							.catch(() => {
-								alert('Erro a remover região do operador');
-							});
+						allSuccesses = false;
+						await res.text().then((error) => (errorMessage = error));
 					}
 				});
 			}
-			originalRegions = deepCopy(operatorRegions);
+
+			if (allSuccesses) {
+				originalRegions = operatorRegions.map((r) => r.value);
+			} else {
+				if (errorMessage) {
+					toast(`Erro a gravar regiões:\n${errorMessage}`, 'error');
+				} else {
+					toast('Erro a gravar regiões', 'error');
+				}
+			}
+			return allSuccesses;
 		};
 
-		let handleUploadLogo = async () => {
+		let handleUploadLogo = async (id: number) => {
 			if (!logoFiles || logoFiles.length == 0) {
-				return;
+				return true;
 			}
 			const formData = new FormData();
 			formData.append('logo', logoFiles[0]);
 
+			let success = true;
+
 			await uploadLogo(id, formData, {
 				onSuccess: () => {
-					toast(`Logotipo do operador ${originalTag} alterado`, 'success');
-					logoFiles = null;
+					// toast(`Logotipo do operador ${originalTag} alterado`, 'success');
+					logoFiles = undefined;
 				},
-				onError: (res) => {
-					res
+				onError: async (res) => {
+					await res
 						.text()
 						.then((error) => {
-							alert(`Erro a alterar logotipo:\n${error}`);
+							toast(`Erro a alterar logotipo:\n${error}`, 'error');
 						})
 						.catch(() => {
-							alert('Erro a alterar logotipo');
+							toast('Erro a alterar logotipo', 'error');
 						});
+					success = false;
 				}
 			});
+
+			return success;
 		};
 
-		let updateRouteTypes = async () => {
-			const deletedRouteTypes = originalRouteTypes.filter(
-				(originalRouteType) => !routeTypes.some((routeType) => routeType.id == originalRouteType.id)
-			);
+		let updateRouteTypes = async (id: number) => {
+			const deletedRouteTypes = routeTypes.filter((rt) => rt._deleted);
+
+			let allSuccesses = true;
+			let errorMessage = null;
 
 			for (const rt of deletedRouteTypes) {
+				if (!allSuccesses) {
+					break;
+				}
 				await deleteOperatorRouteType(id, rt.id, {
 					onSuccess: () => {
-						toast(`Tipo de rota ${rt.id} (${rt.name}) apagada`, 'success');
-						originalRouteTypes = originalRouteTypes.filter((ort) => ort.id != rt.id);
+						/*if (rt.name) {
+							toast(`Tipo de rota ${rt.name} apagado`);
+						} else {
+							toast(`Tipo de rota #${rt.id} apagado`);
+						}*/
+						routeTypes = routeTypes.filter((ort: RouteType) => ort.id != rt.id);
+						delete originalRouteTypes[rt.id];
 					},
-					onError: (res) => {
-						res
-							.text()
-							.then((error) => {
-								alert(`Erro a apagar tipo de rota:\n${error}`);
-							})
-							.catch(() => {
-								alert('Erro a apagar tipo de rota');
-							});
+					onError: async (res) => {
+						allSuccesses = false;
+						await res.text().then((error) => (errorMessage = error));
 					}
 				});
 			}
 
 			for (const rt of routeTypes) {
+				if (!allSuccesses) {
+					break;
+				}
+
 				const body = {
 					name: rt.name || '',
 					zapping_cost: rt.zapping_cost,
@@ -252,123 +321,152 @@
 
 				if (rt.id < 0) {
 					await createOperatorRouteType(id, body, {
-						onSuccess: (id) => {
-							toast(`Tipo de rota ${rt.id} (${rt.name}) criado`, 'success');
-							rt.id = id;
-							originalRouteTypes.push(deepCopy(rt));
+						onSuccess: (res: RouteType) => {
+							/*if (res.name) {
+								toast(`Criado tipo de rota ${res.name}`);
+							} else {
+								toast(`Criado tipo de rota`);
+							}*/
+							rt.id = res.id;
+							originalRouteTypes[rt.id] = deepCopy(rt);
+							routeTypes = routeTypes;
 						},
-						onError: (res) => {
-							res
-								.text()
-								.then((error) => {
-									toast(`Erro a criar tipo de rota:\n${error}`, 'error');
-								})
-								.catch(() => {
-									toast('Erro a criar tipo de rota', 'error');
-								});
-						}
+						onError: async (res) => {
+							allSuccesses = false;
+							await res.text().then((error) => (errorMessage = error));
+						},
+						toJson: true
 					});
-				} else {
+				} else if (rt._changed) {
 					await patchOperatorRouteType(id, rt.id, body, {
 						onSuccess: () => {
-							toast(`Tipo de rota ${rt.id} (${rt.name}) alterado`, 'success');
-							originalRouteTypes = originalRouteTypes.map((ort) =>
-								ort.id == rt.id ? deepCopy(rt) : ort
-							);
+							/*if (rt.name) {
+								toast(`Tipo de rota ${rt.name} alterado`, 'success');
+							} else {
+								toast(`Tipo de rota #${rt.id} alterado`, 'success');
+							}*/
+							delete rt._changed;
+							originalRouteTypes[rt.id] = deepCopy(rt);
 						},
-						onError: (res) => {
-							res
-								.text()
-								.then((error) => {
-									toast(`Erro a alterar tipo de rota:\n${error}`, 'error');
-								})
-								.catch(() => {
-									toast('Erro a alterar tipo de rota', 'error');
-								});
+						onError: async (res) => {
+							allSuccesses = false;
+							await res.text().then((error) => (errorMessage = error));
 						}
 					});
 				}
 			}
+
+			if (!allSuccesses) {
+				if (errorMessage) {
+					toast(`Erro a gravar tipos de rota:\n${errorMessage}`, 'error');
+				} else {
+					toast('Erro a gravar tipos de rota', 'error');
+				}
+			}
+			return allSuccesses;
 		};
 
-		if (id && !dataChanged) {
-			await Promise.all([updateRegions(), handleUploadLogo(), updateRouteTypes()]);
-		} else if (id) {
-			const [dataRes] = await Promise.all([
-				patchOperator(id, data, {
-					onSuccess: () => {
-						copyCurrentToOriginal();
-						toast(`Operador ${tag} alterado`, 'success');
-					},
-					onError: (error) => {
-						dataRes
-							.text()
-							.then((error) => {
-								alert(`Erro a alterar operador:\n${error}`);
-							})
-							.catch(() => {
-								alert('Erro a alterar operador');
-							});
-					}
-				}),
-				updateRegions(),
-				handleUploadLogo()
+		if (id) {
+			let opDataStatus = true;
+
+			const [_, regStatus, logoStatus, typesStatus] = await Promise.all([
+				dataChanged
+					? patchOperator(id, data, {
+							onSuccess: () => {
+								copyCurrentToOriginal();
+							},
+							onError: () => {
+								opDataStatus = false;
+							}
+						})
+					: null,
+				updateRegions(id),
+				handleUploadLogo(id),
+				updateRouteTypes(id)
 			]);
+
+			if (!opDataStatus || !regStatus || !logoStatus || !typesStatus) {
+				toast('Erro a gravar informação', 'error');
+			} else {
+				toast(`Operador alterado`);
+			}
 		} else {
 			await createOperator(data, {
 				onSuccess: async (res) => {
-					id = await res.json().then((data) => data.id);
+					const newOperator: Operator = await res.json();
+					id = newOperator.id;
+					currentLogoUrl = newOperator.logo_url;
 					copyCurrentToOriginal();
-					toast(`Operador ${originalTag} alterado`, 'success');
-					await Promise.all([updateRegions(), handleUploadLogo(), updateRouteTypes()]);
+					toast(`Operador ${originalTag} criado`, 'success');
+					const [regStatus, logoStatus, rtStatus] = await Promise.all([
+						updateRegions(id),
+						handleUploadLogo(id),
+						updateRouteTypes(id)
+					]);
+					if (!regStatus || !logoStatus || !rtStatus) {
+						toast('Erro a gravar informação', 'error');
+					}
 				},
-				onError: (res) => {
+				onError: async (res) => {
 					res
 						.text()
 						.then((error) => {
-							alert(`Erro a criar operador:\n${error}`);
+							toast(`Erro a criar operador:\n${error}`, 'error');
 						})
 						.catch(() => {
-							alert('Erro a criar operador');
+							toast('Erro a criar operador', 'error');
 						});
 				}
 			});
 		}
 
-		await wipeOperators();
+		isSaving = false;
 	}
 
 	onMount(async () => {
 		if (!id) return;
+		const [operator, rts] = await Promise.all([
+			getOperator(id, {
+				onError: (res) => {
+					error(res.status, 'Failed to load the operator');
+				},
+				toJson: true
+			}),
+			getOperatorRouteTypes(id, {
+				onError: (res) => {
+					error(res.status, 'Failed to fetch route types');
+				},
+				toJson: true
+			})
+		]);
 
-		await getOperator(id, {
-			onSuccess: async (res) => {
-				const operator = res.join();
-
-				name = originalName = operator.name;
-				tag = originalTag = operator.tag;
-				description = originalDescription = operator.description;
-				isComplete = originalIsComplete = operator.is_complete ?? false;
-				websiteUrl = originalWebsiteUrl = operator.website_url;
-				libraryUrl = originalLibraryUrl = operator.library_url;
-				forumUrl = originalForumUrl = operator.forum_url;
-				contactUris = originalContactUris = operator.contact_uris.join(';') ?? '';
-				originalRegions = operator.regions || [];
-				operatorRegions = originalRegions ? deepCopy(originalRegions) : [];
-				originalRouteTypes = operator.route_types ? deepCopy(operator.route_types) : [];
-			},
-			onError: () => {
-				toast('Erro a carregar operador', 'error');
-			}
+		name = originalName = operator.name;
+		tag = originalTag = operator.tag;
+		description = originalDescription = operator.description ?? '';
+		isComplete = originalIsComplete = operator.is_complete ?? false;
+		websiteUrl = originalWebsiteUrl = operator.website_url ?? '';
+		libraryUrl = originalLibraryUrl = operator.library_url ?? '';
+		forumUrl = originalForumUrl = operator.forum_url ?? '';
+		contactUris = originalContactUris = operator.contact_uris.join(';') ?? '';
+		originalRegions = operator.regions;
+		operatorRegions = originalRegions.map((id) => {
+			return {
+				value: id,
+				label: regionIndex[id].name
+			};
 		});
+		currentLogoUrl = operator.logo_url;
+
+		routeTypes = rts;
+		originalRouteTypes = Object.fromEntries(rts.map((rt: RouteType) => [rt.id, deepCopy(rt)]));
 	});
 </script>
 
-<div class="flex flex-col gap-1 p-2 overflow-visible w-full">
+<div class="flex flex-col gap-3 overflow-visible w-full">
 	<div class="flex gap-4">
-		<div class="form-control">
-			<label class="input-group">
-				<span class="w-28">Etiqueta</span>
+		<div class="form-control w-24">
+			<label class="input-group flex flex-col">
+				<span class="label-text">Etiqueta</span>
 				<input
 					type="text"
 					bind:value={tag}
@@ -379,8 +477,8 @@
 			</label>
 		</div>
 		<div class="form-control w-full">
-			<label class="input-group">
-				<span class="w-32">Nome</span>
+			<label class="input-group flex flex-col">
+				<span class="label-text">Nome</span>
 				<input
 					type="text"
 					bind:value={name}
@@ -391,20 +489,20 @@
 			</label>
 		</div>
 	</div>
-	<label class="form-control w-full">
-		<div class="label">
-			<span class="label-text">Regiões</span>
-		</div>
-		<select class="select select-bordered" multiple bind:value={operatorRegions} cl>
-			{#each $sortedRegions as region}
-				<option value={region.id}>{region.name}</option>
-			{/each}
-		</select>
-	</label>
+	<div class="form-control w-full">
+		<span class="label-text">Regiões</span>
+		<Select
+			items={regionOptions}
+			multiple={true}
+			disabled={!canEdit}
+			bind:value={operatorRegions}
+		/>
+	</div>
 	<label class="form-control w-full max-w-xs">
-		<div class="label">
-			<span class="label-text">Logotipo</span>
-		</div>
+		<span class="label-text">Logotipo</span>
+		{#if currentLogoUrl}
+			<img src={currentLogoUrl} alt="Logotipo atual" class="max-w-32 max-h-32" />
+		{/if}
 		<input
 			bind:files={logoFiles}
 			type="file"
@@ -413,9 +511,7 @@
 		/>
 	</label>
 	<label class="form-control w-full">
-		<div class="label">
-			<span class="label-text">Descrição</span>
-		</div>
+		<span class="label-text">Descrição</span>
 		<textarea
 			class="textarea textarea-bordered"
 			class:textarea-error={invalidDescription}
@@ -424,7 +520,7 @@
 	</label>
 	<div class="form-control w-full">
 		<label class="input-group">
-			<span class="w-32">Site</span>
+			<span class="label-text">Site</span>
 			<input
 				type="text"
 				bind:value={websiteUrl}
@@ -436,7 +532,7 @@
 	</div>
 	<div class="form-control w-full">
 		<label class="input-group">
-			<span class="w-32">Forum</span>
+			<span class="label-text">Forum</span>
 			<input
 				type="text"
 				bind:value={forumUrl}
@@ -448,7 +544,7 @@
 	</div>
 	<div class="form-control w-full">
 		<label class="input-group">
-			<span class="w-32">Biblioteca</span>
+			<span class="label-text">Biblioteca</span>
 			<input
 				type="text"
 				bind:value={libraryUrl}
@@ -460,7 +556,7 @@
 	</div>
 	<div class="form-control w-full">
 		<label class="input-group">
-			<span class="w-32">Contactos</span>
+			<span class="label-text">Contactos</span>
 			<input
 				type="text"
 				bind:value={contactUris}
@@ -471,47 +567,74 @@
 			/>
 		</label>
 	</div>
-	<div class="flex">
-		<div class="form-control">
-			<label class="input-group">
-				<span>Info completa</span>
-				<input type="checkbox" bind:checked={isComplete} class="checkbox" disabled={!canEdit} />
-			</label>
-		</div>
-	</div>
 </div>
-<div class="label">
-	<span class="label-text">Tipos de rota</span>
+<hr />
+<div class="flex gap-2 flex-wrap">
+	<h2 class="text-lg grow">Tipos de rota</h2>
 	<button class="btn btn-xs btn-success" on:click={addRouteType}>+</button>
 </div>
 <div class="flex flex-col gap-2">
+	{#if canEdit && routeTypes.length == 0}
+		<div role="alert" class="alert border-2 border-warning bg-base-100 w-fit">
+			<span>Deve de ter pelo menos um tipo de linha</span>
+		</div>
+	{/if}
 	{#each routeTypes as rt (rt.id)}
-		<div class="border-2 rounded-lg p-2" class:bg-green-50={rt.id < 0}>
-			<RouteTypeForm
-				bind:id={rt.id}
-				bind:name={rt.name}
-				bind:zapping_cost={rt.zapping_cost}
-				bind:board_cost={rt.board_cost}
-				bind:multi_trip={rt.multi_trip}
-				bind:badge_text_color={rt.badge_text_color}
-				bind:badge_bg_color={rt.badge_bg_color}
-				on:change={() => (routeTypes = routeTypes)}
-				on:delete={() => {
-					routeTypes = routeTypes.filter((rt) => rt.id != rt.id);
-					routeTypes = routeTypes;
-				}}
-				{canEdit}
-			/>
+		<div class="border-2 rounded-lg p-2">
+			{#if rt._deleted}
+				<div class="flex gap-2 items-center justify-between">
+					<div class="flex gap-2 items-center">
+						<span class="badge rounded-md px-2 py-1 badge-error badge-outline">{rt.id}</span>
+						{#if rt.name}
+							<span>{rt.name}</span>
+						{/if}
+					</div>
+					<button
+						class="btn btn-xs btn-neutral"
+						on:click={() => {
+							rt._deleted = false;
+							routeTypes = routeTypes;
+						}}>Restaurar</button
+					>
+				</div>
+			{:else}
+				<RouteTypeForm
+					bind:rtype={rt}
+					on:change={(e) => {
+						rt._changed = e.detail.fromOriginal;
+						routeTypes = routeTypes;
+					}}
+					on:delete={() => {
+						if (rt.id > 0) {
+							rt._deleted = true;
+						} else {
+							routeTypes = routeTypes.filter((ort) => rt != ort);
+						}
+						routeTypes = routeTypes;
+					}}
+					{canEdit}
+				/>
+			{/if}
 		</div>
 	{/each}
 </div>
+<hr />
 
-<div class="flex justify-end" class:hidden={!canEdit}>
-	<input
-		type="submit"
-		value="Guardar"
-		class="btn btn-primary"
-		disabled={!changed || invalidData}
-		on:click={saveOperator}
-	/>
+<div class="flex justify-between items-center flex-wrap" class:hidden={!canEdit}>
+	<label class="input-group flex gap-2 items-center py-2">
+		<span class="text-lg">Informação completa</span>
+		<input type="checkbox" bind:checked={isComplete} class="checkbox" disabled={!canEdit} />
+	</label>
+	<div class="flex items-center">
+		{#if isSaving}
+			<Icon name="spinner" class="animate-spin -ml-1 mr-3 h-6 w-6" />
+		{/if}
+		<input
+			type="submit"
+			value="Guardar"
+			class="btn btn-primary"
+			disabled={!changed || invalidData || isSaving}
+			on:click={saveOperator}
+		/>
+	</div>
 </div>

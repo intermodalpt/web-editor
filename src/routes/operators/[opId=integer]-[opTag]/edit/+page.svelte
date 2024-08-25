@@ -4,11 +4,12 @@
 
 	export let data;
 	const operator = data.operator;
-	const routeTypes = data.routeTypes;
+	const regions = data.regions;
 </script>
 
 <Menu {operator} page="attrs" />
 
 <div class="card-body">
-	<OperatorForm id={operator.id} {routeTypes} />
+	<!-- TODO We already have the entire operator but the form will redownload. Optimize this. -->
+	<OperatorForm id={operator.id} {regions} />
 </div>
