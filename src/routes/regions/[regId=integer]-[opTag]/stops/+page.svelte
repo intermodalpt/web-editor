@@ -33,7 +33,6 @@
 
 	export let data;
 	const region = data.region;
-	console.log(region);
 
 	let picsPerStop = {};
 	let map;
@@ -90,7 +89,7 @@
 
 	async function loadData() {
 		await Promise.all([
-			getRegionStops(1, {
+			getRegionStops(region.id, {
 				onSuccess: (r) => {
 					$stops = Object.fromEntries(r.map((stop) => [stop.id, stop]));
 				},

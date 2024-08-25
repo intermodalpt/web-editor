@@ -125,7 +125,7 @@
 	async function handleSave() {
 		await updateStopTodos($selectedStop.id, todo, {
 			onSuccess: () => {
-				toast('Guardado com sucesso', 'success');
+				toast('Guardado', 'success');
 				$selectedStop.todo = structuredClone(todo);
 				dispatch('todo-update', { id: $selectedStop.id });
 			},

@@ -3,9 +3,9 @@
 	import { derived, writable } from 'svelte/store';
 	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { apiServer, tileStyle } from '$lib/settings';
-	import { fetchStops, fetchParishes, getStops, getParishes, loadMissing } from '$lib/db';
+	import { apiServer, defaultMapBounds, tileStyle } from '$lib/settings';
 	import Menu from '../Menu.svelte';
+	import { regionMapParams } from '$lib/utils';
 
 	export let data;
 	const region = data.region;
@@ -132,7 +132,8 @@
 				}
 
 				const obj = {
-					...parish.geojson
+					type: 'Feature',
+					geometry: parish.geometry
 				};
 				let complete = parish.totalCount == 0 || scoringAttr == parish.totalCount;
 				obj.properties = {
@@ -259,17 +260,15 @@
 	}
 
 	onMount(() => {
+		const mapParam  = regionMapParams(region);
 		map = new maplibre.Map({
 			container: 'map',
 			style: tileStyle,
-			center: [-9.0, 38.65],
+			center: mapParam.center,
 			zoom: 10,
 			minZoom: 8,
 			maxZoom: 20,
-			maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]
+			maxBounds: defaultMapBounds
 		});
 
 		map.addControl(new maplibre.NavigationControl(), 'top-right');
