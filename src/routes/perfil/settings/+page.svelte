@@ -41,7 +41,7 @@
 
 		await changePassword(newPassword, password, {
 			onSuccess: () => {
-				toast('Palavra-chave alterada com sucesso!');
+				toast('Palavra-chave alterada', 'success');
 				password = '';
 				newPassword = '';
 				newPasswordConfirmation = '';

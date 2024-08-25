@@ -26,7 +26,7 @@
 			},
 			{
 				onSuccess: () => {
-					toast('Guardado com sucesso', 'success');
+					toast('Guardado', 'success');
 				},
 				onError: () => {
 					toast('Erro a guardar.', 'error');

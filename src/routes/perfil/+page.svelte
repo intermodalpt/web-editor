@@ -21,7 +21,7 @@
 				<div class="text-xs">Conte-nos sobre si</div>
 			</div>
 			<div>
-				<button class="btn btn-sm btn-info">Abrir</button>
+				<a href="/perfil/survey" class="btn btn-sm btn-info">Abrir</a>
 				<!-- <button class="btn btn-sm btn-neutral">Não quero</button> -->
 			</div>
 		</div>

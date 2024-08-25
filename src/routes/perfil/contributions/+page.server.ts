@@ -15,7 +15,7 @@ export async function load({ locals, fetch }) {
 			toJson: true,
 			fetch
 		}),
-		getOwnUndecidedContributions(0, {
+		getOwnUndecidedContributions({
 			onError: (res) => {
 				error(res.status, 'Problema a obter as contribuições');
 			},

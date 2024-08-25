@@ -2,9 +2,9 @@ import { apiServer, currentSurveyVersion } from '$lib/settings';
 
 // Boilerplate reduction
 
-type SuccessCallback = (res: any) => void | undefined;
-type ErrorCallback = (res: Response) => void | undefined;
-type AfterCallback = (res: Response) => void | undefined;
+type SuccessCallback = (res: any) => void | Promise<void> | undefined;
+type ErrorCallback = (res: Response) => void | Promise<void> | undefined;
+type AfterCallback = (res: Response) => void | Promise<void> | undefined;
 
 interface ReqOpts {
 	onSuccess?: SuccessCallback;
@@ -125,6 +125,30 @@ export async function checkUsername(username: string, opts: ReqOpts) {
 		method: 'POST',
 		isJson: true,
 		body: { username },
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
+export async function getManagementTokens(opts: ReqOpts) {
+	const res = await f(`/v1/auth/mtokens`, { isJson: true, opts });
+	return await handleResponse(res, opts);
+}
+
+export async function createManagementToken(name: string, opts: ReqOpts) {
+	const res = await f(`/v1/auth/mtokens`, {
+		method: 'POST',
+		isJson: true,
+		body: { name },
+		opts
+	});
+	return await handleResponse(res, opts);
+}
+
+export async function revokeManagementTokens(tokenId: string, opts: ReqOpts) {
+	const res = await f(`/v1/auth/mtokens/${tokenId}`, {
+		method: 'DELETE',
+		isJson: true,
 		opts
 	});
 	return await handleResponse(res, opts);
@@ -803,13 +827,38 @@ export async function getStopPicMap(opts: ReqOpts) {
 
 // ----- Contrib -----
 
+export async function getLatestUndecidedContributions(page: number, user: number | null, opts: ReqOpts) {
+	let res;
+	if (user) {
+		res = await f(`/v1/contrib/contributions/undecided?p=${page}&user=${user}`, { opts });
+	} else {
+		res = await f(`/v1/contrib/contributions/undecided?p=${page}`, { opts });
+	}
+	return await handleResponse(res, opts);
+}
+
+export async function getLatestDecidedContributions(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/contrib/contributions/decided?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getChangelog(page: number, opts: ReqOpts) {
+	const res = await f(`/v1/contrib/changelog?p=${page}`, { opts });
+	return await handleResponse(res, opts);
+}
+
 export async function getOwnDecidedContributions(page: number, opts: ReqOpts) {
 	const res = await f(`/v1/contrib/contributions/own/decided?p=${page}`, { opts });
 	return await handleResponse(res, opts);
 }
 
-export async function getOwnUndecidedContributions(page: number, opts: ReqOpts) {
-	const res = await f(`/v1/contrib/contributions/own/undecided?p=${page}`, { opts });
+export async function getOwnUndecidedContributions(opts: ReqOpts) {
+	const res = await f(`/v1/contrib/contributions/own/undecided`, { opts });
+	return await handleResponse(res, opts);
+}
+
+export async function getUndecicedContributors(opts: ReqOpts) {
+	const res = await f(`/v1/contrib/contributions/undecided/contributors`, { opts });
 	return await handleResponse(res, opts);
 }
 
