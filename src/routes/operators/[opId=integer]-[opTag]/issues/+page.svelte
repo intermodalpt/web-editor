@@ -2,8 +2,8 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import IssueViewer from '$lib/issues/Viewer.svelte';
 	import { permissions } from '$lib/stores';
+	import IssueBadge from '$lib/issues/IssueBadge.svelte';
 	import Menu from '../Menu.svelte';
-	import IssueBadge from './IssueBadge.svelte';
 
 	export let data;
 

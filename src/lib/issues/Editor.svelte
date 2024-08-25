@@ -8,10 +8,11 @@
 	import { createIssue } from '$lib/api';
 	import ContentEditor from './ContentEditor.svelte';
 
-	export let issue;
+	export let issue: any = undefined;
 	export let stops;
 	export let routes;
 	export let operators;
+	export let regions;
 
 	let title: string = issue?.title ?? '';
 	let category: string = issue?.category ?? '';
@@ -19,6 +20,7 @@
 	let lon: number | null = issue?.lon ?? null;
 
 	let content: ContentBlock = issue?.content ?? [];
+	let issueRegions: number[] = issue?.region_ids ?? [];
 	let issueRoutes: number[] = issue?.route_ids ?? [];
 	let issueStops: number[] = issue?.stop_ids ?? [];
 	let issueOperators: number[] = issue?.operator_ids ?? [];
@@ -29,6 +31,8 @@
 	$: newRoute = routes[newRouteId];
 	let newOperatorId: string;
 	$: newOperator = operators[newOperatorId];
+	let newRegionId: string;
+	$: newRegion = regions[newRegionId];
 
 	function removeStop(stopId: number) {
 		issueStops = issueStops.filter((e) => e !== stopId);
@@ -45,14 +49,20 @@
 		issueOperators = issueOperators;
 	}
 
+	function removeRegion(regionId: number) {
+		issueRegions = issueRegions.filter((e) => e !== regionId);
+		issueRegions = issueRegions;
+	}
+
 	async function submit() {
 		let issue = {
-			title: title,
-			category: category,
+			title,
+			category,
 			impact: -1,
-			lat: lat,
-			lon: lon,
+			lat,
+			lon,
 			content,
+			region_ids: issueRegions,
 			route_ids: issueRoutes,
 			stop_ids: issueStops,
 			operator_ids: issueOperators
@@ -159,6 +169,39 @@
 				<div class="badge badge-outline badge-lg">
 					{stopId} - {stops[stopId].name}
 					<button class="btn btn-error btn-circle btn-xs" on:click={() => removeStop(stopId)}>
+						<Icon name="close" class="h-4 stroke-current" />
+					</button>
+				</div>
+			{/each}
+		</div>
+	</div>
+{/if}
+
+<div class="form-control">
+	<label class="input-group">
+		<span class="w-28">Região</span>
+		<input type="number" bind:value={newRegionId} class="input input-bordered w-full input-md" />
+		<button
+			disabled={!newRegion}
+			on:click={() => {
+				issueRegions.push(parseInt(newRegionId));
+				issueRegions = issueRegions;
+				newRegionId = null;
+			}}
+			class="btn btn-md btn-success">Adicionar</button
+		>
+	</label>
+</div>
+{#if issueRegions.length > 0}
+	<div class="form-control">
+		<span class="label">
+			<span class="label-text">Referenciadas</span>
+		</span>
+		<div>
+			{#each issueRegions as regionId}
+				<div class="badge badge-outline badge-lg">
+					{regionId} - {regions[regionId].name}
+					<button class="btn btn-error btn-circle btn-xs" on:click={() => removeRegion(regionId)}>
 						<Icon name="close" class="h-4 stroke-current" />
 					</button>
 				</div>

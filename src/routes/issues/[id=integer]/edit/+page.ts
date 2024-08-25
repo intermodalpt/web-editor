@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
-import { getIssue, getOperators, getRoutes, getStops } from '$lib/api';
+import { getIssue, getOperators, getRoutes, getStops, getSimpleRegions } from '$lib/api';
 
 export async function load({ params, fetch }) {
 	const issueId = parseInt(params.id);
 
-	const [issue, operators, stops, routes] = await Promise.all([
+	const [issue, operators, stops, routes, regions] = await Promise.all([
 		getIssue(issueId, {
 			onError: (res: Response) => {
 				error(res.status, 'Erro a carregar problema');
@@ -32,10 +32,17 @@ export async function load({ params, fetch }) {
 			},
 			toJson: true,
 			fetch
+		}),
+		getSimpleRegions({
+			onError: (res) => {
+				error(res.status, 'Erro a carregar as regiões');
+			},
+			toJson: true,
+			fetch
 		})
 	]);
 
-	return { issue, operators, stops, routes };
+	return { issue, operators, stops, routes, regions };
 }
 
 

@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { getOperator, getOperatorIssues } from '$lib/api';
 
-/** @type {import('./$types').PageLoad} */
 export async function load({ params, fetch }) {
 	const operatorId = parseInt(params.opId);
 

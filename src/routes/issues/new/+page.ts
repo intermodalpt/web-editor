@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import { getOperators, getRoutes, getStops } from '$lib/api';
+import { getOperators, getRoutes, getSimpleRegions, getStops } from '$lib/api';
 
 export async function load({ fetch }) {
-	const [operators, stops, routes] = await Promise.all([
+	const [operators, stops, routes, regions] = await Promise.all([
 		getOperators({
 			onError: (res) => {
 				error(res.status, 'Erro a carregar os operadores');
@@ -23,10 +23,17 @@ export async function load({ fetch }) {
 			},
 			toJson: true,
 			fetch
+		}),
+		getSimpleRegions({
+			onError: (res) => {
+				error(res.status, 'Erro a carregar as regiões');
+			},
+			toJson: true,
+			fetch
 		})
 	]);
 
-	return { operators, stops, routes };
+	return { operators, stops, routes, regions };
 }
 
 
