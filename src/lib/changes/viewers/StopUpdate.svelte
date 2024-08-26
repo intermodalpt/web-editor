@@ -2,7 +2,7 @@
 	import maplibre from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { listDifferences, getNearestStops } from '$lib/utils';
-	import { tileStyle } from '$lib/settings';
+	import { defaultMapBounds, mapMinZoom, tileStyle } from '$lib/settings';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { derived } from 'svelte/store';
 	import Icon from '$lib/components/Icon.svelte';
@@ -74,12 +74,9 @@
 			style: tileStyle,
 			center: [change.original.lon, change.original.lat],
 			zoom: 17,
-			minZoom: 8,
+			minZoom: mapMinZoom,
 			maxZoom: 20,
-			maxBounds: [
-				[-10.0, 38.3],
-				[-8.0, 39.35]
-			]
+			maxBounds: defaultMapBounds
 		});
 
 		new maplibre.Marker()
@@ -90,7 +87,7 @@
 			)
 			.addTo(map);
 
-		map.on('load', function () {
+		map.on('load', () => {
 			map.addSource('stops', {
 				type: 'geojson',
 				data: {

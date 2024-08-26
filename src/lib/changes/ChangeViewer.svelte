@@ -10,7 +10,7 @@
 
 	export let change;
 	export let stops = writable({});
-	export let ignoredKeys;
+	export let ignoredKeys = [];
 
 	export let isEvaluation = false;
 </script>

@@ -12,10 +12,12 @@
 	}
 </script>
 
-<li
+<div
 	class="p-2 border-2 rounded-lg cursor-pointer bg-base-100 hover:bg-base-200"
 	on:click={onClick}
 	on:keypress={onClick}
+	role="button"
+	tabindex="0"
 >
 	<h2 class="card-title text-lg">
 		#{changeset.id}
@@ -31,4 +33,4 @@
 		<span class="label-text">{changeset.author_username}</span>
 		<span class="label-text">{new Date(changeset.datetime).toLocaleString('pt')}</span>
 	</div>
-</li>
+</div>

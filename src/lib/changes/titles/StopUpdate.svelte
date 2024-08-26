@@ -2,7 +2,7 @@
 	export let change;
 	export let stops;
 
-	$: originalStop = $stops && $stops[change.original.id];
+	$: originalStop = stops[change.original.id];
 </script>
 
 <div class="flex flex-col">

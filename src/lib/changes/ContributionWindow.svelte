@@ -50,11 +50,14 @@
 	style="grid-template-rows: 1fr auto;"
 	on:click={close}
 	on:keypress={close}
+	role="button"
+	tabindex="0"
 >
 	<div
 		class="modal-box xl:max-w-[80em]"
 		on:click|stopPropagation={() => {}}
 		on:keypress|stopPropagation={() => {}}
+		role="dialog"
 	>
 		<div class="flex flex-col gap-1 max-h-[75vh]">
 			<h2 class="card-title text-lg">

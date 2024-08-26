@@ -12,10 +12,9 @@
 	}
 </script>
 
-<li
+<button
 	class="p-2 border-2 rounded-lg cursor-pointer bg-base-100 hover:bg-base-200"
 	on:click={onClick}
-	on:keypress={onClick}
 >
 	<h2 class="card-title text-lg">
 		{contribution.accepted ? '✅' : '❌'} #{contribution.id}
@@ -35,4 +34,4 @@
 		<span class="label-text">{contribution.evaluator_username}</span>
 		<span class="label-text">{new Date(contribution.evaluation_date).toLocaleString('pt')}</span>
 	</div>
-</li>
+</button>

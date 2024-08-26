@@ -1,16 +1,23 @@
 <script>
 	import { writable, derived } from 'svelte/store';
 	import { apiServer } from '$lib/settings';
-	import { fetchStops, getStops, loadMissing } from '$lib/db';
-	import { liveQuery } from 'dexie';
 	import ContributionRow from '$lib/changes/rows/ContributionRow.svelte';
 	import DecidedContributionRow from '$lib/changes/rows/DecidedContributionRow.svelte';
 	import ChangesetRow from '$lib/changes/rows/ChangesetRow.svelte';
 	import ContributionWindow from '$lib/changes/ContributionWindow.svelte';
 	import ChangesetWindow from '$lib/changes/ChangesetWindow.svelte';
 	import Paginator from '$lib/components/Paginator.svelte';
+	import { onMount } from 'svelte';
+	import {
+		getChangelog,
+		getLatestDecidedContributions,
+		getLatestUndecidedContributions,
+		getUndecicedContributors
+	} from '$lib/api';
+	import { toast } from '$lib/stores';
 
-	const stops = liveQuery(() => getStops());
+	export let data;
+	const stops = data.stops;
 
 	const mapTabs = {
 		undecided: 0,
@@ -51,21 +58,20 @@
 			undecidedLoaded = false;
 			console.log('fetching undecided contributions', $page);
 
-			return (
-				$userFilter
-					? fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${$page}&uid=${$userFilter}`, {
-							credentials: 'include'
-						})
-					: fetch(`${apiServer}/v1/contrib/contributions/undecided?p=${$page}`, {
-							credentials: 'include'
-						})
-			)
-				.then((res) => res.json())
-				.then((res) => {
+			getLatestUndecidedContributions($page, $userFilter, {
+				onSuccess: (res) => {
 					undecidedTotal = res.total;
 					set(res.items);
+				},
+				onError: (err) => {
+					undecidedTotal = 0;
+					toast('Erro a obter as contribuições por decidir', 'error');
+				},
+				onAfter: () => {
 					undecidedLoaded = true;
-				});
+				},
+				toJson: true
+			});
 		}
 	);
 
@@ -74,25 +80,40 @@
 		([$page], set) => {
 			decidedLoaded = false;
 
-			fetch(`${apiServer}/v1/contrib/contributions/decided?p=${$page}`, { credentials: 'include' })
-				.then((res) => res.json())
-				.then((res) => {
+			getLatestDecidedContributions($page, {
+				onSuccess: (res) => {
 					decidedTotal = res.total;
 					set(res.items);
+				},
+				onError: (err) => {
+					decidedTotal = 0;
+					toast('Erro a obter as contribuições decididas', 'error');
+				},
+				onAfter: () => {
 					decidedLoaded = true;
-				});
+				},
+				toJson: true
+			});
 		}
 	);
 
 	const changelog = derived([changelogPage, forceDerivedStoresToUpdate], ([$page], set) => {
 		changelogLoaded = false;
-		fetch(`${apiServer}/v1/contrib/changelog?p=${$page}`, { credentials: 'include' })
-			.then((res) => res.json())
-			.then((res) => {
+
+		getChangelog($page, {
+			onSuccess: (res) => {
 				changelogTotal = res.total;
 				set(res.items);
+			},
+			onError: (err) => {
+				changelogTotal = 0;
+				toast('Erro a obter o changelog', 'error');
+			},
+			onAfter: () => {
 				changelogLoaded = true;
-			});
+			},
+			toJson: true
+		});
 	});
 
 	function refreshData() {
@@ -105,31 +126,7 @@
 		// It doesn't. Let's drown a kitten
 		$forceDerivedStoresToUpdate = $forceDerivedStoresToUpdate + 1;
 	}
-
-	async function loadData() {
-		await Promise.all([
-			fetchStops(),
-			fetch(`${apiServer}/v1/contrib/contributions/undecided/contributors`, {
-				credentials: 'include'
-			})
-				.then((res) => res.json())
-				.then((res) => {
-					contributors = res;
-					contributorsLoaded = true;
-				})
-		]);
-	}
-
-	loadData().then(async () => {
-		console.log('data loaded');
-		await loadMissing();
-	});
 </script>
-
-<svelte:head>
-	<title>Contribuições</title>
-	<meta name="description" content="Contribuições" />
-</svelte:head>
 
 <div class="self-center max-w-[80em] w-full my-4">
 	<div class="tabs tabs-lifted tabs-md lg:tabs-lg ml-4">
@@ -180,7 +177,7 @@
 						</div>
 					{/if}
 				</div>
-				{#if $stops && undecidedLoaded}
+				{#if undecidedLoaded}
 					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
 						{#each $undecidedContributions || [] as contribution (contribution.id)}
 							<ContributionRow
@@ -208,7 +205,7 @@
 						}}
 					/>
 				</div>
-				{#if $stops && decidedLoaded}
+				{#if decidedLoaded}
 					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
 						{#each $decidedContributions || [] as contribution}
 							<DecidedContributionRow
@@ -236,7 +233,7 @@
 						}}
 					/>
 				</div>
-				{#if $stops && changelogLoaded}
+				{#if changelogLoaded}
 					<ul class="grid grid-cols-1 lg:grid-cols-2 gap-2">
 						{#each $changelog || [] as changeset}
 							<ChangesetRow

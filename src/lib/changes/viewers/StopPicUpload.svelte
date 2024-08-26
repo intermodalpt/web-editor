@@ -22,10 +22,10 @@
 		{/if}
 	</ul>
 {:else}
-	<span
+	<button
 		class="link"
-		on:mouseup={() => {
+		on:click={() => {
 			expand = true;
-		}}>Mostrar</span
+		}}>Mostrar</button
 	>
 {/if}
